@@ -20,7 +20,7 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // بيانات إضافية
             $table->timestamps();
 
-            $table->index(['admission_application_id', 'created_at']);
+            $table->index(['admission_application_id', 'created_at'], 'awl_app_created_idx');
         });
     }
 
