@@ -175,7 +175,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index(['student_request_form_id', 'step_number']);
+            $table->index(['student_request_form_id', 'step_number'], 'sra_form_step_idx');
         });
 
         // جدول المساقات المطلوب تسجيلها (للتسجيل الاستثنائي)
