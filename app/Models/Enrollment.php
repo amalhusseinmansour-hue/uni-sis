@@ -49,6 +49,16 @@ class Enrollment extends Model
         return $this->hasOne(Grade::class);
     }
 
+    public function moodleEnrollment(): HasOne
+    {
+        return $this->hasOne(MoodleEnrollment::class);
+    }
+
+    public function moodleGrade(): HasOne
+    {
+        return $this->hasOne(MoodleGrade::class);
+    }
+
     public function scopeForStudent($query, $studentId)
     {
         return $query->where('student_id', $studentId);

@@ -3,15 +3,22 @@
 namespace App\Providers;
 
 use App\Models\Announcement;
+use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\FinancialRecord;
 use App\Models\Grade;
 use App\Models\ServiceRequest;
+use App\Models\Student;
+use App\Models\User;
 use App\Observers\AnnouncementObserver;
+use App\Observers\CourseMoodleObserver;
+use App\Observers\EnrollmentMoodleObserver;
 use App\Observers\EnrollmentObserver;
 use App\Observers\FinancialRecordObserver;
 use App\Observers\GradeObserver;
 use App\Observers\ServiceRequestObserver;
+use App\Observers\StudentMoodleObserver;
+use App\Observers\UserMoodleObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -39,6 +46,12 @@ class AppServiceProvider extends ServiceProvider
         FinancialRecord::observe(FinancialRecordObserver::class);
         ServiceRequest::observe(ServiceRequestObserver::class);
         Announcement::observe(AnnouncementObserver::class);
+
+        // Register Moodle Sync Observers
+        Student::observe(StudentMoodleObserver::class);
+        User::observe(UserMoodleObserver::class);
+        Course::observe(CourseMoodleObserver::class);
+        Enrollment::observe(EnrollmentMoodleObserver::class);
 
         // Enforce strict mode for models in non-production
         Model::shouldBeStrict(!app()->isProduction());

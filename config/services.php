@@ -49,4 +49,21 @@ return [
         'api_key' => env('WEBHOOK_API_KEY'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Moodle LMS Integration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Moodle LMS integration.
+    | Enable web services in Moodle and create a token for external service.
+    |
+    */
+
+    'moodle' => [
+        'url' => env('MOODLE_URL'),                           // e.g., https://lms.university.edu
+        'token' => env('MOODLE_TOKEN'),                       // Web service token
+        'webhook_secret' => env('MOODLE_WEBHOOK_SECRET'),     // Secret for validating incoming webhooks
+        'sync_enabled' => env('MOODLE_SYNC_ENABLED', false),  // Enable/disable sync
+    ],
+
 ];

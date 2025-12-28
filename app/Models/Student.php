@@ -449,6 +449,15 @@ class Student extends Model
     }
 
     // ==========================================
+    // Moodle Integration Relationships
+    // ==========================================
+
+    public function moodleUser(): HasOne
+    {
+        return $this->hasOne(MoodleUser::class);
+    }
+
+    // ==========================================
     // Schedule
     // ==========================================
 

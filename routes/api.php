@@ -34,6 +34,8 @@ use App\Http\Controllers\Api\DynamicFormController;
 use App\Http\Controllers\Api\DynamicTableController;
 use App\Http\Controllers\Api\DynamicReportController;
 use App\Http\Controllers\Api\WebhookController;
+use App\Http\Controllers\Api\MoodleWebhookController;
+use App\Http\Controllers\Api\MoodleSyncController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -72,6 +74,14 @@ Route::prefix('webhook')->group(function () {
 
     // التحقق من حالة طلب القبول
     Route::get('/admission/status/{reference}', [WebhookController::class, 'checkStatus']);
+
+    // ==========================================
+    // MOODLE WEBHOOK ENDPOINTS
+    // ==========================================
+    // استقبال العلامات من Moodle
+    Route::post('/moodle/grades', [MoodleWebhookController::class, 'receiveGrades']);
+    Route::post('/moodle/grades/bulk', [MoodleWebhookController::class, 'receiveBulkGrades']);
+    Route::post('/moodle/completion', [MoodleWebhookController::class, 'receiveCompletion']);
 });
 
 // Protected routes (authenticated users)
@@ -714,6 +724,34 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/schedules/{id}', [$reportController, 'deleteSchedule']);
             });
         });
+    });
+});
+
+// ==========================================
+// MOODLE LMS INTEGRATION (Admin)
+// ==========================================
+Route::middleware(['auth:sanctum'])->prefix('moodle')->group(function () {
+    // حالة الاتصال والإحصائيات
+    Route::get('/status', [MoodleSyncController::class, 'getStatus']);
+    Route::get('/sync/status', [MoodleSyncController::class, 'getSyncStatus']);
+    Route::post('/test-connection', [MoodleSyncController::class, 'testConnection']);
+
+    // مزامنة البيانات إلى Moodle (Admin only)
+    Route::middleware('role:ADMIN')->group(function () {
+        Route::post('/sync/students', [MoodleSyncController::class, 'syncStudents']);
+        Route::post('/sync/lecturers', [MoodleSyncController::class, 'syncLecturers']);
+        Route::post('/sync/courses', [MoodleSyncController::class, 'syncCourses']);
+        Route::post('/sync/enrollments', [MoodleSyncController::class, 'syncEnrollments']);
+
+        // استيراد العلامات من Moodle
+        Route::post('/import/grades', [MoodleSyncController::class, 'importGrades']);
+        Route::post('/sync/grades-to-sis', [MoodleSyncController::class, 'syncGradesToSis']);
+
+        // إعادة محاولة المزامنات الفاشلة
+        Route::post('/retry-failed', [MoodleSyncController::class, 'retryFailed']);
+
+        // سجل المزامنة
+        Route::get('/logs', [MoodleSyncController::class, 'getLogs']);
     });
 });
 
