@@ -3,12 +3,14 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::create('students', function (Blueprint $table) {
+            $table->engine = 'InnoDB ROW_FORMAT=DYNAMIC';
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('program_id')->nullable()->constrained()->onDelete('set null');
