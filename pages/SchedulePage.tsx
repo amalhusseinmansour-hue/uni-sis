@@ -1,0 +1,456 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Calendar, Clock, MapPin, User, BookOpen, Download, Printer,
+  ChevronLeft, ChevronRight, Filter, List, Grid, Bell, Share2,
+  FileText, Video, Users, Coffee, AlertCircle
+} from 'lucide-react';
+import { TRANSLATIONS } from '../constants';
+import { scheduleAPI } from '../api/schedule';
+import { dashboardAPI } from '../api/dashboard';
+import Schedule, { MiniCalendar } from '../components/Schedule';
+import { Card, CardHeader, CardBody, StatCard } from '../components/ui/Card';
+import Button, { IconButton } from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import { Select } from '../components/ui/Input';
+import { exportToPDF, exportToICal, printPage, formatTableHTML } from '../utils/exportUtils';
+
+interface SchedulePageProps {
+  lang: 'en' | 'ar';
+}
+
+const SchedulePage: React.FC<SchedulePageProps> = ({ lang }) => {
+  const t = TRANSLATIONS;
+  const [viewMode, setViewMode] = useState<'week' | 'day' | 'list'>('week');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedSemester, setSelectedSemester] = useState('current');
+  const [scheduleEvents, setScheduleEvents] = useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    todayClasses: 0,
+    weeklyHours: 0,
+    enrolledCourses: 0,
+  });
+
+  // Fetch data from APIs
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch timetable and events in parallel
+        const [timetableRes, eventsRes] = await Promise.all([
+          scheduleAPI.getMyTimetable().catch(() => []),
+          dashboardAPI.getUpcomingEvents(5).catch(() => []),
+        ]);
+
+        // Transform and set schedule events
+        const timetable = timetableRes.data || timetableRes || [];
+        if (timetable.length > 0) {
+          const events = scheduleAPI.transformToEvents(timetable, lang);
+          setScheduleEvents(events);
+
+          // Calculate stats
+          const today = new Date().getDay();
+          const todayClasses = events.filter(e => e.day === today).length;
+          const weeklyHours = Math.ceil(events.reduce((sum, e) => {
+            const start = e.startTime.split(':').map(Number);
+            const end = e.endTime.split(':').map(Number);
+            return sum + (end[0] - start[0]) + (end[1] - start[1]) / 60;
+          }, 0));
+          const enrolledCourses = new Set(events.map(e => e.courseCode)).size;
+
+          setStats({ todayClasses, weeklyHours, enrolledCourses });
+        }
+
+        // Transform and set upcoming events
+        const events = eventsRes.data || eventsRes || [];
+        setUpcomingEvents(dashboardAPI.transformEvents(events, lang));
+
+      } catch (error) {
+        console.error('Error fetching schedule data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [lang]);
+
+  // Default schedule events (fallback)
+  const defaultScheduleEvents = [
+    {
+      id: '1',
+      title: 'Introduction to Computer Science',
+      titleAr: 'مقدمة في علوم الحاسوب',
+      instructor: 'Dr. Sarah Smith',
+      location: 'Room 101, Building A',
+      startTime: '08:00',
+      endTime: '09:30',
+      day: 0,
+      color: 'bg-blue-500 text-white',
+      type: 'lecture' as const,
+      courseCode: 'CS101',
+    },
+    {
+      id: '2',
+      title: 'Calculus II',
+      titleAr: 'تفاضل وتكامل ٢',
+      instructor: 'Dr. Ahmed Hassan',
+      location: 'Room 205, Building B',
+      startTime: '10:00',
+      endTime: '11:30',
+      day: 0,
+      color: 'bg-purple-500 text-white',
+      type: 'lecture' as const,
+      courseCode: 'MATH201',
+    },
+    {
+      id: '3',
+      title: 'Programming Lab',
+      titleAr: 'معمل البرمجة',
+      instructor: 'Eng. Mohammed Ali',
+      location: 'Lab 3, Computer Center',
+      startTime: '13:00',
+      endTime: '15:00',
+      day: 1,
+      color: 'bg-green-500 text-white',
+      type: 'lab' as const,
+      courseCode: 'CS101L',
+    },
+    {
+      id: '4',
+      title: 'Data Structures',
+      titleAr: 'هياكل البيانات',
+      instructor: 'Dr. Fatima Omar',
+      location: 'Room 301, Building A',
+      startTime: '09:00',
+      endTime: '10:30',
+      day: 2,
+      color: 'bg-orange-500 text-white',
+      type: 'lecture' as const,
+      courseCode: 'CS201',
+    },
+    {
+      id: '5',
+      title: 'English Language',
+      titleAr: 'اللغة الإنجليزية',
+      instructor: 'Ms. Jane Wilson',
+      location: 'Room 102, Building C',
+      startTime: '11:00',
+      endTime: '12:30',
+      day: 2,
+      color: 'bg-pink-500 text-white',
+      type: 'lecture' as const,
+      courseCode: 'ENG102',
+    },
+  ];
+
+  // Use API data or fallback
+  const displayScheduleEvents = scheduleEvents.length > 0 ? scheduleEvents : defaultScheduleEvents;
+
+  // Today's classes
+  const todayClasses = displayScheduleEvents.filter(e => e.day === new Date().getDay());
+
+  // Default upcoming events (fallback)
+  const defaultUpcomingEvents = [
+    { id: '1', title: lang === 'ar' ? 'اختبار منتصف الفصل - CS101' : 'Midterm Exam - CS101', date: '2024-12-15', type: 'exam' },
+    { id: '2', title: lang === 'ar' ? 'تسليم مشروع البرمجة' : 'Programming Project Due', date: '2024-12-10', type: 'assignment' },
+    { id: '3', title: lang === 'ar' ? 'إجازة اليوم الوطني' : 'National Day Holiday', date: '2024-12-23', type: 'holiday' },
+  ];
+
+  // Use API data or fallback
+  const displayUpcomingEvents = upcomingEvents.length > 0 ? upcomingEvents : defaultUpcomingEvents;
+
+  // Daily schedule for list view
+  const dailySchedule = [
+    { time: '08:00 - 09:30', course: 'CS101', title: lang === 'ar' ? 'مقدمة في علوم الحاسوب' : 'Intro to Computer Science', room: 'Room 101', type: 'lecture' },
+    { time: '10:00 - 11:30', course: 'MATH201', title: lang === 'ar' ? 'تفاضل وتكامل ٢' : 'Calculus II', room: 'Room 205', type: 'lecture' },
+    { time: '12:00 - 13:00', course: '', title: lang === 'ar' ? 'استراحة الغداء' : 'Lunch Break', room: '', type: 'break' },
+    { time: '13:00 - 14:30', course: 'CS201', title: lang === 'ar' ? 'هياكل البيانات' : 'Data Structures', room: 'Room 301', type: 'lecture' },
+    { time: '15:00 - 16:30', course: 'ENG102', title: lang === 'ar' ? 'اللغة الإنجليزية' : 'English Language', room: 'Room 102', type: 'lecture' },
+  ];
+
+  const renderListView = () => (
+    <Card>
+      <CardHeader
+        title={lang === 'ar' ? 'جدول اليوم' : "Today's Schedule"}
+        icon={List}
+        iconColor="text-blue-600 bg-blue-50"
+        action={
+          <Badge variant="info">
+            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </Badge>
+        }
+      />
+      <CardBody noPadding>
+        <div className="divide-y divide-slate-100">
+          {dailySchedule.map((item, index) => (
+            <div
+              key={index}
+              className={`p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors ${
+                item.type === 'break' ? 'bg-slate-50' : ''
+              }`}
+            >
+              <div className="w-32 text-sm font-medium text-slate-500">{item.time}</div>
+              <div className={`w-2 h-12 rounded-full ${
+                item.type === 'lecture' ? 'bg-blue-500' :
+                item.type === 'lab' ? 'bg-green-500' :
+                item.type === 'break' ? 'bg-slate-300' : 'bg-purple-500'
+              }`}></div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  {item.course && (
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-mono font-medium text-slate-600">
+                      {item.course}
+                    </span>
+                  )}
+                  <h4 className="font-medium text-slate-800">{item.title}</h4>
+                </div>
+                {item.room && (
+                  <div className="flex items-center gap-1 mt-1 text-sm text-slate-500">
+                    <MapPin className="w-3 h-3" />
+                    {item.room}
+                  </div>
+                )}
+              </div>
+              {item.type !== 'break' && (
+                <IconButton icon={Bell} size="sm" tooltip={lang === 'ar' ? 'تذكير' : 'Reminder'} />
+              )}
+            </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {lang === 'ar' ? 'الجدول الدراسي' : 'Class Schedule'}
+          </h1>
+          <p className="text-slate-500">
+            {lang === 'ar' ? 'عرض جدولك الأسبوعي والمحاضرات القادمة' : 'View your weekly schedule and upcoming classes'}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Select
+            options={[
+              { value: 'current', label: lang === 'ar' ? 'الفصل الحالي' : 'Current Semester' },
+              { value: 'next', label: lang === 'ar' ? 'الفصل القادم' : 'Next Semester' },
+              { value: 'previous', label: lang === 'ar' ? 'الفصل السابق' : 'Previous Semester' },
+            ]}
+            value={selectedSemester}
+            onChange={(e) => setSelectedSemester(e.target.value)}
+            fullWidth={false}
+            className="w-40"
+          />
+          <Button
+            variant="outline"
+            icon={Download}
+            onClick={() => {
+              const headers = [
+                lang === 'ar' ? 'اليوم' : 'Day',
+                lang === 'ar' ? 'المقرر' : 'Course',
+                lang === 'ar' ? 'العنوان' : 'Title',
+                lang === 'ar' ? 'الوقت' : 'Time',
+                lang === 'ar' ? 'المكان' : 'Location',
+                lang === 'ar' ? 'المحاضر' : 'Instructor',
+              ];
+              const days = lang === 'ar'
+                ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+                : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+              const rows = scheduleEvents.map(e => [
+                days[e.day],
+                e.courseCode,
+                lang === 'ar' && e.titleAr ? e.titleAr : e.title,
+                `${e.startTime} - ${e.endTime}`,
+                e.location,
+                e.instructor
+              ]);
+              const tableHTML = formatTableHTML(headers, rows, lang);
+              exportToPDF(
+                lang === 'ar' ? 'الجدول الدراسي' : 'Class Schedule',
+                tableHTML,
+                'class-schedule',
+                lang
+              );
+            }}
+          >
+            {lang === 'ar' ? 'تصدير PDF' : 'Export PDF'}
+          </Button>
+          <Button variant="outline" icon={Printer} onClick={() => printPage(undefined, 'Class Schedule', 'الجدول الدراسي', lang)}>
+            {lang === 'ar' ? 'طباعة' : 'Print'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard
+          title={lang === 'ar' ? 'محاضرات اليوم' : "Today's Classes"}
+          value={stats.todayClasses > 0 ? stats.todayClasses.toString() : todayClasses.length.toString()}
+          subtitle={lang === 'ar' ? 'محاضرة' : 'classes'}
+          icon={BookOpen}
+          iconColor="text-blue-600 bg-blue-50"
+        />
+        <StatCard
+          title={lang === 'ar' ? 'ساعات الأسبوع' : 'Weekly Hours'}
+          value={stats.weeklyHours > 0 ? stats.weeklyHours.toString() : '18'}
+          subtitle={lang === 'ar' ? 'ساعة معتمدة' : 'credit hours'}
+          icon={Clock}
+          iconColor="text-green-600 bg-green-50"
+        />
+        <StatCard
+          title={lang === 'ar' ? 'المقررات المسجلة' : 'Enrolled Courses'}
+          value={stats.enrolledCourses > 0 ? stats.enrolledCourses.toString() : '6'}
+          subtitle={lang === 'ar' ? 'مقرر' : 'courses'}
+          icon={FileText}
+          iconColor="text-purple-600 bg-purple-50"
+        />
+        <StatCard
+          title={lang === 'ar' ? 'الأحداث القادمة' : 'Upcoming Events'}
+          value={displayUpcomingEvents.length.toString()}
+          subtitle={lang === 'ar' ? 'هذا الأسبوع' : 'this week'}
+          icon={Calendar}
+          iconColor="text-orange-600 bg-orange-50"
+        />
+      </div>
+
+      {/* View Mode Toggle */}
+      <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setViewMode('week')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            viewMode === 'week' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Grid className="w-4 h-4" />
+            {lang === 'ar' ? 'أسبوعي' : 'Week'}
+          </div>
+        </button>
+        <button
+          onClick={() => setViewMode('day')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            viewMode === 'day' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            {lang === 'ar' ? 'يومي' : 'Day'}
+          </div>
+        </button>
+        <button
+          onClick={() => setViewMode('list')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            viewMode === 'list' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <List className="w-4 h-4" />
+            {lang === 'ar' ? 'قائمة' : 'List'}
+          </div>
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Schedule View */}
+        <div className="lg:col-span-3">
+          {loading ? (
+            <Card>
+              <CardBody>
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="relative w-12 h-12 mx-auto mb-4">
+                      <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+                      <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                    </div>
+                    <p className="text-slate-500">{lang === 'ar' ? 'جاري تحميل الجدول...' : 'Loading schedule...'}</p>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          ) : viewMode === 'list' ? (
+            renderListView()
+          ) : (
+            <Schedule
+              lang={lang}
+              events={displayScheduleEvents}
+              onEventClick={(event) => console.log('Event clicked:', event)}
+            />
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Mini Calendar */}
+          <MiniCalendar
+            lang={lang}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            highlightedDates={displayUpcomingEvents.map(e => new Date(e.date))}
+          />
+
+          {/* Upcoming Events */}
+          <Card>
+            <CardHeader
+              title={lang === 'ar' ? 'الأحداث القادمة' : 'Upcoming Events'}
+              icon={AlertCircle}
+              iconColor="text-orange-600 bg-orange-50"
+            />
+            <CardBody>
+              <div className="space-y-3">
+                {displayUpcomingEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-2 h-2 rounded-full mt-2 ${
+                        event.type === 'exam' ? 'bg-red-500' :
+                        event.type === 'assignment' ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-slate-800">{event.title}</p>
+                        <p className="text-xs text-slate-500 mt-1">{event.date}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader
+              title={lang === 'ar' ? 'إجراءات سريعة' : 'Quick Actions'}
+              icon={Share2}
+              iconColor="text-blue-600 bg-blue-50"
+            />
+            <CardBody>
+              <div className="space-y-2">
+                <Button variant="ghost" fullWidth icon={Video} className="justify-start">
+                  {lang === 'ar' ? 'الفصول الافتراضية' : 'Virtual Classes'}
+                </Button>
+                <Button variant="ghost" fullWidth icon={Users} className="justify-start">
+                  {lang === 'ar' ? 'مجموعات الدراسة' : 'Study Groups'}
+                </Button>
+                <Button variant="ghost" fullWidth icon={Coffee} className="justify-start">
+                  {lang === 'ar' ? 'حجز قاعة دراسية' : 'Book Study Room'}
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SchedulePage;

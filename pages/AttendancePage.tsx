@@ -1,0 +1,614 @@
+import React, { useState, useEffect } from 'react';
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area
+} from 'recharts';
+import {
+  Calendar, Clock, CheckCircle, XCircle, AlertCircle, TrendingUp,
+  Download, Filter, ChevronDown, User, BookOpen, AlertTriangle,
+  CalendarDays, Percent, FileText, Eye, Info
+} from 'lucide-react';
+import { TRANSLATIONS } from '../constants';
+import { studentsAPI } from '../api/students';
+import { attendanceAPI } from '../api/attendance';
+import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
+import Button, { IconButton } from '../components/ui/Button';
+import Badge, { StatusBadge } from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
+import { Select, SearchInput } from '../components/ui/Input';
+import { exportToPDF, exportToCSV, formatTableHTML } from '../utils/exportUtils';
+
+interface AttendancePageProps {
+  lang: 'en' | 'ar';
+}
+
+const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
+  const t = TRANSLATIONS;
+  const [selectedCourse, setSelectedCourse] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [overallStats, setOverallStats] = useState({
+    totalClasses: 120,
+    attended: 108,
+    absent: 8,
+    excused: 4,
+    rate: 90,
+  });
+  const [courseAttendance, setCourseAttendance] = useState<any[]>([]);
+  const [recentRecords, setRecentRecords] = useState<any[]>([]);
+  const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
+
+  // Fetch attendance data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch student profile and enrollments
+        const profileRes = await studentsAPI.getMyProfile().catch(() => null);
+        const studentId = profileRes?.student?.id || profileRes?.id;
+
+        if (studentId) {
+          // Fetch enrollments with attendance
+          const enrollmentsRes = await studentsAPI.getEnrollments(studentId).catch(() => []);
+          const enrollments = enrollmentsRes.data || enrollmentsRes || [];
+
+          if (enrollments.length > 0) {
+            // Calculate course-wise attendance
+            const courseData = attendanceAPI.calculateCourseAttendance(enrollments, lang);
+            setCourseAttendance(courseData);
+
+            // Calculate overall stats
+            let totalClasses = 0;
+            let totalAttended = 0;
+            let totalAbsent = 0;
+            let totalExcused = 0;
+
+            courseData.forEach(course => {
+              totalClasses += course.total;
+              totalAttended += course.attended;
+              totalAbsent += course.absent;
+              totalExcused += course.excused;
+            });
+
+            const rate = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 90;
+
+            setOverallStats({
+              totalClasses: totalClasses || 120,
+              attended: totalAttended || 108,
+              absent: totalAbsent || 8,
+              excused: totalExcused || 4,
+              rate: rate || 90,
+            });
+
+            // Collect recent records from all enrollments
+            const allRecords: any[] = [];
+            enrollments.forEach((enrollment: any) => {
+              const records = enrollment.attendance_records || [];
+              records.forEach((record: any) => {
+                allRecords.push({
+                  ...record,
+                  course: enrollment.course?.code || enrollment.courseCode,
+                  title: lang === 'ar'
+                    ? (enrollment.course?.name_ar || enrollment.courseName)
+                    : (enrollment.course?.name_en || enrollment.courseName),
+                });
+              });
+            });
+
+            // Sort by date and take recent 10
+            allRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setRecentRecords(allRecords.slice(0, 10));
+
+            // Calculate monthly trend
+            const monthMap = new Map<string, { total: number; attended: number }>();
+            allRecords.forEach(record => {
+              const month = new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' });
+              if (!monthMap.has(month)) {
+                monthMap.set(month, { total: 0, attended: 0 });
+              }
+              const data = monthMap.get(month)!;
+              data.total++;
+              if (record.status === 'present') data.attended++;
+            });
+
+            const trend = Array.from(monthMap.entries()).map(([month, data]) => ({
+              month,
+              rate: data.total > 0 ? Math.round((data.attended / data.total) * 100) : 0,
+            }));
+            setMonthlyTrend(trend);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching attendance data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [lang]);
+
+  // Default course attendance (fallback)
+  const defaultCourseAttendance = [
+    { id: '1', code: 'CS101', name: lang === 'ar' ? 'مقدمة في علوم الحاسوب' : 'Intro to Computer Science', total: 24, attended: 22, absent: 1, excused: 1, rate: 92 },
+    { id: '2', code: 'MATH201', name: lang === 'ar' ? 'تفاضل وتكامل ٢' : 'Calculus II', total: 24, attended: 21, absent: 2, excused: 1, rate: 88 },
+    { id: '3', code: 'CS201', name: lang === 'ar' ? 'هياكل البيانات' : 'Data Structures', total: 24, attended: 23, absent: 1, excused: 0, rate: 96 },
+    { id: '4', code: 'ENG102', name: lang === 'ar' ? 'اللغة الإنجليزية' : 'English Language', total: 24, attended: 20, absent: 3, excused: 1, rate: 83 },
+    { id: '5', code: 'PHY101', name: lang === 'ar' ? 'الفيزياء العامة' : 'General Physics', total: 24, attended: 22, absent: 1, excused: 1, rate: 92 },
+  ];
+
+  // Default monthly trend (fallback)
+  const defaultMonthlyTrend = [
+    { month: lang === 'ar' ? 'سبتمبر' : 'Sep', rate: 95 },
+    { month: lang === 'ar' ? 'أكتوبر' : 'Oct', rate: 92 },
+    { month: lang === 'ar' ? 'نوفمبر' : 'Nov', rate: 88 },
+    { month: lang === 'ar' ? 'ديسمبر' : 'Dec', rate: 90 },
+  ];
+
+  // Use API data or fallback
+  const displayCourseAttendance = courseAttendance.length > 0 ? courseAttendance : defaultCourseAttendance;
+  const displayMonthlyTrend = monthlyTrend.length > 0 ? monthlyTrend : defaultMonthlyTrend;
+
+  // Attendance breakdown for pie chart
+  const attendanceBreakdown = [
+    { name: lang === 'ar' ? 'حاضر' : 'Present', value: overallStats.attended, color: '#22c55e' },
+    { name: lang === 'ar' ? 'غائب' : 'Absent', value: overallStats.absent, color: '#ef4444' },
+    { name: lang === 'ar' ? 'معذور' : 'Excused', value: overallStats.excused, color: '#f59e0b' },
+  ];
+
+  // Default recent records (fallback)
+  const defaultRecentRecords = [
+    { id: '1', date: '2024-11-28', course: 'CS101', title: lang === 'ar' ? 'مقدمة في علوم الحاسوب' : 'Intro to CS', status: 'present', time: '08:00 - 09:30' },
+    { id: '2', date: '2024-11-28', course: 'MATH201', title: lang === 'ar' ? 'تفاضل وتكامل ٢' : 'Calculus II', status: 'present', time: '10:00 - 11:30' },
+    { id: '3', date: '2024-11-27', course: 'CS201', title: lang === 'ar' ? 'هياكل البيانات' : 'Data Structures', status: 'absent', time: '09:00 - 10:30' },
+    { id: '4', date: '2024-11-27', course: 'ENG102', title: lang === 'ar' ? 'اللغة الإنجليزية' : 'English', status: 'present', time: '11:00 - 12:30' },
+    { id: '5', date: '2024-11-26', course: 'PHY101', title: lang === 'ar' ? 'الفيزياء' : 'Physics', status: 'excused', time: '13:00 - 14:30', excuse: lang === 'ar' ? 'عذر طبي' : 'Medical excuse' },
+    { id: '6', date: '2024-11-26', course: 'CS101', title: lang === 'ar' ? 'مقدمة في علوم الحاسوب' : 'Intro to CS', status: 'present', time: '08:00 - 09:30' },
+    { id: '7', date: '2024-11-25', course: 'MATH201', title: lang === 'ar' ? 'تفاضل وتكامل ٢' : 'Calculus II', status: 'present', time: '10:00 - 11:30' },
+    { id: '8', date: '2024-11-25', course: 'CS201', title: lang === 'ar' ? 'هياكل البيانات' : 'Data Structures', status: 'present', time: '09:00 - 10:30' },
+  ];
+
+  // Use API data or fallback
+  const displayRecentRecords = recentRecords.length > 0 ? recentRecords : defaultRecentRecords;
+
+  // Weekly attendance
+  const weeklyData = [
+    { day: lang === 'ar' ? 'أحد' : 'Sun', classes: 3, attended: 3 },
+    { day: lang === 'ar' ? 'إثنين' : 'Mon', classes: 2, attended: 2 },
+    { day: lang === 'ar' ? 'ثلاثاء' : 'Tue', classes: 3, attended: 2 },
+    { day: lang === 'ar' ? 'أربعاء' : 'Wed', classes: 2, attended: 2 },
+    { day: lang === 'ar' ? 'خميس' : 'Thu', classes: 2, attended: 1 },
+  ];
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'present':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'absent':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'excused':
+        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'present':
+        return lang === 'ar' ? 'حاضر' : 'Present';
+      case 'absent':
+        return lang === 'ar' ? 'غائب' : 'Absent';
+      case 'excused':
+        return lang === 'ar' ? 'معذور' : 'Excused';
+      default:
+        return status;
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {lang === 'ar' ? 'سجل الحضور' : 'Attendance Record'}
+          </h1>
+          <p className="text-slate-500">
+            {lang === 'ar' ? 'تتبع حضورك في المحاضرات والمعامل' : 'Track your class and lab attendance'}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            icon={Download}
+            onClick={() => {
+              const headers = [
+                lang === 'ar' ? 'رمز المقرر' : 'Course Code',
+                lang === 'ar' ? 'اسم المقرر' : 'Course Name',
+                lang === 'ar' ? 'إجمالي المحاضرات' : 'Total Classes',
+                lang === 'ar' ? 'الحضور' : 'Attended',
+                lang === 'ar' ? 'الغياب' : 'Absent',
+                lang === 'ar' ? 'معذور' : 'Excused',
+                lang === 'ar' ? 'نسبة الحضور' : 'Rate %',
+              ];
+              const rows = displayCourseAttendance.map(c => [
+                c.code, c.name, c.total, c.attended, c.absent, c.excused, `${c.rate}%`
+              ]);
+              const tableHTML = formatTableHTML(headers, rows, lang);
+              exportToPDF(
+                lang === 'ar' ? 'تقرير الحضور' : 'Attendance Report',
+                tableHTML,
+                'attendance-report',
+                lang
+              );
+            }}
+          >
+            {lang === 'ar' ? 'تحميل التقرير' : 'Download Report'}
+          </Button>
+          <Button variant="primary" icon={FileText}>
+            {lang === 'ar' ? 'طلب عذر' : 'Request Excuse'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Overall Stats Card */}
+      <GradientCard gradient="from-emerald-600 via-green-600 to-teal-600" className="relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div className="relative grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-1">
+            <p className="text-green-100 text-sm mb-2">{lang === 'ar' ? 'نسبة الحضور الكلية' : 'Overall Attendance Rate'}</p>
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-5xl font-bold">{overallStats.rate}%</h2>
+              <TrendingUp className="w-6 h-6 text-green-200" />
+            </div>
+            <p className="text-green-100 text-sm mt-2">
+              {lang === 'ar' ? `${overallStats.attended} من ${overallStats.totalClasses} محاضرة` : `${overallStats.attended} of ${overallStats.totalClasses} classes`}
+            </p>
+          </div>
+
+          <div className="md:col-span-3 grid grid-cols-3 gap-4">
+            <div className="bg-white/10 rounded-xl p-4 text-center">
+              <CheckCircle className="w-8 h-8 text-green-200 mx-auto mb-2" />
+              <p className="text-3xl font-bold">{overallStats.attended}</p>
+              <p className="text-green-100 text-sm">{lang === 'ar' ? 'حضور' : 'Present'}</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-4 text-center">
+              <XCircle className="w-8 h-8 text-red-300 mx-auto mb-2" />
+              <p className="text-3xl font-bold">{overallStats.absent}</p>
+              <p className="text-green-100 text-sm">{lang === 'ar' ? 'غياب' : 'Absent'}</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-4 text-center">
+              <AlertCircle className="w-8 h-8 text-yellow-300 mx-auto mb-2" />
+              <p className="text-3xl font-bold">{overallStats.excused}</p>
+              <p className="text-green-100 text-sm">{lang === 'ar' ? 'معذور' : 'Excused'}</p>
+            </div>
+          </div>
+        </div>
+      </GradientCard>
+
+      {/* Warning Alert (if attendance is low) */}
+      {overallStats.rate < 85 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-red-800">
+              {lang === 'ar' ? 'تحذير: نسبة حضور منخفضة' : 'Warning: Low Attendance Rate'}
+            </h4>
+            <p className="text-sm text-red-600 mt-1">
+              {lang === 'ar'
+                ? 'نسبة حضورك أقل من 85%. قد يؤثر ذلك على أهليتك لدخول الاختبارات.'
+                : 'Your attendance rate is below 85%. This may affect your exam eligibility.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Monthly Trend */}
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title={lang === 'ar' ? 'تطور نسبة الحضور' : 'Attendance Trend'}
+            icon={TrendingUp}
+            iconColor="text-blue-600 bg-blue-50"
+          />
+          <CardBody>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                <AreaChart data={displayMonthlyTrend}>
+                  <defs>
+                    <linearGradient id="attendanceGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `${v}%`} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                    formatter={(value: number) => [`${value}%`, lang === 'ar' ? 'نسبة الحضور' : 'Attendance Rate']}
+                  />
+                  <Area type="monotone" dataKey="rate" stroke="#22c55e" strokeWidth={3} fill="url(#attendanceGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Pie Chart */}
+        <Card>
+          <CardHeader
+            title={lang === 'ar' ? 'توزيع الحضور' : 'Attendance Distribution'}
+            icon={Percent}
+            iconColor="text-purple-600 bg-purple-50"
+          />
+          <CardBody>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                <PieChart>
+                  <Pie
+                    data={attendanceBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {attendanceBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-center gap-4 mt-4">
+              {attendanceBreakdown.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-xs text-slate-600">{item.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Course-wise Attendance */}
+      <Card>
+        <CardHeader
+          title={lang === 'ar' ? 'الحضور حسب المقرر' : 'Attendance by Course'}
+          icon={BookOpen}
+          iconColor="text-indigo-600 bg-indigo-50"
+          action={
+            <Select
+              options={[
+                { value: 'all', label: lang === 'ar' ? 'جميع المقررات' : 'All Courses' },
+                ...displayCourseAttendance.map(c => ({ value: c.code, label: c.code }))
+              ]}
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              fullWidth={false}
+              className="w-40"
+            />
+          }
+        />
+        <CardBody noPadding>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {lang === 'ar' ? 'المقرر' : 'Course'}
+                  </th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase text-center`}>
+                    {lang === 'ar' ? 'إجمالي المحاضرات' : 'Total Classes'}
+                  </th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase text-center`}>
+                    {lang === 'ar' ? 'حضور' : 'Present'}
+                  </th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase text-center`}>
+                    {lang === 'ar' ? 'غياب' : 'Absent'}
+                  </th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase text-center`}>
+                    {lang === 'ar' ? 'معذور' : 'Excused'}
+                  </th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-left' : 'text-right'}`}>
+                    {lang === 'ar' ? 'النسبة' : 'Rate'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {displayCourseAttendance
+                  .filter((course: any) => selectedCourse === 'all' || course.code === selectedCourse)
+                  .map((course: any) => (
+                  <tr key={course.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                          {course.code.substring(0, 2)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-800">{course.name}</p>
+                          <p className="text-xs text-slate-500">{course.code}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center text-slate-600">{course.total}</td>
+                    <td className="p-4 text-center">
+                      <span className="text-green-600 font-medium">{course.attended}</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-red-600 font-medium">{course.absent}</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-yellow-600 font-medium">{course.excused}</span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 justify-end">
+                        <div className="w-24 bg-slate-100 rounded-full h-2">
+                          <div
+                            className={`h-full rounded-full ${
+                              course.rate >= 90 ? 'bg-green-500' :
+                              course.rate >= 75 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${course.rate}%` }}
+                          ></div>
+                        </div>
+                        <span className={`text-sm font-bold ${
+                          course.rate >= 90 ? 'text-green-600' :
+                          course.rate >= 75 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>{course.rate}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Recent Attendance Records */}
+      <Card>
+        <CardHeader
+          title={lang === 'ar' ? 'سجل الحضور الأخير' : 'Recent Attendance'}
+          icon={CalendarDays}
+          iconColor="text-green-600 bg-green-50"
+          action={
+            <Select
+              options={[
+                { value: 'all', label: lang === 'ar' ? 'جميع الأشهر' : 'All Months' },
+                { value: 'nov', label: lang === 'ar' ? 'نوفمبر' : 'November' },
+                { value: 'oct', label: lang === 'ar' ? 'أكتوبر' : 'October' },
+                { value: 'sep', label: lang === 'ar' ? 'سبتمبر' : 'September' },
+              ]}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              fullWidth={false}
+              className="w-32"
+            />
+          }
+        />
+        <CardBody noPadding>
+          <div className="divide-y divide-slate-100">
+            {displayRecentRecords
+              .filter((record: any) => {
+                if (selectedMonth === 'all') return true;
+                const month = new Date(record.date).getMonth();
+                if (selectedMonth === 'nov') return month === 10;
+                if (selectedMonth === 'oct') return month === 9;
+                if (selectedMonth === 'sep') return month === 8;
+                return true;
+              })
+              .map((record: any) => (
+              <div
+                key={record.id}
+                className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer"
+                onClick={() => {
+                  setSelectedRecord(record);
+                  setShowDetailsModal(true);
+                }}
+              >
+                <div className="w-12 text-center">
+                  <p className="text-lg font-bold text-slate-800">{new Date(record.date).getDate()}</p>
+                  <p className="text-xs text-slate-500">
+                    {new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' })}
+                  </p>
+                </div>
+                <div className="w-px h-10 bg-slate-200"></div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-mono font-medium text-slate-600">
+                      {record.course}
+                    </span>
+                    <h4 className="font-medium text-slate-800">{record.title}</h4>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {record.time}
+                    </span>
+                    {record.excuse && (
+                      <span className="flex items-center gap-1 text-yellow-600">
+                        <Info className="w-3 h-3" />
+                        {record.excuse}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(record.status)}
+                  <Badge variant={
+                    record.status === 'present' ? 'success' :
+                    record.status === 'absent' ? 'danger' : 'warning'
+                  }>
+                    {getStatusLabel(record.status)}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Details Modal */}
+      <Modal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        title={lang === 'ar' ? 'تفاصيل الحضور' : 'Attendance Details'}
+        size="md"
+      >
+        {selectedRecord && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
+              {getStatusIcon(selectedRecord.status)}
+              <div>
+                <h3 className="font-bold text-slate-800">{selectedRecord.title}</h3>
+                <p className="text-sm text-slate-500">{selectedRecord.course}</p>
+              </div>
+              <Badge variant={
+                selectedRecord.status === 'present' ? 'success' :
+                selectedRecord.status === 'absent' ? 'danger' : 'warning'
+              } className="ml-auto">
+                {getStatusLabel(selectedRecord.status)}
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 border border-slate-200 rounded-lg">
+                <p className="text-xs text-slate-500 mb-1">{lang === 'ar' ? 'التاريخ' : 'Date'}</p>
+                <p className="font-medium text-slate-800">{selectedRecord.date}</p>
+              </div>
+              <div className="p-3 border border-slate-200 rounded-lg">
+                <p className="text-xs text-slate-500 mb-1">{lang === 'ar' ? 'الوقت' : 'Time'}</p>
+                <p className="font-medium text-slate-800">{selectedRecord.time}</p>
+              </div>
+            </div>
+
+            {selectedRecord.excuse && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-600 mb-1">{lang === 'ar' ? 'سبب العذر' : 'Excuse Reason'}</p>
+                <p className="font-medium text-yellow-800">{selectedRecord.excuse}</p>
+              </div>
+            )}
+
+            {selectedRecord.status === 'absent' && !selectedRecord.excuse && (
+              <Button variant="primary" fullWidth icon={FileText}>
+                {lang === 'ar' ? 'تقديم طلب عذر' : 'Submit Excuse Request'}
+              </Button>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+export default AttendancePage;

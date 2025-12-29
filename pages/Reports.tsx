@@ -1,0 +1,989 @@
+import React, { useState } from 'react';
+import {
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  TrendingDown,
+  Download,
+  Filter,
+  Calendar,
+  RefreshCw,
+  FileText,
+  Users,
+  GraduationCap,
+  CreditCard,
+  BookOpen,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  ChevronDown,
+  Printer,
+  Mail,
+  Share2,
+  MoreHorizontal,
+  ArrowUpRight,
+  ArrowDownRight,
+  Eye,
+  FileSpreadsheet,
+  FileType2,
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from 'recharts';
+import { Card, CardHeader, CardBody } from '../components/ui/Card';
+import { TRANSLATIONS } from '../constants';
+
+interface ReportsProps {
+  lang: 'en' | 'ar';
+}
+
+const t = {
+  ...TRANSLATIONS,
+  reports: { en: 'Reports & Analytics', ar: 'التقارير والتحليلات' },
+  overview: { en: 'Overview', ar: 'نظرة عامة' },
+  enrollment: { en: 'Enrollment', ar: 'التسجيل' },
+  academic: { en: 'Academic', ar: 'الأكاديمية' },
+  financial: { en: 'Financial', ar: 'المالية' },
+  custom: { en: 'Custom Reports', ar: 'تقارير مخصصة' },
+  totalStudents: { en: 'Total Students', ar: 'إجمالي الطلاب' },
+  activeEnrollments: { en: 'Active Enrollments', ar: 'التسجيلات النشطة' },
+  graduationRate: { en: 'Graduation Rate', ar: 'معدل التخرج' },
+  retentionRate: { en: 'Retention Rate', ar: 'معدل الاستمرار' },
+  averageGPA: { en: 'Average GPA', ar: 'المعدل التراكمي' },
+  totalRevenue: { en: 'Total Revenue', ar: 'إجمالي الإيرادات' },
+  pendingPayments: { en: 'Pending Payments', ar: 'المدفوعات المعلقة' },
+  scholarships: { en: 'Scholarships', ar: 'المنح الدراسية' },
+  enrollmentTrend: { en: 'Enrollment Trend', ar: 'اتجاه التسجيل' },
+  gpaDistribution: { en: 'GPA Distribution', ar: 'توزيع المعدل التراكمي' },
+  departmentEnrollment: { en: 'Enrollment by Department', ar: 'التسجيل حسب القسم' },
+  revenueBreakdown: { en: 'Revenue Breakdown', ar: 'تفصيل الإيرادات' },
+  monthlyRevenue: { en: 'Monthly Revenue', ar: 'الإيرادات الشهرية' },
+  studentPerformance: { en: 'Student Performance', ar: 'أداء الطلاب' },
+  courseCompletion: { en: 'Course Completion', ar: 'إكمال المقررات' },
+  attendanceRate: { en: 'Attendance Rate', ar: 'معدل الحضور' },
+  export: { en: 'Export', ar: 'تصدير' },
+  print: { en: 'Print', ar: 'طباعة' },
+  share: { en: 'Share', ar: 'مشاركة' },
+  refresh: { en: 'Refresh', ar: 'تحديث' },
+  lastUpdated: { en: 'Last updated', ar: 'آخر تحديث' },
+  selectPeriod: { en: 'Select Period', ar: 'اختر الفترة' },
+  thisMonth: { en: 'This Month', ar: 'هذا الشهر' },
+  lastMonth: { en: 'Last Month', ar: 'الشهر الماضي' },
+  thisYear: { en: 'This Year', ar: 'هذا العام' },
+  lastYear: { en: 'Last Year', ar: 'العام الماضي' },
+  customRange: { en: 'Custom Range', ar: 'نطاق مخصص' },
+  generateReport: { en: 'Generate Report', ar: 'إنشاء تقرير' },
+  reportType: { en: 'Report Type', ar: 'نوع التقرير' },
+  selectType: { en: 'Select Type', ar: 'اختر النوع' },
+  studentReport: { en: 'Student Report', ar: 'تقرير الطلاب' },
+  financialReport: { en: 'Financial Report', ar: 'تقرير مالي' },
+  courseReport: { en: 'Course Report', ar: 'تقرير المقررات' },
+  attendanceReport: { en: 'Attendance Report', ar: 'تقرير الحضور' },
+  performanceMetrics: { en: 'Performance Metrics', ar: 'مقاييس الأداء' },
+  vsLastPeriod: { en: 'vs last period', ar: 'مقارنة بالفترة السابقة' },
+  topPerformers: { en: 'Top Performers', ar: 'الأفضل أداءً' },
+  needsAttention: { en: 'Needs Attention', ar: 'يحتاج اهتماماً' },
+};
+
+// Mock data
+const enrollmentTrendData = [
+  { month: 'Jan', students: 1200, newEnrollments: 150 },
+  { month: 'Feb', students: 1280, newEnrollments: 120 },
+  { month: 'Mar', students: 1350, newEnrollments: 180 },
+  { month: 'Apr', students: 1420, newEnrollments: 140 },
+  { month: 'May', students: 1380, newEnrollments: 100 },
+  { month: 'Jun', students: 1450, newEnrollments: 160 },
+  { month: 'Jul', students: 1520, newEnrollments: 200 },
+  { month: 'Aug', students: 1680, newEnrollments: 280 },
+  { month: 'Sep', students: 1850, newEnrollments: 350 },
+  { month: 'Oct', students: 1920, newEnrollments: 180 },
+  { month: 'Nov', students: 1950, newEnrollments: 120 },
+  { month: 'Dec', students: 2000, newEnrollments: 100 },
+];
+
+const departmentData = [
+  { name: 'Computer Science', students: 450, color: '#3B82F6' },
+  { name: 'Engineering', students: 380, color: '#10B981' },
+  { name: 'Business', students: 320, color: '#F59E0B' },
+  { name: 'Medicine', students: 280, color: '#EF4444' },
+  { name: 'Arts', students: 220, color: '#8B5CF6' },
+  { name: 'Science', students: 350, color: '#06B6D4' },
+];
+
+const gpaDistributionData = [
+  { range: '3.5-4.0', count: 420, label: 'Excellent' },
+  { range: '3.0-3.49', count: 580, label: 'Very Good' },
+  { range: '2.5-2.99', count: 450, label: 'Good' },
+  { range: '2.0-2.49', count: 320, label: 'Satisfactory' },
+  { range: 'Below 2.0', count: 130, label: 'Needs Improvement' },
+];
+
+const revenueData = [
+  { month: 'Jan', tuition: 450000, fees: 50000, other: 20000 },
+  { month: 'Feb', tuition: 420000, fees: 45000, other: 18000 },
+  { month: 'Mar', tuition: 480000, fees: 55000, other: 22000 },
+  { month: 'Apr', tuition: 460000, fees: 52000, other: 21000 },
+  { month: 'May', tuition: 440000, fees: 48000, other: 19000 },
+  { month: 'Jun', tuition: 500000, fees: 60000, other: 25000 },
+];
+
+const performanceData = [
+  { subject: 'Assignments', A: 85, B: 75 },
+  { subject: 'Exams', A: 78, B: 70 },
+  { subject: 'Projects', A: 90, B: 82 },
+  { subject: 'Attendance', A: 92, B: 88 },
+  { subject: 'Participation', A: 88, B: 80 },
+];
+
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+
+const Reports: React.FC<ReportsProps> = ({ lang }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'enrollment' | 'academic' | 'financial' | 'custom'>('overview');
+  const [selectedPeriod, setSelectedPeriod] = useState('thisYear');
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const isRTL = lang === 'ar';
+
+  const tabs = [
+    { key: 'overview', label: t.overview[lang], icon: BarChart3 },
+    { key: 'enrollment', label: t.enrollment[lang], icon: Users },
+    { key: 'academic', label: t.academic[lang], icon: GraduationCap },
+    { key: 'financial', label: t.financial[lang], icon: CreditCard },
+    { key: 'custom', label: t.custom[lang], icon: FileText },
+  ];
+
+  const periods = [
+    { key: 'thisMonth', label: t.thisMonth[lang] },
+    { key: 'lastMonth', label: t.lastMonth[lang] },
+    { key: 'thisYear', label: t.thisYear[lang] },
+    { key: 'lastYear', label: t.lastYear[lang] },
+    { key: 'custom', label: t.customRange[lang] },
+  ];
+
+  const statCards = [
+    {
+      title: t.totalStudents[lang],
+      value: '2,000',
+      change: '+12.5%',
+      trend: 'up',
+      icon: Users,
+      color: 'blue',
+    },
+    {
+      title: t.activeEnrollments[lang],
+      value: '1,850',
+      change: '+8.2%',
+      trend: 'up',
+      icon: GraduationCap,
+      color: 'green',
+    },
+    {
+      title: t.graduationRate[lang],
+      value: '94.5%',
+      change: '+2.1%',
+      trend: 'up',
+      icon: CheckCircle,
+      color: 'purple',
+    },
+    {
+      title: t.averageGPA[lang],
+      value: '3.24',
+      change: '-0.05',
+      trend: 'down',
+      icon: TrendingUp,
+      color: 'orange',
+    },
+    {
+      title: t.totalRevenue[lang],
+      value: '$2.8M',
+      change: '+15.3%',
+      trend: 'up',
+      icon: CreditCard,
+      color: 'emerald',
+    },
+    {
+      title: t.attendanceRate[lang],
+      value: '89.2%',
+      change: '+1.8%',
+      trend: 'up',
+      icon: Clock,
+      color: 'cyan',
+    },
+  ];
+
+  const colorClasses: Record<string, string> = {
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-green-100 text-green-600',
+    purple: 'bg-purple-100 text-purple-600',
+    orange: 'bg-orange-100 text-orange-600',
+    emerald: 'bg-emerald-100 text-emerald-600',
+    cyan: 'bg-cyan-100 text-cyan-600',
+  };
+
+  const renderOverviewTab = () => (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {statCards.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index} className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`p-2 rounded-lg ${colorClasses[stat.color]}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <span
+                  className={`flex items-center text-xs font-medium ${
+                    stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {stat.trend === 'up' ? (
+                    <ArrowUpRight className="w-3 h-3" />
+                  ) : (
+                    <ArrowDownRight className="w-3 h-3" />
+                  )}
+                  {stat.change}
+                </span>
+              </div>
+              <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+              <p className="text-xs text-slate-500 mt-1">{stat.title}</p>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Charts Row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Enrollment Trend */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">{t.enrollmentTrend[lang]}</h3>
+              <button className="p-2 hover:bg-slate-100 rounded-lg">
+                <MoreHorizontal className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={enrollmentTrendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
+                <YAxis stroke="#94A3B8" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="students"
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
+                  fillOpacity={0.2}
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="newEnrollments"
+                  stroke="#10B981"
+                  fill="#10B981"
+                  fillOpacity={0.2}
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
+        {/* Department Enrollment */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">{t.departmentEnrollment[lang]}</h3>
+              <button className="p-2 hover:bg-slate-100 rounded-lg">
+                <MoreHorizontal className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={departmentData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="students"
+                >
+                  {departmentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                  }}
+                />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
+              {departmentData.map((dept, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
+                  <span className="text-xs text-slate-600">{dept.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* GPA Distribution */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">{t.gpaDistribution[lang]}</h3>
+              <button className="p-2 hover:bg-slate-100 rounded-lg">
+                <MoreHorizontal className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={gpaDistributionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="range" stroke="#94A3B8" fontSize={12} />
+                <YAxis stroke="#94A3B8" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="count" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
+        {/* Revenue Breakdown */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">{t.revenueBreakdown[lang]}</h3>
+              <button className="p-2 hover:bg-slate-100 rounded-lg">
+                <MoreHorizontal className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
+                <YAxis stroke="#94A3B8" fontSize={12} tickFormatter={(value) => `$${value / 1000}k`} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                  }}
+                  formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                />
+                <Legend />
+                <Bar dataKey="tuition" name="Tuition" fill="#3B82F6" stackId="a" />
+                <Bar dataKey="fees" name="Fees" fill="#10B981" stackId="a" />
+                <Bar dataKey="other" name="Other" fill="#F59E0B" stackId="a" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Performance Radar */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-800">{t.performanceMetrics[lang]}</h3>
+            <button className="p-2 hover:bg-slate-100 rounded-lg">
+              <MoreHorizontal className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="w-full lg:w-1/2">
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={performanceData}>
+                  <PolarGrid stroke="#E2E8F0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748B', fontSize: 12 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#94A3B8', fontSize: 10 }} />
+                  <Radar name="This Year" dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+                  <Radar name="Last Year" dataKey="B" stroke="#94A3B8" fill="#94A3B8" fillOpacity={0.2} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-full lg:w-1/2 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-green-50 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">{t.topPerformers[lang]}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-700">324</p>
+                  <p className="text-xs text-green-600">{lang === 'en' ? 'GPA above 3.5' : 'معدل أعلى من 3.5'}</p>
+                </div>
+                <div className="p-4 bg-amber-50 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-800">{t.needsAttention[lang]}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-amber-700">87</p>
+                  <p className="text-xs text-amber-600">{lang === 'en' ? 'GPA below 2.0' : 'معدل أقل من 2.0'}</p>
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600 mb-2">{t.courseCompletion[lang]}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-slate-200 rounded-full h-3">
+                    <div className="bg-blue-600 h-3 rounded-full" style={{ width: '87%' }} />
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">87%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  // Enrollment Tab - Detailed enrollment analytics
+  const renderEnrollmentTab = () => (
+    <div className="space-y-6">
+      {/* Enrollment Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: lang === 'en' ? 'New Enrollments' : 'التسجيلات الجديدة', value: '350', change: '+15%', color: 'blue' },
+          { label: lang === 'en' ? 'Withdrawals' : 'الانسحابات', value: '23', change: '-5%', color: 'red' },
+          { label: lang === 'en' ? 'Transfers In' : 'المنقولون إلينا', value: '45', change: '+8%', color: 'green' },
+          { label: lang === 'en' ? 'Transfers Out' : 'المنقولون منا', value: '12', change: '-2%', color: 'orange' },
+        ].map((stat, i) => (
+          <Card key={i} className="p-4">
+            <p className="text-sm text-slate-500">{stat.label}</p>
+            <p className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</p>
+            <p className={`text-sm ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>{stat.change} {t.vsLastPeriod[lang]}</p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Enrollment by Level */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <h3 className="font-bold text-slate-800">{lang === 'en' ? 'Enrollment by Academic Level' : 'التسجيل حسب المستوى الأكاديمي'}</h3>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={[
+                { level: lang === 'en' ? 'Freshman' : 'مستجد', count: 520 },
+                { level: lang === 'en' ? 'Sophomore' : 'سنة ثانية', count: 480 },
+                { level: lang === 'en' ? 'Junior' : 'سنة ثالثة', count: 420 },
+                { level: lang === 'en' ? 'Senior' : 'سنة رابعة', count: 380 },
+                { level: lang === 'en' ? 'Graduate' : 'دراسات عليا', count: 200 },
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="level" stroke="#94A3B8" fontSize={12} />
+                <YAxis stroke="#94A3B8" fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="font-bold text-slate-800">{lang === 'en' ? 'Gender Distribution' : 'توزيع الجنس'}</h3>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={[
+                    { name: lang === 'en' ? 'Male' : 'ذكور', value: 1150, color: '#3B82F6' },
+                    { name: lang === 'en' ? 'Female' : 'إناث', value: 850, color: '#EC4899' },
+                  ]}
+                  cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
+                >
+                  <Cell fill="#3B82F6" />
+                  <Cell fill="#EC4899" />
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Monthly Enrollment Trend */}
+      <Card>
+        <CardHeader>
+          <h3 className="font-bold text-slate-800">{t.enrollmentTrend[lang]}</h3>
+        </CardHeader>
+        <CardBody>
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={enrollmentTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
+              <YAxis stroke="#94A3B8" fontSize={12} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="students" name={lang === 'en' ? 'Total Students' : 'إجمالي الطلاب'} stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+              <Line type="monotone" dataKey="newEnrollments" name={lang === 'en' ? 'New Enrollments' : 'التسجيلات الجديدة'} stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  // Academic Tab - Academic performance analytics
+  const renderAcademicTab = () => (
+    <div className="space-y-6">
+      {/* Academic Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: t.averageGPA[lang], value: '3.24', icon: TrendingUp, color: 'blue' },
+          { label: lang === 'en' ? 'Honor Roll' : 'قائمة الشرف', value: '324', icon: GraduationCap, color: 'green' },
+          { label: lang === 'en' ? 'Academic Warning' : 'إنذار أكاديمي', value: '87', icon: AlertCircle, color: 'orange' },
+          { label: lang === 'en' ? 'Pass Rate' : 'نسبة النجاح', value: '94.2%', icon: CheckCircle, color: 'purple' },
+        ].map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={i} className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${colorClasses[stat.color]}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">{stat.label}</p>
+                  <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* GPA Distribution & Performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <h3 className="font-bold text-slate-800">{t.gpaDistribution[lang]}</h3>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={gpaDistributionData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis type="number" stroke="#94A3B8" fontSize={12} />
+                <YAxis dataKey="range" type="category" stroke="#94A3B8" fontSize={12} width={80} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="font-bold text-slate-800">{lang === 'en' ? 'Course Pass Rates' : 'نسب النجاح في المقررات'}</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-4">
+              {[
+                { course: lang === 'en' ? 'Mathematics' : 'الرياضيات', rate: 92 },
+                { course: lang === 'en' ? 'Physics' : 'الفيزياء', rate: 88 },
+                { course: lang === 'en' ? 'Computer Science' : 'علوم الحاسب', rate: 95 },
+                { course: lang === 'en' ? 'English' : 'اللغة الإنجليزية', rate: 91 },
+                { course: lang === 'en' ? 'Chemistry' : 'الكيمياء', rate: 85 },
+              ].map((item, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-700">{item.course}</span>
+                    <span className="font-bold text-slate-800">{item.rate}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 rounded-full">
+                    <div
+                      className={`h-2 rounded-full ${item.rate >= 90 ? 'bg-green-500' : item.rate >= 80 ? 'bg-blue-500' : 'bg-orange-500'}`}
+                      style={{ width: `${item.rate}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Performance Radar */}
+      <Card>
+        <CardHeader>
+          <h3 className="font-bold text-slate-800">{t.studentPerformance[lang]}</h3>
+        </CardHeader>
+        <CardBody>
+          <ResponsiveContainer width="100%" height={350}>
+            <RadarChart data={performanceData}>
+              <PolarGrid stroke="#E2E8F0" />
+              <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748B', fontSize: 12 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#94A3B8', fontSize: 10 }} />
+              <Radar name={lang === 'en' ? 'This Semester' : 'هذا الفصل'} dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+              <Radar name={lang === 'en' ? 'Last Semester' : 'الفصل السابق'} dataKey="B" stroke="#94A3B8" fill="#94A3B8" fillOpacity={0.2} />
+              <Legend />
+            </RadarChart>
+          </ResponsiveContainer>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  // Financial Tab - Financial analytics
+  const renderFinancialTab = () => (
+    <div className="space-y-6">
+      {/* Financial Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: t.totalRevenue[lang], value: 'SAR 2.8M', change: '+15.3%', color: 'green' },
+          { label: t.pendingPayments[lang], value: 'SAR 450K', change: '-8.2%', color: 'orange' },
+          { label: t.scholarships[lang], value: 'SAR 620K', change: '+12%', color: 'purple' },
+          { label: lang === 'en' ? 'Collection Rate' : 'نسبة التحصيل', value: '87.5%', change: '+3.1%', color: 'blue' },
+        ].map((stat, i) => (
+          <Card key={i} className="p-4">
+            <p className="text-sm text-slate-500">{stat.label}</p>
+            <p className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</p>
+            <p className={`text-sm ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>{stat.change} {t.vsLastPeriod[lang]}</p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Revenue Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <h3 className="font-bold text-slate-800">{t.monthlyRevenue[lang]}</h3>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
+                <YAxis stroke="#94A3B8" fontSize={12} tickFormatter={(v) => `${v/1000}K`} />
+                <Tooltip formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']} />
+                <Area type="monotone" dataKey="tuition" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name={lang === 'en' ? 'Tuition' : 'الرسوم الدراسية'} />
+                <Area type="monotone" dataKey="fees" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name={lang === 'en' ? 'Fees' : 'الرسوم'} />
+                <Area type="monotone" dataKey="other" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name={lang === 'en' ? 'Other' : 'أخرى'} />
+                <Legend />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="font-bold text-slate-800">{t.revenueBreakdown[lang]}</h3>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={[
+                    { name: lang === 'en' ? 'Tuition' : 'الرسوم الدراسية', value: 2200000, color: '#3B82F6' },
+                    { name: lang === 'en' ? 'Registration Fees' : 'رسوم التسجيل', value: 350000, color: '#10B981' },
+                    { name: lang === 'en' ? 'Lab Fees' : 'رسوم المعامل', value: 150000, color: '#F59E0B' },
+                    { name: lang === 'en' ? 'Other' : 'أخرى', value: 100000, color: '#8B5CF6' },
+                  ]}
+                  cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
+                >
+                  <Cell fill="#3B82F6" />
+                  <Cell fill="#10B981" />
+                  <Cell fill="#F59E0B" />
+                  <Cell fill="#8B5CF6" />
+                </Pie>
+                <Tooltip formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']} />
+                <Legend />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Payment Status */}
+      <Card>
+        <CardHeader>
+          <h3 className="font-bold text-slate-800">{lang === 'en' ? 'Payment Status Overview' : 'نظرة عامة على حالة الدفع'}</h3>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4 bg-green-50 rounded-xl text-center">
+              <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-green-700">1,520</p>
+              <p className="text-sm text-green-600">{lang === 'en' ? 'Fully Paid' : 'مدفوع بالكامل'}</p>
+            </div>
+            <div className="p-4 bg-yellow-50 rounded-xl text-center">
+              <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-yellow-700">280</p>
+              <p className="text-sm text-yellow-600">{lang === 'en' ? 'Partial Payment' : 'دفع جزئي'}</p>
+            </div>
+            <div className="p-4 bg-red-50 rounded-xl text-center">
+              <AlertCircle className="w-8 h-8 text-red-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-red-700">200</p>
+              <p className="text-sm text-red-600">{lang === 'en' ? 'Overdue' : 'متأخر'}</p>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  const renderCustomReportsTab = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <h3 className="text-lg font-bold text-slate-800">{t.generateReport[lang]}</h3>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{t.reportType[lang]}</label>
+              <select className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">{t.selectType[lang]}</option>
+                <option value="student">{t.studentReport[lang]}</option>
+                <option value="financial">{t.financialReport[lang]}</option>
+                <option value="course">{t.courseReport[lang]}</option>
+                <option value="attendance">{t.attendanceReport[lang]}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{lang === 'en' ? 'Department' : 'القسم'}</label>
+              <select className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">{lang === 'en' ? 'All Departments' : 'كل الأقسام'}</option>
+                <option value="cs">Computer Science</option>
+                <option value="eng">Engineering</option>
+                <option value="bus">Business</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{lang === 'en' ? 'From Date' : 'من تاريخ'}</label>
+              <input type="date" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{lang === 'en' ? 'To Date' : 'إلى تاريخ'}</label>
+              <input type="date" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              {t.generateReport[lang]}
+            </button>
+            <button className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              {lang === 'en' ? 'Preview' : 'معاينة'}
+            </button>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Saved Reports */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-800">{lang === 'en' ? 'Saved Reports' : 'التقارير المحفوظة'}</h3>
+            <button className="text-sm text-blue-600 hover:underline">
+              {lang === 'en' ? 'View All' : 'عرض الكل'}
+            </button>
+          </div>
+        </CardHeader>
+        <CardBody className="p-0">
+          <div className="divide-y divide-slate-100">
+            {[
+              { name: 'Monthly Enrollment Report', date: '2024-01-15', type: 'enrollment' },
+              { name: 'Q4 Financial Summary', date: '2024-01-10', type: 'financial' },
+              { name: 'Student Performance Analysis', date: '2024-01-08', type: 'academic' },
+              { name: 'Attendance Trend Report', date: '2024-01-05', type: 'attendance' },
+            ].map((report, index) => (
+              <div key={index} className="flex items-center justify-between p-4 hover:bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 rounded-lg">
+                    <FileText className="w-5 h-5 text-slate-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-800">{report.name}</p>
+                    <p className="text-sm text-slate-500">{report.date}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="p-2 hover:bg-slate-100 rounded-lg" title="View">
+                    <Eye className="w-4 h-4 text-slate-500" />
+                  </button>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg" title="Download PDF">
+                    <FileType2 className="w-4 h-4 text-red-500" />
+                  </button>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg" title="Download Excel">
+                    <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">{t.reports[lang]}</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {t.lastUpdated[lang]}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {/* Period Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+            >
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <span className="text-sm">{periods.find((p) => p.key === selectedPeriod)?.label}</span>
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            </button>
+            {showPeriodDropdown && (
+              <div className="absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+                {periods.map((period) => (
+                  <button
+                    key={period.key}
+                    onClick={() => {
+                      setSelectedPeriod(period.key);
+                      setShowPeriodDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-sm text-left hover:bg-slate-50 ${
+                      selectedPeriod === period.key ? 'bg-blue-50 text-blue-600' : 'text-slate-700'
+                    }`}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Refresh */}
+          <button className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+            <RefreshCw className="w-4 h-4 text-slate-500" />
+          </button>
+
+          {/* Export */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Download className="w-4 h-4" />
+              <span className="text-sm">{t.export[lang]}</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showExportMenu && (
+              <div className={`absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 ${isRTL ? 'left-0' : 'right-0'}`}>
+                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                  <FileType2 className="w-4 h-4 text-red-500" />
+                  Export as PDF
+                </button>
+                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  Export as Excel
+                </button>
+                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-slate-600" />
+                  {t.print[lang]}
+                </button>
+                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-blue-600" />
+                  Send via Email
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-slate-200">
+        <nav className="flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Content */}
+      {activeTab === 'overview' && renderOverviewTab()}
+      {activeTab === 'enrollment' && renderEnrollmentTab()}
+      {activeTab === 'academic' && renderAcademicTab()}
+      {activeTab === 'financial' && renderFinancialTab()}
+      {activeTab === 'custom' && renderCustomReportsTab()}
+    </div>
+  );
+};
+
+export default Reports;
