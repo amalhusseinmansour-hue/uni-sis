@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Course, EnrolledStudent } from '../types';
-import { MOCK_ENROLLED_STUDENTS, TRANSLATIONS } from '../constants';
+import { TRANSLATIONS } from '../constants';
 import {
   Users,
   Calendar,
@@ -52,7 +52,6 @@ import {
 
 interface LecturerProps {
   lang: 'en' | 'ar';
-  courses: Course[];
 }
 
 const t = {
@@ -124,19 +123,39 @@ const t = {
 
 const COLORS = ['#22c55e', '#3b82f6', '#f97316', '#ef4444'];
 
-const Lecturer: React.FC<LecturerProps> = ({ lang, courses }) => {
+const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
+  const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [students, setStudents] = useState<EnrolledStudent[]>(MOCK_ENROLLED_STUDENTS);
+  const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'attendance' | 'assignments'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSaveNotification, setShowSaveNotification] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'grade' | 'attendance'>('name');
   const [filterRisk, setFilterRisk] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
 
   const isRTL = lang === 'ar';
 
-  // Filter courses for this lecturer
-  const myCourses = courses.filter((c) => c.instructor === 'Dr. Sarah Smith');
+  // Fetch lecturer courses from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const { coursesAPI } = await import('../api/courses');
+        const response = await coursesAPI.getAll();
+        const allCourses = response.data || response || [];
+        setCourses(allCourses);
+      } catch (error) {
+        console.error('Error fetching lecturer data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Filter courses for this lecturer (could be filtered by API later)
+  const myCourses = courses;
 
   // Calculate statistics
   const calculateStats = () => {

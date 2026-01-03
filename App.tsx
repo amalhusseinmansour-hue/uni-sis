@@ -37,31 +37,19 @@ import {
 } from './pages/admin';
 import AiAssistant from './components/AiAssistant';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
-import { MOCK_STUDENT, MOCK_COURSES, MOCK_FINANCIALS, MOCK_ANNOUNCEMENTS, MOCK_APPLICATIONS } from './constants';
+// Mock data removed - using real API data only
 import { UserRole } from './types';
 import { authAPI } from './api';
 import { ConfigProvider } from './context/ConfigContext';
 
-// Helper to get complete student data for profile
-const getStudentProfileData = (user: any) => {
-  if (user?.role === 'student') {
-    // Merge mock student data with logged in user
-    return {
-      ...MOCK_STUDENT,
-      ...user,
-      name: `${user.firstName} ${user.lastName}`,
-      nameEn: `${user.firstName} ${user.lastName}`,
-      nameAr: user.firstNameAr ? `${user.firstNameAr} ${user.lastNameAr}` : `${user.firstName} ${user.lastName}`,
-    };
-  }
-  // For non-students, create a basic profile
+// Helper to get user profile data from API response
+const getUserProfileData = (user: any) => {
   return {
-    ...MOCK_STUDENT,
     ...user,
-    name: `${user?.firstName || 'User'} ${user?.lastName || ''}`,
-    nameEn: `${user?.firstName || 'User'} ${user?.lastName || ''}`,
-    nameAr: `${user?.firstName || 'User'} ${user?.lastName || ''}`,
-    studentId: user?.id || 'N/A',
+    name: user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User',
+    nameEn: user?.name_en || `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+    nameAr: user?.name_ar || `${user?.firstNameAr || ''} ${user?.lastNameAr || ''}`.trim(),
+    studentId: user?.student_id || user?.id || 'N/A',
     role: user?.role,
   };
 };
@@ -148,11 +136,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Data context for AI
+  // Data context for AI - will be populated from API
   const contextData = {
     student: currentUser,
-    courses: MOCK_COURSES,
-    finance: MOCK_FINANCIALS
+    courses: [],
+    finance: []
   };
 
   if (showSplash) {
@@ -192,9 +180,6 @@ const App: React.FC = () => {
                 lang={lang}
                 role={currentUser.role}
                 student={currentUser}
-                courses={MOCK_COURSES}
-                announcements={MOCK_ANNOUNCEMENTS}
-                applications={MOCK_APPLICATIONS}
               />
             }
           />
@@ -202,7 +187,7 @@ const App: React.FC = () => {
             path="academic"
             element={
               currentUser.role === UserRole.STUDENT
-              ? <Academic lang={lang} courses={MOCK_COURSES} />
+              ? <Academic lang={lang} />
               : <Navigate to="/" />
             }
           />
@@ -213,7 +198,6 @@ const App: React.FC = () => {
                 lang={lang}
                 role={currentUser.role}
                 student={currentUser.role === UserRole.STUDENT ? currentUser : undefined}
-                financials={MOCK_FINANCIALS}
               />
             }
           />
@@ -221,7 +205,7 @@ const App: React.FC = () => {
              path="admissions"
              element={
                (currentUser.role === UserRole.ADMIN)
-               ? <Admissions lang={lang} applications={MOCK_APPLICATIONS} />
+               ? <Admissions lang={lang} />
                : <Navigate to="/" />
              }
           />
@@ -229,7 +213,7 @@ const App: React.FC = () => {
              path="lecturer"
              element={
                (currentUser.role === UserRole.LECTURER)
-               ? <Lecturer lang={lang} courses={MOCK_COURSES} />
+               ? <Lecturer lang={lang} />
                : <Navigate to="/" />
              }
           />
@@ -248,7 +232,7 @@ const App: React.FC = () => {
              element={
                <Profile
                   lang={lang}
-                  student={getStudentProfileData(currentUser)}
+                  student={getUserProfileData(currentUser)}
                />
              }
           />

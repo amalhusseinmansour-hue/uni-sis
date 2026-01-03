@@ -12,7 +12,7 @@ import {
   Users, Star, Info, CheckSquare, Square, Layers, BarChart2
 } from 'lucide-react';
 import { Course, ServiceRequest } from '../types';
-import { TRANSLATIONS, MOCK_GRADES, MOCK_SERVICE_REQUESTS, MOCK_COURSES } from '../constants';
+import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
 import { coursesAPI } from '../api/courses';
 import { enrollmentsAPI } from '../api/enrollments';
@@ -25,10 +25,9 @@ import { generateTranscriptPDF, GradeRecord, StudentInfo } from '../utils/export
 
 interface AcademicProps {
   lang: 'en' | 'ar';
-  courses: Course[];
 }
 
-const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
+const Academic: React.FC<AcademicProps> = ({ lang }) => {
   const t = TRANSLATIONS;
   const location = useLocation();
 
@@ -36,9 +35,9 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
   const [activeTab, setActiveTab] = useState<'record' | 'register' | 'grades' | 'plan' | 'requests'>(initialTab as any);
 
   const [myCourses, setMyCourses] = useState<any[]>([]);
-  const [availableCourses, setAvailableCourses] = useState<any[]>(MOCK_COURSES);
-  const [grades, setGrades] = useState<any[]>(MOCK_GRADES);
-  const [requests, setRequests] = useState<ServiceRequest[]>(MOCK_SERVICE_REQUESTS);
+  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentId, setStudentId] = useState<string>('');
   const [showCourseModal, setShowCourseModal] = useState(false);
@@ -46,12 +45,7 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showRequestDetailsModal, setShowRequestDetailsModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [showDropConfirm, setShowDropConfirm] = useState(false);
-  const [courseToDropId, setCourseToDropId] = useState<string>('');
   const [cart, setCart] = useState<any[]>([]);
-  const [showWithdrawRequestModal, setShowWithdrawRequestModal] = useState(false);
-  const [courseToWithdraw, setCourseToWithdraw] = useState<any>(null);
-  const [withdrawReason, setWithdrawReason] = useState('');
   const [semesterFilter, setSemesterFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -71,34 +65,27 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
         setLoading(true);
         try {
           const profile = await studentsAPI.getMyProfile();
-          setStudentId(profile.id);
-          setStudent({ ...profile, postponementCount: profile.postponementCount || 1 }); // From database
-          const enrollmentsData = await studentsAPI.getEnrollments(profile.id);
-          setMyCourses(enrollmentsData);
-          const gradesData = await studentsAPI.getGrades(profile.id);
-          setGrades(gradesData.length > 0 ? gradesData : MOCK_GRADES);
+          setStudentId(profile.student?.id || profile.id);
+          setStudent({ ...profile.student || profile, postponementCount: profile.postponementCount || 0 });
+
+          const [enrollmentsData, gradesData] = await Promise.all([
+            studentsAPI.getEnrollments(profile.student?.id || profile.id).catch(() => []),
+            studentsAPI.getGrades(profile.student?.id || profile.id).catch(() => []),
+          ]);
+
+          setMyCourses(enrollmentsData.data || enrollmentsData || []);
+          setGrades(gradesData.data || gradesData || []);
+
           const currentYear = new Date().getFullYear();
           const currentMonth = new Date().getMonth();
           const currentSemester = currentMonth >= 8 ? 'FALL' : currentMonth >= 1 && currentMonth <= 5 ? 'SPRING' : 'SUMMER';
-          const coursesData = await coursesAPI.getAvailableSections(currentSemester, currentYear, profile.id);
-          setAvailableCourses(coursesData.length > 0 ? coursesData : MOCK_COURSES);
+          const coursesData = await coursesAPI.getAvailableSections(currentSemester, currentYear, profile.student?.id || profile.id).catch(() => []);
+          setAvailableCourses(coursesData.data || coursesData || []);
         } catch (apiError: any) {
-          setAvailableCourses(MOCK_COURSES);
-          setGrades(MOCK_GRADES);
-          setMyCourses(MOCK_COURSES.slice(0, 4));
-          // Mock student data with postponement and withdrawal counts
-          setStudent({
-            id: 'mock-student',
-            name: 'Ahmed Ali',
-            nameAr: 'أحمد علي',
-            studentId: '20231045',
-            postponementCount: 1, // From database
-            withdrawalCount: 0, // From database
-          });
+          console.error('Error fetching academic data:', apiError);
         }
       } catch (err: any) {
-        setAvailableCourses(MOCK_COURSES);
-        setGrades(MOCK_GRADES);
+        console.error('Academic fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -162,19 +149,6 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
     const enrollmentsData = await studentsAPI.getEnrollments(studentId);
     setMyCourses(enrollmentsData);
     setCart([]);
-  };
-
-  const handleDrop = async () => {
-    if (!courseToDropId) return;
-    try {
-      await enrollmentsAPI.drop(courseToDropId);
-      const enrollmentsData = await studentsAPI.getEnrollments(studentId);
-      setMyCourses(enrollmentsData);
-    } catch (err: any) {
-      console.error('Error dropping course:', err);
-    }
-    setShowDropConfirm(false);
-    setCourseToDropId('');
   };
 
   // GPA calculations
@@ -908,18 +882,7 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
                       </div>
                       <div className="flex gap-2">
                         {isEnrolled ? (
-                          <Button
-                            variant="outline"
-                            icon={FileText}
-                            onClick={() => {
-                              setCourseToWithdraw(course);
-                              setWithdrawReason('');
-                              setShowWithdrawRequestModal(true);
-                            }}
-                            className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                          >
-                            {lang === 'ar' ? 'طلب سحب' : 'Request Withdrawal'}
-                          </Button>
+                          <Badge variant="success">{lang === 'ar' ? 'مسجل' : 'Enrolled'}</Badge>
                         ) : inCart ? (
                           <Button variant="outline" icon={X} onClick={() => removeFromCart(course.id)}>
                             {lang === 'ar' ? 'إزالة' : 'Remove'}
@@ -1063,7 +1026,6 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
               { value: 'excuse', label: lang === 'ar' ? 'عذر غياب' : 'Absence Excuse' },
               { value: 'postponement', label: lang === 'ar' ? 'تأجيل دراسي' : 'Study Postponement' },
               { value: 'freeze', label: lang === 'ar' ? 'تجميد فصل' : 'Semester Freeze' },
-              { value: 'full_withdrawal', label: lang === 'ar' ? 'انسحاب من فصل كامل' : 'Full Semester Withdrawal' },
               { value: 're_enrollment', label: lang === 'ar' ? 'إعادة القيد' : 'Re-enrollment' },
               { value: 'other', label: lang === 'ar' ? 'أخرى' : 'Other' },
             ]}
@@ -1256,79 +1218,6 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
             </>
           )}
 
-          {/* Full Semester Withdrawal Request */}
-          {requestType === 'full_withdrawal' && (
-            <>
-              {/* Previous Withdrawals - Read Only from Database */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600">
-                      {lang === 'ar' ? 'عدد مرات الانسحاب السابقة' : 'Previous Withdrawals'}
-                    </label>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {lang === 'ar' ? 'الحد الأقصى المسموح: 2 مرات' : 'Maximum allowed: 2 times'}
-                    </p>
-                  </div>
-                  <div className={`text-3xl font-bold ${(student?.withdrawalCount || 0) >= 2 ? 'text-red-600' : (student?.withdrawalCount || 0) >= 1 ? 'text-amber-600' : 'text-green-600'}`}>
-                    {student?.withdrawalCount || 0}
-                  </div>
-                </div>
-                {(student?.withdrawalCount || 0) >= 2 && (
-                  <div className="mt-3 p-2 bg-red-50 rounded-lg border border-red-200">
-                    <p className="text-sm text-red-700">
-                      {lang === 'ar' ? '⚠️ لقد استنفدت الحد الأقصى لمرات الانسحاب من الفصل' : '⚠️ You have reached the maximum withdrawal limit'}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Warning about consequences */}
-              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-amber-800">
-                    {lang === 'ar' ? 'تنبيه مهم' : 'Important Warning'}
-                  </h4>
-                  <ul className="text-sm text-amber-700 mt-1 list-disc list-inside space-y-1">
-                    <li>{lang === 'ar' ? 'الانسحاب من الفصل يعني إلغاء جميع المواد المسجلة' : 'Withdrawal cancels all registered courses'}</li>
-                    <li>{lang === 'ar' ? 'لن يتم استرداد الرسوم الدراسية' : 'Tuition fees are non-refundable'}</li>
-                    <li>{lang === 'ar' ? 'سيتم احتساب الفصل من فصول التأجيل' : 'This semester counts towards postponement limit'}</li>
-                  </ul>
-                </div>
-              </div>
-
-              <Select
-                label={lang === 'ar' ? 'سبب الانسحاب' : 'Reason for Withdrawal'}
-                options={[
-                  { value: '', label: lang === 'ar' ? 'اختر السبب' : 'Select reason' },
-                  { value: 'health', label: lang === 'ar' ? 'أسباب صحية' : 'Health Reasons' },
-                  { value: 'financial', label: lang === 'ar' ? 'أسباب مالية' : 'Financial Reasons' },
-                  { value: 'personal', label: lang === 'ar' ? 'ظروف شخصية' : 'Personal Circumstances' },
-                  { value: 'work', label: lang === 'ar' ? 'ظروف العمل' : 'Work Circumstances' },
-                  { value: 'family', label: lang === 'ar' ? 'ظروف عائلية' : 'Family Circumstances' },
-                  { value: 'academic', label: lang === 'ar' ? 'صعوبات أكاديمية' : 'Academic Difficulties' },
-                  { value: 'other', label: lang === 'ar' ? 'أخرى' : 'Other' },
-                ]}
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-              />
-
-              {/* Confirmation Checkbox */}
-              <label className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-200 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 mt-0.5 text-red-600 rounded focus:ring-red-500"
-                />
-                <span className="text-sm text-red-800">
-                  {lang === 'ar'
-                    ? 'أقر بأنني أفهم أن الانسحاب من الفصل نهائي ولا يمكن التراجع عنه، وأن الرسوم غير قابلة للاسترداد.'
-                    : 'I acknowledge that semester withdrawal is final and irreversible, and tuition fees are non-refundable.'}
-                </span>
-              </label>
-            </>
-          )}
-
           {/* Re-enrollment - Simple message only */}
           {requestType === 're_enrollment' && (
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-center">
@@ -1376,7 +1265,6 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
                   excuse: { en: 'Absence Excuse', ar: 'عذر غياب' },
                   postponement: { en: 'Study Postponement', ar: 'تأجيل دراسي' },
                   freeze: { en: 'Semester Freeze', ar: 'تجميد فصل' },
-                  full_withdrawal: { en: 'Full Semester Withdrawal', ar: 'انسحاب من فصل كامل' },
                   re_enrollment: { en: 'Re-enrollment', ar: 'إعادة القيد' },
                   other: { en: 'Other', ar: 'أخرى' },
                 };
@@ -1406,113 +1294,6 @@ const Academic: React.FC<AcademicProps> = ({ lang, courses }) => {
             </Button>
           </div>
         </div>
-      </Modal>
-
-      {/* Course Withdrawal Request Modal */}
-      <Modal
-        isOpen={showWithdrawRequestModal}
-        onClose={() => setShowWithdrawRequestModal(false)}
-        title={lang === 'ar' ? 'طلب سحب مادة' : 'Course Withdrawal Request'}
-        size="md"
-      >
-        {courseToWithdraw && (
-          <div className="space-y-4">
-            {/* Course Info */}
-            <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center text-white">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800">
-                    {lang === 'en' ? courseToWithdraw.name_en : courseToWithdraw.name_ar}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="primary">{courseToWithdraw.code}</Badge>
-                    <span className="text-sm text-slate-500">{courseToWithdraw.credits} {t.credits[lang]}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Warning */}
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-amber-800">
-                  {lang === 'ar' ? 'ملاحظة مهمة' : 'Important Notice'}
-                </h4>
-                <p className="text-sm text-amber-700">
-                  {lang === 'ar'
-                    ? 'سيتم مراجعة طلبك من قبل مرشدك الأكاديمي. قد يستغرق الرد على الطلب 2-3 أيام عمل.'
-                    : 'Your request will be reviewed by your academic advisor. Response may take 2-3 business days.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Reason Selection */}
-            <Select
-              label={lang === 'ar' ? 'سبب السحب' : 'Reason for Withdrawal'}
-              options={[
-                { value: '', label: lang === 'ar' ? 'اختر السبب' : 'Select reason' },
-                { value: 'schedule_conflict', label: lang === 'ar' ? 'تعارض في الجدول' : 'Schedule Conflict' },
-                { value: 'workload', label: lang === 'ar' ? 'عبء دراسي زائد' : 'Excessive Workload' },
-                { value: 'personal', label: lang === 'ar' ? 'أسباب شخصية' : 'Personal Reasons' },
-                { value: 'health', label: lang === 'ar' ? 'أسباب صحية' : 'Health Reasons' },
-                { value: 'financial', label: lang === 'ar' ? 'أسباب مالية' : 'Financial Reasons' },
-                { value: 'other', label: lang === 'ar' ? 'أخرى' : 'Other' },
-              ]}
-              value={withdrawReason}
-              onChange={(e) => setWithdrawReason(e.target.value)}
-            />
-
-            {/* Additional Details */}
-            <Textarea
-              label={lang === 'ar' ? 'تفاصيل إضافية (اختياري)' : 'Additional Details (optional)'}
-              placeholder={lang === 'ar' ? 'اكتب أي تفاصيل إضافية هنا...' : 'Write any additional details here...'}
-              rows={3}
-            />
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => setShowWithdrawRequestModal(false)}
-              >
-                {t.cancel[lang]}
-              </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                icon={FileText}
-                disabled={!withdrawReason}
-                onClick={() => {
-                  // Create withdrawal request
-                  const withdrawRequest: ServiceRequest = {
-                    id: `sr${Date.now()}`,
-                    requestType: lang === 'ar'
-                      ? `طلب سحب مادة: ${courseToWithdraw.code}`
-                      : `Course Withdrawal: ${courseToWithdraw.code}`,
-                    date: new Date().toISOString().split('T')[0],
-                    status: 'PENDING',
-                    comments: lang === 'ar'
-                      ? `سبب السحب: ${withdrawReason === 'schedule_conflict' ? 'تعارض في الجدول' : withdrawReason === 'workload' ? 'عبء دراسي زائد' : withdrawReason === 'personal' ? 'أسباب شخصية' : withdrawReason === 'health' ? 'أسباب صحية' : withdrawReason === 'financial' ? 'أسباب مالية' : 'أخرى'}`
-                      : `Reason: ${withdrawReason === 'schedule_conflict' ? 'Schedule Conflict' : withdrawReason === 'workload' ? 'Excessive Workload' : withdrawReason === 'personal' ? 'Personal Reasons' : withdrawReason === 'health' ? 'Health Reasons' : withdrawReason === 'financial' ? 'Financial Reasons' : 'Other'}`
-                  };
-                  setRequests([withdrawRequest, ...requests]);
-                  setShowWithdrawRequestModal(false);
-                  setCourseToWithdraw(null);
-                  setWithdrawReason('');
-                  // Switch to requests tab to show the new request
-                  setActiveTab('requests');
-                }}
-              >
-                {lang === 'ar' ? 'تقديم الطلب' : 'Submit Request'}
-              </Button>
-            </div>
-          </div>
-        )}
       </Modal>
 
       {/* Request Details Modal */}

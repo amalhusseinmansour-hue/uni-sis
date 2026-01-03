@@ -12,7 +12,7 @@ import {
   Activity, Zap, BookMarked, UserCheck, CalendarDays
 } from 'lucide-react';
 import { Student, Course, Announcement, UserRole, AdmissionApplication } from '../types';
-import { TRANSLATIONS, MOCK_ANNOUNCEMENTS, MOCK_APPLICATIONS, MOCK_COURSES } from '../constants';
+import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
 import { financeAPI } from '../api/finance';
 import { dashboardAPI } from '../api/dashboard';
@@ -30,19 +30,13 @@ import useLMSData from '../hooks/useLMSData';
 interface DashboardProps {
   lang: 'en' | 'ar';
   role: UserRole;
-  student: Student;
-  courses: Course[];
-  announcements: Announcement[];
-  applications?: AdmissionApplication[];
+  student: any;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
   lang,
   role,
   student: currentUser,
-  courses,
-  announcements = MOCK_ANNOUNCEMENTS,
-  applications = MOCK_APPLICATIONS
 }) => {
   const t = TRANSLATIONS;
   const navigate = useNavigate();
@@ -50,12 +44,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const [student, setStudent] = useState<any>(currentUser);
   const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [financials, setFinancials] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleEvents, setScheduleEvents] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [announcementsList, setAnnouncementsList] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [gpaHistory, setGpaHistory] = useState<any[]>([]);
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
@@ -77,16 +73,17 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         // Fetch common data for all roles
         try {
-          const [announcementsRes, eventsRes] = await Promise.all([
+          const [announcementsRes, eventsRes, coursesRes] = await Promise.all([
             dashboardAPI.getAnnouncements(5).catch(() => []),
             dashboardAPI.getUpcomingEvents(5).catch(() => []),
+            import('../api/courses').then(m => m.coursesAPI.getAll({ per_page: 10 })).catch(() => []),
           ]);
 
           setAnnouncementsList(announcementsRes.data || announcementsRes || []);
           setUpcomingEvents(dashboardAPI.transformEvents(eventsRes.data || eventsRes || [], lang));
+          setCourses(coursesRes.data || coursesRes || []);
         } catch (e) {
-          // Use mock data as fallback
-          setAnnouncementsList(MOCK_ANNOUNCEMENTS);
+          console.warn('Error fetching common data:', e);
         }
 
         if (role === UserRole.STUDENT) {
@@ -137,8 +134,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           }
         } else if (role === UserRole.ADMIN || role === UserRole.FINANCE) {
           try {
-            const statsData = await dashboardAPI.getStats().catch(() => null);
+            const [statsData, appsData] = await Promise.all([
+              dashboardAPI.getStats().catch(() => null),
+              import('../api/admissions').then(m => m.admissionsAPI.getAll({ per_page: 10 })).catch(() => []),
+            ]);
             setDashboardStats(statsData);
+            setApplications(appsData.data || appsData || []);
           } catch (e) {
             console.error('Error fetching admin stats:', e);
           }
@@ -603,15 +604,15 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
         <CardBody noPadding>
           <div className="divide-y divide-slate-100">
-            {(courses || MOCK_COURSES).slice(0, 4).map((course) => (
+            {courses.length > 0 ? courses.slice(0, 4).map((course: any) => (
               <div key={course.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
-                    {course.code.slice(0, 2)}
+                    {(course.code || '').slice(0, 2)}
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-800">{lang === 'en' ? course.name_en : course.name_ar}</h4>
-                    <p className="text-sm text-slate-500">{course.code} • {course.instructor}</p>
+                    <p className="text-sm text-slate-500">{course.code} • {course.instructor || course.instructor_name}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -619,7 +620,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <p className="text-xs text-slate-400 mt-1">{course.schedule}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-slate-500">
+                {lang === 'ar' ? 'لا توجد مساقات مسجلة' : 'No courses enrolled'}
+              </div>
+            )}
           </div>
         </CardBody>
       </Card>
@@ -633,7 +638,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
         <CardBody noPadding>
           <div className="divide-y divide-slate-100">
-            {(announcementsList.length > 0 ? announcementsList : announcements).map((ann) => (
+            {announcementsList.length > 0 ? announcementsList.map((ann: any) => (
               <div key={ann.id} className="p-4 hover:bg-slate-50 transition-colors">
                 <div className="flex items-start gap-3">
                   <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
@@ -652,7 +657,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-slate-500">
+                {lang === 'ar' ? 'لا توجد إعلانات' : 'No announcements'}
+              </div>
+            )}
           </div>
         </CardBody>
       </Card>
@@ -769,7 +778,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <CardHeader title={t.announcements[lang]} icon={Bell} iconColor="text-red-600 bg-red-50" />
         <CardBody noPadding>
           <div className="divide-y divide-slate-100">
-            {announcements.map((ann) => (
+            {announcementsList.length > 0 ? announcementsList.map((ann: any) => (
               <div key={ann.id} className="p-4 hover:bg-slate-50">
                 <div className="flex items-start gap-3">
                   <div className={`w-2 h-2 mt-2 rounded-full ${
@@ -782,7 +791,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-slate-500">
+                {lang === 'ar' ? 'لا توجد إعلانات' : 'No announcements'}
+              </div>
+            )}
           </div>
         </CardBody>
       </Card>

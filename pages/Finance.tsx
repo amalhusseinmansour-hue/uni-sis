@@ -16,7 +16,7 @@ import {
   GraduationCap, Percent, FileCheck, Layers, Target
 } from 'lucide-react';
 import { FinancialRecord, Student, UserRole } from '../types';
-import { TRANSLATIONS, MOCK_FINANCIALS } from '../constants';
+import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
 import { financeAPI } from '../api/finance';
 import { paymentPlansAPI, PaymentPlan, Installment, Scholarship, StudentScholarship } from '../api/paymentPlans';
@@ -30,18 +30,17 @@ interface FinanceProps {
   lang: 'en' | 'ar';
   role: UserRole;
   student?: Student;
-  financials: FinancialRecord[];
 }
 
 type AdminTab = 'dashboard' | 'reports' | 'invoices' | 'debtors' | 'payments' | 'plans' | 'scholarships';
 type StudentTab = 'overview' | 'payments' | 'scholarships';
 
-const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent, financials: initialFinancials }) => {
+const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }) => {
   const t = TRANSLATIONS;
   const isStudent = role === UserRole.STUDENT;
 
   const [student, setStudent] = useState<any>(initialStudent);
-  const [financials, setFinancials] = useState<any[]>(initialFinancials || MOCK_FINANCIALS);
+  const [financials, setFinancials] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   UserCheck,
   UserPlus,
@@ -54,7 +54,6 @@ import {
 
 interface AdmissionsProps {
   lang: 'en' | 'ar';
-  applications: AdmissionApplication[];
 }
 
 const t = {
@@ -143,8 +142,26 @@ const t = {
 
 const COLORS = ['#3b82f6', '#22c55e', '#f97316', '#8b5cf6', '#ec4899'];
 
-const Admissions: React.FC<AdmissionsProps> = ({ lang, applications: initialApps }) => {
-  const [apps, setApps] = useState(initialApps);
+const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
+  const [apps, setApps] = useState<AdmissionApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch applications from API
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        setLoading(true);
+        const { admissionsAPI } = await import('../api/admissions');
+        const response = await admissionsAPI.getAll();
+        setApps(response.data || response || []);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApps();
+  }, []);
   const [view, setView] = useState<'dashboard' | 'list' | 'register'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
