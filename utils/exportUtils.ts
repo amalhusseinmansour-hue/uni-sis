@@ -5,8 +5,49 @@
 // ==========================================
 
 /**
- * University Information - Can be configured from backend
+ * Get branding settings from localStorage
  */
+const getBrandingSettings = () => {
+  try {
+    const stored = localStorage.getItem('university_branding_settings');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Error reading branding settings:', e);
+  }
+  return null;
+};
+
+/**
+ * University Information - Can be configured from backend/admin panel
+ */
+export const getUniversityInfo = () => {
+  const branding = getBrandingSettings();
+  return {
+    name_en: branding?.universityName || 'VERTIX UNIVERSITY',
+    name_ar: branding?.universityNameAr || 'جامعة فيرتكس',
+    logo: branding?.logo || branding?.reportHeaderLogo || '',
+    logoLight: branding?.logoLight || '',
+    slogan_en: branding?.universitySlogan || 'Excellence in Education',
+    slogan_ar: branding?.universitySloganAr || 'التميز في التعليم',
+    address_en: branding?.universityAddress || 'P.O. Box 12345, Riyadh, Saudi Arabia',
+    address_ar: branding?.universityAddressAr || 'ص.ب 12345، الرياض، المملكة العربية السعودية',
+    phone: branding?.universityPhone || '+966 11 123 4567',
+    email: branding?.universityEmail || 'info@vertix.edu.sa',
+    website: branding?.universityWebsite || 'www.vertix.edu.sa',
+    // Colors
+    primaryColor: branding?.reportPrimaryColor || branding?.primaryColor || '#1e40af',
+    secondaryColor: branding?.reportSecondaryColor || branding?.secondaryColor || '#3b82f6',
+    accentColor: branding?.accentColor || '#f59e0b',
+    // Report settings
+    footerText: branding?.reportFooterText || 'This is an official document issued by the university',
+    footerTextAr: branding?.reportFooterTextAr || 'هذه وثيقة رسمية صادرة من الجامعة',
+    showWatermark: branding?.showReportWatermark !== false,
+  };
+};
+
+// Keep for backward compatibility
 export const UNIVERSITY_INFO = {
   name_en: 'VERTIX UNIVERSITY',
   name_ar: 'جامعة فيرتكس',
@@ -29,20 +70,26 @@ export const generateUniversityHeader = (
   lang: 'en' | 'ar' = 'en'
 ): string => {
   const isRTL = lang === 'ar';
-  const currentDate = new Date().toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+  const info = getUniversityInfo();
+  const currentDate = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
 
+  // Generate logo HTML - either image or text fallback
+  const logoHTML = info.logo
+    ? `<img src="${info.logo}" alt="Logo" style="height: 60px; width: auto; object-fit: contain;" />`
+    : `<div class="university-logo">${info.name_en.substring(0, 2).toUpperCase()}</div>`;
+
   return `
-    <div class="official-header">
+    <div class="official-header" style="background: linear-gradient(135deg, ${info.primaryColor} 0%, ${info.secondaryColor} 50%, ${info.primaryColor} 100%);">
       <div class="header-content">
         <div class="university-info">
-          <div class="university-logo">${UNIVERSITY_INFO.logo}</div>
+          ${logoHTML}
           <div class="university-name">
-            <h1>${isRTL ? UNIVERSITY_INFO.name_ar : UNIVERSITY_INFO.name_en}</h1>
-            <p class="slogan">${isRTL ? UNIVERSITY_INFO.slogan_ar : UNIVERSITY_INFO.slogan_en}</p>
+            <h1>${isRTL ? info.name_ar : info.name_en}</h1>
+            <p class="slogan">${isRTL ? info.slogan_ar : info.slogan_en}</p>
           </div>
         </div>
         <div class="document-info">
@@ -51,7 +98,7 @@ export const generateUniversityHeader = (
           <p class="document-number">${isRTL ? 'رقم الوثيقة:' : 'Doc No:'} ${Date.now().toString(36).toUpperCase()}</p>
         </div>
       </div>
-      <div class="header-decoration"></div>
+      <div class="header-decoration" style="background: linear-gradient(90deg, ${info.accentColor} 0%, ${info.accentColor}80 50%, ${info.accentColor} 100%);"></div>
     </div>
   `;
 };
@@ -61,6 +108,7 @@ export const generateUniversityHeader = (
  */
 export const generateUniversityFooter = (lang: 'en' | 'ar' = 'en'): string => {
   const isRTL = lang === 'ar';
+  const info = getUniversityInfo();
 
   return `
     <div class="official-footer">
@@ -80,14 +128,12 @@ export const generateUniversityFooter = (lang: 'en' | 'ar' = 'en'): string => {
           <p class="qr-label">${isRTL ? 'رمز التحقق' : 'Verify'}</p>
         </div>
       </div>
-      <div class="footer-info">
-        <p>${isRTL ? UNIVERSITY_INFO.address_ar : UNIVERSITY_INFO.address_en}</p>
-        <p>${UNIVERSITY_INFO.phone} | ${UNIVERSITY_INFO.email} | ${UNIVERSITY_INFO.website}</p>
+      <div class="footer-info" style="border-top-color: ${info.primaryColor}; border-bottom-color: ${info.primaryColor};">
+        <p>${isRTL ? info.address_ar : info.address_en}</p>
+        <p>${info.phone} | ${info.email} | ${info.website}</p>
       </div>
       <div class="footer-note">
-        ${isRTL
-          ? 'هذه الوثيقة رسمية صادرة عن نظام معلومات الطلاب. للتحقق من صحتها، يرجى مسح رمز QR أو التواصل مع إدارة القبول والتسجيل.'
-          : 'This is an official document generated by the Student Information System. For verification, scan the QR code or contact the Admissions and Registration Office.'}
+        ${isRTL ? info.footerTextAr : info.footerText}
       </div>
     </div>
   `;
@@ -854,7 +900,7 @@ export const generateTranscriptPDF = (
   lang: 'en' | 'ar' = 'en'
 ): void => {
   const isRTL = lang === 'ar';
-  const currentDate = new Date().toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+  const currentDate = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'

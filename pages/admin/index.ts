@@ -6,3 +6,4 @@ export { default as ReportBuilder } from './ReportBuilder';
 export { default as SystemSettings } from './SystemSettings';
 export { default as MenuDashboardManager } from './MenuDashboardManager';
 export { default as UserManagement } from './UserManagement';
+export { default as BrandingSettings } from './BrandingSettings';

@@ -32,8 +32,10 @@ import {
   SystemSettings,
   MenuDashboardManager,
   UserManagement,
+  BrandingSettings,
 } from './pages/admin';
 import AiAssistant from './components/AiAssistant';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { MOCK_STUDENT, MOCK_COURSES, MOCK_FINANCIALS, MOCK_ANNOUNCEMENTS, MOCK_APPLICATIONS } from './constants';
 import { UserRole } from './types';
 import { authAPI } from './api';
@@ -394,11 +396,22 @@ const App: React.FC = () => {
                : <Navigate to="/" />
              }
           />
+          <Route
+             path="admin/branding"
+             element={
+               (currentUser.role === UserRole.ADMIN)
+               ? <BrandingSettings lang={lang} />
+               : <Navigate to="/" />
+             }
+          />
         </Route>
         </Routes>
 
         {/* AI Assistant is available globally */}
         <AiAssistant lang={lang} contextData={contextData} />
+
+        {/* PWA Install Prompt */}
+        <PWAInstallPrompt lang={lang} />
       </HashRouter>
     </ConfigProvider>
   );

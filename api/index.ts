@@ -18,6 +18,7 @@ export { certificatesAPI } from './certificates';
 export { academicStatusAPI } from './academicStatus';
 export { lmsAPI } from './lms';
 export { paymentPlansAPI } from './paymentPlans';
+export { brandingAPI } from './branding';
 export { default as apiClient } from './client';
 
 // Dynamic Configuration APIs

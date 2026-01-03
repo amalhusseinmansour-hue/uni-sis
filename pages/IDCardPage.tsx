@@ -6,6 +6,7 @@ import {
   Mail, Phone, MapPin, Hash, Award, BookOpen
 } from 'lucide-react';
 import { idCardAPI, DigitalIdCard, downloadBlobAsFile } from '../api/idCard';
+import { brandingAPI, BrandingSettings } from '../api/branding';
 
 interface IDCardPageProps {
   lang: 'en' | 'ar';
@@ -99,9 +100,19 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
   const [idCard, setIdCard] = useState<DigitalIdCard | null>(null);
   const [showBack, setShowBack] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [branding, setBranding] = useState<BrandingSettings | null>(null);
 
-  // Fetch ID card data
+  // Fetch branding settings and ID card data
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const brandingData = await brandingAPI.getSettings();
+        setBranding(brandingData);
+      } catch (err) {
+        console.warn('Using default branding');
+      }
+    };
+    loadData();
     fetchIdCard();
   }, []);
 
@@ -156,9 +167,9 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
     }
   };
 
-  // Format date
+  // Format date (Gregorian calendar)
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+    return new Date(date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -357,27 +368,51 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
             >
               {/* Front Side */}
               {!showBack && (
-                <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900 rounded-2xl shadow-2xl overflow-hidden print:break-inside-avoid"
-                     style={{ aspectRatio: '1.586' }}>
+                <div
+                  className="rounded-2xl shadow-2xl overflow-hidden print:break-inside-avoid"
+                  style={{
+                    aspectRatio: '1.586',
+                    background: branding?.idCardTemplate === 'minimal'
+                      ? '#f8fafc'
+                      : `linear-gradient(135deg, ${branding?.idCardPrimaryColor || '#1e3a5f'}, ${branding?.idCardSecondaryColor || '#2563eb'})`
+                  }}>
                   {/* Decorative Elements */}
                   <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl" />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/10 rounded-full blur-2xl" />
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400" />
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.accentColor || '#f59e0b'}20` }} />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.idCardSecondaryColor || '#2563eb'}20` }} />
+                    <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}80, ${branding?.accentColor || '#f59e0b'})` }} />
                   </div>
 
                   {/* Header */}
                   <div className="bg-black/30 p-4 flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-slate-900 font-bold text-lg">U</span>
-                      </div>
+                      {branding?.logoLight || branding?.logo ? (
+                        <img
+                          src={branding.logoLight || branding.logo}
+                          alt="Logo"
+                          className="h-10 w-auto object-contain"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
+                          <span className="text-slate-900 font-bold text-lg">U</span>
+                        </div>
+                      )}
                       <div>
-                        <h3 className="text-yellow-400 font-bold text-sm">{t.universityName['ar']}</h3>
-                        <p className="text-white/70 text-xs">{t.universityName['en']}</p>
+                        <h3 className="font-bold text-sm" style={{ color: branding?.accentColor || '#fbbf24' }}>
+                          {branding?.universityNameAr || t.universityName['ar']}
+                        </h3>
+                        <p className="text-xs" style={{ color: `${branding?.idCardTextColor || '#ffffff'}b3` }}>
+                          {branding?.universityName || t.universityName['en']}
+                        </p>
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 px-3 py-1 rounded-lg text-xs font-bold">
+                    <div
+                      className="px-3 py-1 rounded-lg text-xs font-bold"
+                      style={{
+                        background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}dd)`,
+                        color: branding?.idCardTemplate === 'minimal' ? '#ffffff' : '#1e293b'
+                      }}
+                    >
                       بطاقة طالب | Student ID
                     </div>
                   </div>
@@ -386,7 +421,10 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                   <div className="p-4 flex gap-4 relative z-10">
                     {/* Photo */}
                     <div className="flex-shrink-0">
-                      <div className="w-20 h-24 bg-white rounded-lg border-2 border-yellow-400/50 overflow-hidden shadow-lg">
+                      <div
+                        className="w-20 h-24 bg-white rounded-lg overflow-hidden shadow-lg"
+                        style={{ borderWidth: '2px', borderColor: `${branding?.accentColor || '#f59e0b'}80` }}
+                      >
                         {card.student.profile_picture_url ? (
                           <img
                             src={card.student.profile_picture_url}
@@ -402,27 +440,27 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                     </div>
 
                     {/* Info */}
-                    <div className="flex-1 text-white">
+                    <div className="flex-1" style={{ color: branding?.idCardTextColor || '#ffffff' }}>
                       <h2 className="font-bold text-lg leading-tight mb-0.5">
                         {lang === 'ar' ? card.student.name_ar : card.student.name_en}
                       </h2>
-                      <p className="text-white/70 text-sm italic mb-2">
+                      <p className="text-sm italic mb-2" style={{ color: `${branding?.idCardTextColor || '#ffffff'}b3` }}>
                         {lang === 'ar' ? card.student.name_en : card.student.name_ar}
                       </p>
 
                       <div className="mb-2">
-                        <p className="text-yellow-400/80 text-xs uppercase tracking-wider">{t.studentId[lang]}</p>
-                        <p className="text-yellow-400 font-bold text-lg font-mono tracking-wide">
+                        <p className="text-xs uppercase tracking-wider" style={{ color: `${branding?.accentColor || '#f59e0b'}cc` }}>{t.studentId[lang]}</p>
+                        <p className="font-bold text-lg font-mono tracking-wide" style={{ color: branding?.accentColor || '#f59e0b' }}>
                           {card.student.student_id}
                         </p>
                       </div>
 
                       <div className="space-y-0.5 text-sm">
-                        <p className="text-white/80">
-                          <span className="text-white/50">{t.program[lang]}:</span> {lang === 'ar' ? card.program?.name_ar : card.program?.name_en}
+                        <p style={{ color: `${branding?.idCardTextColor || '#ffffff'}cc` }}>
+                          <span style={{ color: `${branding?.idCardTextColor || '#ffffff'}80` }}>{t.program[lang]}:</span> {lang === 'ar' ? card.program?.name_ar : card.program?.name_en}
                         </p>
-                        <p className="text-white/80">
-                          <span className="text-white/50">{t.level[lang]}:</span> {card.academic.level} - {t.semester[lang]} {card.academic.semester}
+                        <p style={{ color: `${branding?.idCardTextColor || '#ffffff'}cc` }}>
+                          <span style={{ color: `${branding?.idCardTextColor || '#ffffff'}80` }}>{t.level[lang]}:</span> {card.academic.level} - {t.semester[lang]} {card.academic.semester}
                         </p>
                       </div>
                     </div>
@@ -439,12 +477,12 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                   </div>
 
                   {/* Footer */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 p-2 px-4 flex justify-between items-center text-xs text-white/70">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 p-2 px-4 flex justify-between items-center text-xs" style={{ color: `${branding?.idCardTextColor || '#ffffff'}b3` }}>
                     <div className="flex gap-4">
                       <span>{t.issuedOn[lang]}: {formatDate(card.validity.issue_date)}</span>
                       <span>{t.validUntil[lang]}: {formatDate(card.validity.expiry_date)}</span>
                     </div>
-                    <span className="font-mono text-yellow-400">{card.verification.barcode}</span>
+                    <span className="font-mono" style={{ color: branding?.accentColor || '#f59e0b' }}>{card.verification.barcode}</span>
                   </div>
                 </div>
               )}
@@ -455,35 +493,44 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                      style={{ aspectRatio: '1.586' }}>
                   <div className="h-full flex flex-col items-center justify-center p-6">
                     {/* QR Code */}
-                    <div className="bg-white p-4 rounded-xl shadow-lg mb-4">
-                      <div className="w-32 h-32 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <QrCode className="w-24 h-24 text-slate-800" />
+                    {branding?.showQRCode !== false && (
+                      <div className="bg-white p-4 rounded-xl shadow-lg mb-4">
+                        <div className="w-32 h-32 bg-slate-100 rounded-lg flex items-center justify-center">
+                          <QrCode className="w-24 h-24" style={{ color: branding?.idCardPrimaryColor || '#1e293b' }} />
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <p className="text-slate-600 text-sm text-center mb-4">{t.scanQr[lang]}</p>
 
                     {/* Barcode */}
-                    <div className="bg-white px-6 py-3 rounded-lg shadow">
-                      <div className="flex gap-0.5 mb-1 justify-center">
-                        {Array.from({ length: 30 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="bg-slate-800"
-                            style={{
-                              width: Math.random() > 0.5 ? '2px' : '1px',
-                              height: '30px',
-                            }}
-                          />
-                        ))}
+                    {branding?.showBarcode !== false && (
+                      <div className="bg-white px-6 py-3 rounded-lg shadow">
+                        <div className="flex gap-0.5 mb-1 justify-center">
+                          {Array.from({ length: 30 }).map((_, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                width: Math.random() > 0.5 ? '2px' : '1px',
+                                height: '30px',
+                                backgroundColor: branding?.idCardPrimaryColor || '#1e293b'
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-center text-xs text-slate-500 font-mono">
+                          {card.verification.barcode}
+                        </p>
                       </div>
-                      <p className="text-center text-xs text-slate-500 font-mono">
-                        {card.verification.barcode}
-                      </p>
-                    </div>
+                    )}
 
                     {/* Footer */}
                     <div className="absolute bottom-4 text-center">
-                      <p className="text-slate-500 text-xs">{t.universityName[lang]}</p>
+                      <p className="text-xs" style={{ color: branding?.idCardPrimaryColor || '#64748b' }}>
+                        {lang === 'ar' ? branding?.universityNameAr : branding?.universityName || t.universityName[lang]}
+                      </p>
+                      {branding?.universityWebsite && (
+                        <p className="text-xs text-slate-400">{branding.universityWebsite}</p>
+                      )}
                     </div>
                   </div>
                 </div>
