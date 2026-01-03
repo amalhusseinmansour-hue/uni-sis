@@ -2,8 +2,12 @@
 export enum UserRole {
   STUDENT = 'STUDENT',
   LECTURER = 'LECTURER',
-  ADMIN = 'ADMIN', // Admissions & Top Management
-  FINANCE = 'FINANCE'
+  ADMIN = 'ADMIN', // System Administrator - Full Access
+  FINANCE = 'FINANCE', // Finance Department
+  STUDENT_AFFAIRS = 'STUDENT_AFFAIRS', // Student Affairs
+  ACCOUNTANT = 'ACCOUNTANT', // Accountant
+  REGISTRAR = 'REGISTRAR', // Registrar Office
+  ADMISSIONS = 'ADMISSIONS', // Admissions Office
 }
 
 export interface User {

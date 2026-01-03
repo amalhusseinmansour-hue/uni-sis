@@ -19,27 +19,20 @@ import {
   Check,
   AlertCircle,
   RefreshCw,
+  Download,
+  Upload,
+  Filter,
+  MoreHorizontal,
+  Calculator,
+  ClipboardList,
+  UserPlus,
+  Phone,
 } from 'lucide-react';
+import { usersAPI, User, CreateUserData, UserFilters } from '../../api/users';
+import { rolesAPI, Role, DEFAULT_ROLES } from '../../api/roles';
 
 interface Props {
   lang: 'en' | 'ar';
-}
-
-interface UserAccount {
-  id: string;
-  email: string;
-  password?: string;
-  firstName: string;
-  lastName: string;
-  firstNameAr?: string;
-  lastNameAr?: string;
-  role: 'admin' | 'student' | 'lecturer' | 'finance';
-  studentId?: string;
-  department?: string;
-  program?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  createdAt: string;
-  lastLogin?: string;
 }
 
 const translations = {
@@ -48,10 +41,15 @@ const translations = {
   addUser: { en: 'Add New User', ar: 'إضافة مستخدم جديد' },
   search: { en: 'Search users...', ar: 'البحث عن المستخدمين...' },
   allRoles: { en: 'All Roles', ar: 'كل الأدوار' },
+  allStatus: { en: 'All Status', ar: 'كل الحالات' },
   admin: { en: 'Admin', ar: 'مدير النظام' },
   student: { en: 'Student', ar: 'طالب' },
   lecturer: { en: 'Lecturer', ar: 'محاضر' },
   finance: { en: 'Finance', ar: 'مالية' },
+  student_affairs: { en: 'Student Affairs', ar: 'شؤون الطلاب' },
+  accountant: { en: 'Accountant', ar: 'محاسب' },
+  registrar: { en: 'Registrar', ar: 'التسجيل' },
+  admissions: { en: 'Admissions', ar: 'القبول' },
   email: { en: 'Email', ar: 'البريد الإلكتروني' },
   password: { en: 'Password', ar: 'كلمة المرور' },
   confirmPassword: { en: 'Confirm Password', ar: 'تأكيد كلمة المرور' },
@@ -63,6 +61,7 @@ const translations = {
   studentId: { en: 'Student ID', ar: 'رقم الطالب' },
   department: { en: 'Department', ar: 'القسم' },
   program: { en: 'Program', ar: 'البرنامج' },
+  phone: { en: 'Phone', ar: 'رقم الجوال' },
   status: { en: 'Status', ar: 'الحالة' },
   active: { en: 'Active', ar: 'نشط' },
   inactive: { en: 'Inactive', ar: 'غير نشط' },
@@ -89,68 +88,45 @@ const translations = {
   noUsers: { en: 'No users found', ar: 'لا يوجد مستخدمين' },
   totalUsers: { en: 'Total Users', ar: 'إجمالي المستخدمين' },
   quickStats: { en: 'Quick Stats', ar: 'إحصائيات سريعة' },
+  exportUsers: { en: 'Export', ar: 'تصدير' },
+  importUsers: { en: 'Import', ar: 'استيراد' },
+  loading: { en: 'Loading...', ar: 'جاري التحميل...' },
+  error: { en: 'Error loading data', ar: 'خطأ في تحميل البيانات' },
+  retry: { en: 'Retry', ar: 'إعادة المحاولة' },
 };
 
 const t = (key: keyof typeof translations, lang: 'en' | 'ar') => translations[key][lang];
 
-// Initial mock users
-const initialUsers: UserAccount[] = [
-  {
-    id: '1',
-    email: 'admin@university.edu',
-    firstName: 'Admin',
-    lastName: 'User',
-    role: 'admin',
-    status: 'active',
-    createdAt: '2024-01-01',
-    lastLogin: '2024-12-25',
-  },
-  {
-    id: '2',
-    email: 'ahmed.mansour@student.university.edu',
-    firstName: 'Ahmed',
-    lastName: 'Mansour',
-    firstNameAr: 'أحمد',
-    lastNameAr: 'منصور',
-    role: 'student',
-    studentId: 'STU-2024-001',
-    program: 'Computer Science',
-    status: 'active',
-    createdAt: '2024-01-15',
-    lastLogin: '2024-12-24',
-  },
-  {
-    id: '3',
-    email: 'sarah.smith@university.edu',
-    firstName: 'Sarah',
-    lastName: 'Smith',
-    role: 'lecturer',
-    department: 'Computer Science',
-    status: 'active',
-    createdAt: '2024-01-10',
-    lastLogin: '2024-12-23',
-  },
-  {
-    id: '4',
-    email: 'finance@university.edu',
-    firstName: 'Finance',
-    lastName: 'Officer',
-    role: 'finance',
-    status: 'active',
-    createdAt: '2024-01-05',
-    lastLogin: '2024-12-22',
-  },
-];
+const roleConfig: Record<string, { icon: any; color: string; bgColor: string }> = {
+  admin: { icon: Shield, color: 'text-purple-700', bgColor: 'bg-purple-100' },
+  student: { icon: GraduationCap, color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  lecturer: { icon: Briefcase, color: 'text-green-700', bgColor: 'bg-green-100' },
+  finance: { icon: DollarSign, color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
+  student_affairs: { icon: Users, color: 'text-pink-700', bgColor: 'bg-pink-100' },
+  accountant: { icon: Calculator, color: 'text-teal-700', bgColor: 'bg-teal-100' },
+  registrar: { icon: ClipboardList, color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
+  admissions: { icon: UserPlus, color: 'text-orange-700', bgColor: 'bg-orange-100' },
+};
+
+const statusConfig: Record<string, { color: string; bgColor: string }> = {
+  active: { color: 'text-green-700', bgColor: 'bg-green-100' },
+  inactive: { color: 'text-gray-700', bgColor: 'bg-gray-100' },
+  suspended: { color: 'text-red-700', bgColor: 'bg-red-100' },
+};
 
 const UserManagement: React.FC<Props> = ({ lang }) => {
-  const [users, setUsers] = useState<UserAccount[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [stats, setStats] = useState({ total: 0, byRole: {} as Record<string, number>, byStatus: {} as Record<string, number> });
 
   const [formData, setFormData] = useState({
     email: '',
@@ -160,14 +136,46 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     lastName: '',
     firstNameAr: '',
     lastNameAr: '',
-    role: 'student' as 'admin' | 'student' | 'lecturer' | 'finance',
+    role: 'student',
     studentId: '',
     department: '',
     program: '',
+    phone: '',
     status: 'active' as 'active' | 'inactive' | 'suspended',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [usersData, rolesData] = await Promise.all([
+        usersAPI.getAll(),
+        rolesAPI.getAll(),
+      ]);
+      setUsers(usersData.data || []);
+      setRoles(rolesData || []);
+
+      // Calculate stats
+      const userList = usersData.data || [];
+      const byRole: Record<string, number> = {};
+      const byStatus: Record<string, number> = {};
+      userList.forEach((u: User) => {
+        const roleName = u.role?.toLowerCase() || 'unknown';
+        byRole[roleName] = (byRole[roleName] || 0) + 1;
+        byStatus[u.status] = (byStatus[u.status] || 0) + 1;
+      });
+      setStats({ total: userList.length, byRole, byStatus });
+    } catch (error) {
+      // Use default roles if API fails
+      setRoles(DEFAULT_ROLES.map((r, i) => ({ ...r, id: i + 1, permissions: [], createdAt: new Date().toISOString() })) as Role[]);
+    }
+    setLoading(false);
+  };
 
   const generatePassword = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
@@ -180,8 +188,8 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
 
   const generateStudentId = () => {
     const year = new Date().getFullYear();
-    const num = String(users.filter(u => u.role === 'student').length + 1).padStart(3, '0');
-    return `STU-${year}-${num}`;
+    const num = String(users.filter(u => u.role?.toLowerCase() === 'student').length + 1).padStart(4, '0');
+    return `${year}${num}`;
   };
 
   const validateForm = () => {
@@ -217,47 +225,52 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    if (editingUser) {
-      // Update existing user
-      setUsers(users.map(u =>
-        u.id === editingUser.id
-          ? {
-              ...u,
-              ...formData,
-              password: formData.password || u.password
-            }
-          : u
-      ));
-      showNotification('success', t('userUpdated', lang));
-    } else {
-      // Create new user
-      const newUser: UserAccount = {
-        id: String(Date.now()),
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        firstNameAr: formData.firstNameAr,
-        lastNameAr: formData.lastNameAr,
-        role: formData.role,
-        studentId: formData.role === 'student' ? formData.studentId : undefined,
-        department: formData.role === 'lecturer' ? formData.department : undefined,
-        program: formData.role === 'student' ? formData.program : undefined,
-        status: formData.status,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setUsers([...users, newUser]);
-      showNotification('success', t('userCreated', lang));
+    try {
+      if (editingUser) {
+        await usersAPI.update(editingUser.id, {
+          email: formData.email,
+          password: formData.password || undefined,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          firstNameAr: formData.firstNameAr,
+          lastNameAr: formData.lastNameAr,
+          role: formData.role.toUpperCase(),
+          studentId: formData.role === 'student' ? formData.studentId : undefined,
+          department: formData.department,
+          program: formData.program,
+          phone: formData.phone,
+          status: formData.status,
+        });
+        showNotification('success', t('userUpdated', lang));
+      } else {
+        await usersAPI.create({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          firstNameAr: formData.firstNameAr,
+          lastNameAr: formData.lastNameAr,
+          role: formData.role.toUpperCase(),
+          studentId: formData.role === 'student' ? formData.studentId : undefined,
+          department: formData.department,
+          program: formData.program,
+          phone: formData.phone,
+          status: formData.status,
+        });
+        showNotification('success', t('userCreated', lang));
+      }
+      loadData();
+      resetForm();
+      setShowModal(false);
+    } catch (error: any) {
+      showNotification('error', error.response?.data?.message || 'Error saving user');
     }
-
-    resetForm();
-    setShowModal(false);
   };
 
-  const handleEdit = (user: UserAccount) => {
+  const handleEdit = (user: User) => {
     setEditingUser(user);
     setFormData({
       email: user.email,
@@ -267,19 +280,25 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       lastName: user.lastName,
       firstNameAr: user.firstNameAr || '',
       lastNameAr: user.lastNameAr || '',
-      role: user.role,
+      role: user.role?.toLowerCase() || 'student',
       studentId: user.studentId || '',
       department: user.department || '',
       program: user.program || '',
+      phone: user.phone || '',
       status: user.status,
     });
     setShowModal(true);
   };
 
-  const handleDelete = (userId: string) => {
-    setUsers(users.filter(u => u.id !== userId));
+  const handleDelete = async (userId: number) => {
+    try {
+      await usersAPI.delete(userId);
+      showNotification('success', t('userDeleted', lang));
+      loadData();
+    } catch (error) {
+      showNotification('error', 'Error deleting user');
+    }
     setDeleteConfirm(null);
-    showNotification('success', t('userDeleted', lang));
   };
 
   const resetForm = () => {
@@ -295,6 +314,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       studentId: '',
       department: '',
       program: '',
+      phone: '',
       status: 'active',
     });
     setEditingUser(null);
@@ -317,52 +337,55 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch =
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.studentId?.toLowerCase().includes(searchTerm.toLowerCase()));
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.studentId?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesRole = roleFilter === 'all' || user.role?.toLowerCase() === roleFilter;
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
 
-    return matchesSearch && matchesRole;
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin': return <Shield className="w-4 h-4" />;
-      case 'student': return <GraduationCap className="w-4 h-4" />;
-      case 'lecturer': return <Briefcase className="w-4 h-4" />;
-      case 'finance': return <DollarSign className="w-4 h-4" />;
-      default: return <Users className="w-4 h-4" />;
-    }
+  const getRoleDisplay = (role: string) => {
+    const roleLower = role?.toLowerCase() || 'unknown';
+    const config = roleConfig[roleLower] || roleConfig.student;
+    const Icon = config.icon;
+    const roleKey = roleLower as keyof typeof translations;
+    const label = translations[roleKey]?.[lang] || role;
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bgColor} ${config.color}`}>
+        <Icon className="w-3 h-3" />
+        {label}
+      </span>
+    );
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-700';
-      case 'student': return 'bg-blue-100 text-blue-700';
-      case 'lecturer': return 'bg-green-100 text-green-700';
-      case 'finance': return 'bg-yellow-100 text-yellow-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  const getStatusDisplay = (status: string) => {
+    const config = statusConfig[status] || statusConfig.inactive;
+    const statusKey = status as keyof typeof translations;
+    const label = translations[statusKey]?.[lang] || status;
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bgColor} ${config.color}`}>
+        {status === 'active' ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
+        {label}
+      </span>
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-700';
-      case 'inactive': return 'bg-gray-100 text-gray-700';
-      case 'suspended': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const stats = {
-    total: users.length,
-    admins: users.filter(u => u.role === 'admin').length,
-    students: users.filter(u => u.role === 'student').length,
-    lecturers: users.filter(u => u.role === 'lecturer').length,
-    finance: users.filter(u => u.role === 'finance').length,
-  };
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('loading', lang)}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -379,79 +402,65 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('title', lang)}</h1>
-          <p className="text-gray-600">{t('subtitle', lang)}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="w-7 h-7 text-blue-600" />
+            {t('title', lang)}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('subtitle', lang)}</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          {t('addUser', lang)}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {/* Export logic */}}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            {t('exportUsers', lang)}
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            {t('addUser', lang)}
+          </button>
+        </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <Users className="w-5 h-5 text-gray-600" />
+            <div className="p-2 bg-gray-100 dark:bg-slate-700 rounded-lg">
+              <Users className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t('totalUsers', lang)}</p>
-              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('totalUsers', lang)}</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Shield className="w-5 h-5 text-purple-600" />
+        {Object.entries(roleConfig).slice(0, 5).map(([role, config]) => {
+          const Icon = config.icon;
+          const count = stats.byRole[role] || 0;
+          const roleKey = role as keyof typeof translations;
+          return (
+            <div key={role} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 ${config.bgColor} rounded-lg`}>
+                  <Icon className={`w-5 h-5 ${config.color}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{translations[roleKey]?.[lang] || role}</p>
+                  <p className={`text-xl font-bold ${config.color}`}>{count}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">{t('admin', lang)}</p>
-              <p className="text-xl font-bold text-purple-600">{stats.admins}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <GraduationCap className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">{t('student', lang)}</p>
-              <p className="text-xl font-bold text-blue-600">{stats.students}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Briefcase className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">{t('lecturer', lang)}</p>
-              <p className="text-xl font-bold text-green-600">{stats.lecturers}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <DollarSign className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">{t('finance', lang)}</p>
-              <p className="text-xl font-bold text-yellow-600">{stats.finance}</p>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
@@ -460,100 +469,108 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
               placeholder={t('search', lang)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
             />
           </div>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
           >
             <option value="all">{t('allRoles', lang)}</option>
             <option value="admin">{t('admin', lang)}</option>
             <option value="student">{t('student', lang)}</option>
             <option value="lecturer">{t('lecturer', lang)}</option>
             <option value="finance">{t('finance', lang)}</option>
+            <option value="student_affairs">{t('student_affairs', lang)}</option>
+            <option value="accountant">{t('accountant', lang)}</option>
+            <option value="registrar">{t('registrar', lang)}</option>
+            <option value="admissions">{t('admissions', lang)}</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+          >
+            <option value="all">{t('allStatus', lang)}</option>
+            <option value="active">{t('active', lang)}</option>
+            <option value="inactive">{t('inactive', lang)}</option>
+            <option value="suspended">{t('suspended', lang)}</option>
           </select>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-slate-700">
               <tr>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('email', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {lang === 'ar' ? 'الاسم' : 'Name'}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('role', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('status', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('createdAt', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('actions', lang)}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     {t('noUsers', lang)}
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-900">{user.email}</span>
+                        <span className="text-sm text-gray-900 dark:text-white">{user.email}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {user.firstName} {user.lastName}
                         </p>
                         {user.firstNameAr && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {user.firstNameAr} {user.lastNameAr}
                           </p>
                         )}
                         {user.studentId && (
-                          <p className="text-xs text-blue-600">{user.studentId}</p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400">{user.studentId}</p>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                        {getRoleIcon(user.role)}
-                        {t(user.role, lang)}
-                      </span>
+                      {getRoleDisplay(user.role)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
-                        {user.status === 'active' ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
-                        {t(user.status, lang)}
-                      </span>
+                      {getStatusDisplay(user.status)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {user.createdAt}
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(user)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                           title={t('edit', lang)}
                         >
                           <Edit className="w-4 h-4" />
@@ -562,13 +579,13 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleDelete(user.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             >
                               <Check className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}
-                              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -576,7 +593,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                         ) : (
                           <button
                             onClick={() => setDeleteConfirm(user.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             title={t('delete', lang)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -594,16 +611,16 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {editingUser ? t('editUser', lang) : t('createUser', lang)}
                 </h2>
                 <button
                   onClick={() => { setShowModal(false); resetForm(); }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -613,39 +630,43 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
             <div className="p-6 space-y-4">
               {/* Role Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('role', lang)} *
                 </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {(['admin', 'student', 'lecturer', 'finance'] as const).map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => {
-                        setFormData({
-                          ...formData,
-                          role,
-                          studentId: role === 'student' ? generateStudentId() : '',
-                        });
-                      }}
-                      className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-colors ${
-                        formData.role === role
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <span className={getRoleColor(role) + ' p-2 rounded-full'}>
-                        {getRoleIcon(role)}
-                      </span>
-                      <span className="text-sm font-medium">{t(role, lang)}</span>
-                    </button>
-                  ))}
+                  {Object.entries(roleConfig).map(([role, config]) => {
+                    const Icon = config.icon;
+                    const roleKey = role as keyof typeof translations;
+                    return (
+                      <button
+                        key={role}
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            role,
+                            studentId: role === 'student' ? generateStudentId() : '',
+                          });
+                        }}
+                        className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-colors ${
+                          formData.role === role
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-slate-600 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className={`${config.bgColor} p-2 rounded-full`}>
+                          <Icon className={`w-4 h-4 ${config.color}`} />
+                        </span>
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{translations[roleKey]?.[lang] || role}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Email & Password */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('email', lang)} *
                   </label>
                   <div className="relative">
@@ -654,7 +675,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                         errors.email ? 'border-red-500' : ''
                       }`}
                     />
@@ -663,7 +684,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('password', lang)} {!editingUser && '*'}
                   </label>
                   <div className="relative flex gap-2">
@@ -674,7 +695,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         placeholder={editingUser ? (lang === 'ar' ? 'اتركه فارغاً للإبقاء' : 'Leave empty to keep') : ''}
-                        className={`w-full ${lang === 'ar' ? 'pr-10 pl-10' : 'pl-10 pr-10'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        className={`w-full ${lang === 'ar' ? 'pr-10 pl-10' : 'pl-10 pr-10'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                           errors.password ? 'border-red-500' : ''
                         }`}
                       />
@@ -689,10 +710,10 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                     <button
                       type="button"
                       onClick={generatePassword}
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="px-3 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                       title={t('generatePassword', lang)}
                     >
-                      <RefreshCw className="w-5 h-5 text-gray-600" />
+                      <RefreshCw className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
                   {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
@@ -702,14 +723,14 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
               {/* Confirm Password */}
               {formData.password && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('confirmPassword', lang)} *
                   </label>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                       errors.confirmPassword ? 'border-red-500' : ''
                     }`}
                   />
@@ -720,28 +741,28 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
               {/* Names */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('firstName', lang)} *
                   </label>
                   <input
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                       errors.firstName ? 'border-red-500' : ''
                     }`}
                   />
                   {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('lastName', lang)} *
                   </label>
                   <input
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                       errors.lastName ? 'border-red-500' : ''
                     }`}
                   />
@@ -752,27 +773,43 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
               {/* Arabic Names */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('firstNameAr', lang)}
                   </label>
                   <input
                     type="text"
                     value={formData.firstNameAr}
                     onChange={(e) => setFormData({ ...formData, firstNameAr: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                     dir="rtl"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('lastNameAr', lang)}
                   </label>
                   <input
                     type="text"
                     value={formData.lastNameAr}
                     onChange={(e) => setFormData({ ...formData, lastNameAr: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                     dir="rtl"
+                  />
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('phone', lang)}
+                </label>
+                <div className="relative">
+                  <Phone className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
                   />
                 </div>
               </div>
@@ -781,27 +818,27 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
               {formData.role === 'student' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {t('studentId', lang)} *
                     </label>
                     <input
                       type="text"
                       value={formData.studentId}
                       onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                         errors.studentId ? 'border-red-500' : ''
                       }`}
                     />
                     {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {t('program', lang)}
                     </label>
                     <select
                       value={formData.program}
                       onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                     >
                       <option value="">-- {lang === 'ar' ? 'اختر البرنامج' : 'Select Program'} --</option>
                       <option value="Computer Science">{lang === 'ar' ? 'علوم الحاسوب' : 'Computer Science'}</option>
@@ -813,28 +850,29 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                 </div>
               )}
 
-              {formData.role === 'lecturer' && (
+              {(formData.role === 'lecturer' || formData.role === 'student_affairs' || formData.role === 'registrar') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('department', lang)}
                   </label>
                   <select
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                   >
                     <option value="">-- {lang === 'ar' ? 'اختر القسم' : 'Select Department'} --</option>
                     <option value="Computer Science">{lang === 'ar' ? 'علوم الحاسوب' : 'Computer Science'}</option>
                     <option value="Mathematics">{lang === 'ar' ? 'الرياضيات' : 'Mathematics'}</option>
                     <option value="Physics">{lang === 'ar' ? 'الفيزياء' : 'Physics'}</option>
                     <option value="Business">{lang === 'ar' ? 'إدارة الأعمال' : 'Business'}</option>
+                    <option value="Engineering">{lang === 'ar' ? 'الهندسة' : 'Engineering'}</option>
                   </select>
                 </div>
               )}
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('status', lang)}
                 </label>
                 <div className="flex gap-4">
@@ -848,7 +886,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                         className="w-4 h-4 text-blue-600"
                       />
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[status].bgColor} ${statusConfig[status].color}`}>
                         {t(status, lang)}
                       </span>
                     </label>
@@ -858,10 +896,10 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3">
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
                 {t('cancel', lang)}
               </button>

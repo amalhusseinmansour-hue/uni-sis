@@ -151,6 +151,7 @@ const t = {
   lms: { en: 'Learning System', ar: 'نظام التعلم' },
   userManagement: { en: 'User Management', ar: 'إدارة المستخدمين' },
   branding: { en: 'Branding & Templates', ar: 'العلامة التجارية والقوالب' },
+  rolesPermissions: { en: 'Roles & Permissions', ar: 'الأدوار والصلاحيات' },
 };
 
 // Convert API menu items to NavItems
@@ -283,6 +284,7 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
           label: t.adminPanel[lang],
           children: [
             { to: '/admin/users', icon: Users, label: t.userManagement[lang] },
+            { to: '/admin/roles', icon: Shield, label: t.rolesPermissions[lang] },
             { to: '/admin/branding', icon: Palette, label: t.branding[lang] },
             { to: '/admin/tables', icon: Table, label: t.tableBuilder[lang] },
             { to: '/admin/forms', icon: FileEdit, label: t.formBuilder[lang] },

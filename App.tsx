@@ -33,6 +33,7 @@ import {
   MenuDashboardManager,
   UserManagement,
   BrandingSettings,
+  RolesPermissions,
 } from './pages/admin';
 import AiAssistant from './components/AiAssistant';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -401,6 +402,14 @@ const App: React.FC = () => {
              element={
                (currentUser.role === UserRole.ADMIN)
                ? <BrandingSettings lang={lang} />
+               : <Navigate to="/" />
+             }
+          />
+          <Route
+             path="admin/roles"
+             element={
+               (currentUser.role === UserRole.ADMIN)
+               ? <RolesPermissions lang={lang} />
                : <Navigate to="/" />
              }
           />

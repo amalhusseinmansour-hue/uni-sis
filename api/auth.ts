@@ -13,80 +13,9 @@ export interface RegisterData {
   role: string;
 }
 
-// Mock users for testing when backend is not available
-const MOCK_USERS = [
-  {
-    id: '1',
-    email: 'admin@university.edu',
-    password: 'admin123',
-    firstName: 'Admin',
-    lastName: 'User',
-    role: 'ADMIN',
-    avatar: null,
-  },
-  {
-    id: '2',
-    email: 'ahmed.mansour@student.university.edu',
-    password: 'student123',
-    firstName: 'Ahmed',
-    lastName: 'Mansour',
-    firstNameAr: 'أحمد',
-    lastNameAr: 'منصور',
-    role: 'STUDENT',
-    studentId: 'STU-2024-001',
-    program: 'Computer Science',
-    level: 3,
-    gpa: 3.75,
-    avatar: null,
-  },
-  {
-    id: '3',
-    email: 'sarah.smith@university.edu',
-    password: 'lecturer123',
-    firstName: 'Sarah',
-    lastName: 'Smith',
-    role: 'LECTURER',
-    department: 'Computer Science',
-    avatar: null,
-  },
-  {
-    id: '4',
-    email: 'finance@university.edu',
-    password: 'finance123',
-    firstName: 'Finance',
-    lastName: 'Officer',
-    role: 'FINANCE',
-    avatar: null,
-  },
-];
-
-// Check if we should use mock data (when backend is unavailable)
-const USE_MOCK = true; // Set to true only for testing without backend
-
 export const authAPI = {
-  // Login
+  // Login - connects to real backend
   login: async (credentials: LoginCredentials) => {
-    if (USE_MOCK) {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const user = MOCK_USERS.find(
-        u => u.email === credentials.email && u.password === credentials.password
-      );
-
-      if (!user) {
-        throw { response: { data: { error: 'Invalid email or password' } } };
-      }
-
-      const { password, ...userWithoutPassword } = user;
-      const token = 'mock-jwt-token-' + user.id;
-
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-
-      return { user: userWithoutPassword, token };
-    }
-
     const response = await apiClient.post('/login', credentials);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
