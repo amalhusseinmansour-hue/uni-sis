@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { AdmissionApplication } from '../types';
 import { TRANSLATIONS } from '../constants';
+import { exportToCSV } from '../utils/exportUtils';
 import {
   BarChart,
   Bar,
@@ -602,13 +603,24 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
               ))}
             </select>
             <div className="flex gap-2">
-              <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.exportList[lang]}>
+              <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.exportList[lang]} onClick={() => {
+                const data = filteredApps.map(app => ({
+                  fullName: app.fullName,
+                  email: app.email,
+                  nationalId: app.nationalId,
+                  program: app.program,
+                  highSchoolScore: app.highSchoolScore,
+                  date: app.date,
+                  status: app.status
+                }));
+                exportToCSV(data, 'admissions-list');
+              }}>
                 <Download className="w-4 h-4 text-slate-600" />
               </button>
-              <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.printReport[lang]}>
+              <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.printReport[lang]} onClick={() => window.print()}>
                 <Printer className="w-4 h-4 text-slate-600" />
               </button>
-              <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.refresh[lang]}>
+              <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.refresh[lang]} onClick={() => window.location.reload()}>
                 <RefreshCw className="w-4 h-4 text-slate-600" />
               </button>
             </div>

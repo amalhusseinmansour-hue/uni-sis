@@ -14,7 +14,8 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { DynamicTable } from '../components/dynamic';
-import { TableDataRow } from '../api/dynamicTables';
+import { TableDataRow, dynamicTablesAPI } from '../api/dynamicTables';
+import { exportToCSV } from '../utils/exportUtils';
 
 interface DynamicStudentsPageProps {
   lang: 'en' | 'ar';
@@ -97,7 +98,16 @@ const DynamicStudentsPage: React.FC<DynamicStudentsPageProps> = ({ lang }) => {
             <Upload className="w-4 h-4" />
             {t.importStudents[lang]}
           </button>
-          <button className="px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <button className="px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 flex items-center gap-2" onClick={async () => {
+            try {
+              const response = await dynamicTablesAPI.getTableData('students_list');
+              if (response && response.data) {
+                exportToCSV(response.data, 'students-export');
+              }
+            } catch (error) {
+              console.error('Failed to export students:', error);
+            }
+          }}>
             <Download className="w-4 h-4" />
             {t.exportStudents[lang]}
           </button>

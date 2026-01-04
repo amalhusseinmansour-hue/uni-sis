@@ -120,7 +120,7 @@ const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({ lang }) => {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+    return date.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

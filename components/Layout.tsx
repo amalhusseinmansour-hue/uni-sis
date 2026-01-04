@@ -227,7 +227,26 @@ const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, setUserRole, onLog
              {/* Role Switcher for Demo */}
              <select
               value={user.role}
-              onChange={(e) => setUserRole(e.target.value as UserRole)}
+              onChange={(e) => {
+                const newRole = e.target.value as UserRole;
+                console.log('[Layout] Role switch requested:', newRole);
+
+                // SIMPLE APPROACH: Update localStorage directly and reload
+                try {
+                  const userStr = localStorage.getItem('user');
+                  if (userStr) {
+                    const userData = JSON.parse(userStr);
+                    userData.role = newRole;
+                    localStorage.setItem('user', JSON.stringify(userData));
+                    console.log('[Layout] Updated localStorage, reloading...');
+                    // Force reload to apply new role
+                    window.location.hash = '#/';
+                    window.location.reload();
+                  }
+                } catch (err) {
+                  console.error('[Layout] Role switch error:', err);
+                }
+              }}
               className="hidden md:block text-xs bg-slate-100 border border-slate-300 rounded px-2 py-1"
              >
                <option value={UserRole.STUDENT}>{t.viewStudent[lang]}</option>

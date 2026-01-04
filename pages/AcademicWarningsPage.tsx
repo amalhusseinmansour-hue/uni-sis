@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
+import { exportToPDF } from '../utils/exportUtils';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -579,7 +580,18 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" icon={Download}>
+          <Button variant="outline" icon={Download} onClick={() => {
+            const data = [{
+              status: getStatusLabel(academicStatus.status),
+              currentGPA: academicStatus.gpa,
+              requiredGPA: academicStatus.requiredGPA,
+              warningsCount: academicStatus.warningsCount,
+              maxWarnings: academicStatus.maxWarnings,
+              semester: academicStatus.semester,
+              trend: academicStatus.trend
+            }];
+            exportToPDF(data, 'academic-status-report');
+          }}>
             {lang === 'ar' ? 'تحميل التقرير' : 'Download Report'}
           </Button>
           <Button variant="outline" icon={MessageSquare}>

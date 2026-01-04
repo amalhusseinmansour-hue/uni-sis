@@ -1,5 +1,41 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+// Version check - if you see this in console, the new code is running
+console.log('🚀 App.tsx v5.0 - Enhanced debugging + protected role switch');
+
+// Error log storage helper
+const logError = (type: string, details: any) => {
+  try {
+    const logs = JSON.parse(localStorage.getItem('error_log') || '[]');
+    logs.push({
+      timestamp: new Date().toISOString(),
+      type,
+      details: typeof details === 'object' ? JSON.stringify(details) : String(details),
+    });
+    // Keep only last 50 errors
+    localStorage.setItem('error_log', JSON.stringify(logs.slice(-50)));
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
+
+// Clear old error logs on load (keep for debugging)
+console.log('[App] Previous errors:', JSON.parse(localStorage.getItem('error_log') || '[]'));
+
+// Global error handler to catch any unhandled errors
+window.onerror = function(message, source, lineno, colno, error) {
+  console.error('🔴 [Global Error]', { message, source, lineno, colno, error });
+  logError('window.onerror', { message, source, lineno, colno, errorMessage: error?.message });
+  // Don't let errors cause logout
+  return true; // Prevents default error handling
+};
+
+window.onunhandledrejection = function(event) {
+  console.error('🔴 [Unhandled Promise Rejection]', event.reason);
+  logError('unhandledrejection', { reason: event.reason?.message || String(event.reason) });
+  event.preventDefault(); // Prevents default handling
+};
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -23,7 +59,10 @@ import AdvisingPage from './pages/AdvisingPage';
 import CertificatesPage from './pages/CertificatesPage';
 import AcademicWarningsPage from './pages/AcademicWarningsPage';
 import LMSPage from './pages/LMSPage';
+import DebugPage from './pages/DebugPage';
+import SimpleStudentDashboard from './pages/SimpleStudentDashboard';
 import SplashScreen from './components/SplashScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 // Admin Pages
 import {
   TableBuilder,
@@ -54,7 +93,33 @@ const getUserProfileData = (user: any) => {
   };
 };
 
+// Track App mounts globally
+let appMountCount = 0;
+
 const App: React.FC = () => {
+  appMountCount++;
+  console.log(`[App] 🔵 Component mounting/rendering - Mount count: ${appMountCount}`);
+
+  // Log render on first mount
+  useEffect(() => {
+    logError('app_mounted', { mountCount: appMountCount });
+    console.log(`[App] 🟢 Component MOUNTED - count: ${appMountCount}`);
+
+    return () => {
+      console.log(`[App] 🔴 Component UNMOUNTING!`);
+      logError('app_unmounted', { mountCount: appMountCount });
+    };
+  }, []);
+
+  // Ref to track if we're in the middle of a role switch (prevents race conditions)
+  const isRoleSwitchingRef = useRef(false);
+
+  // Ref to store the latest auth state (for recovery)
+  const authStateRef = useRef<{ isAuthenticated: boolean; user: any }>({
+    isAuthenticated: false,
+    user: null,
+  });
+
   // Initialize language - default to 'ar' (Arabic) for RTL
   const [lang, setLang] = useState<'en' | 'ar'>(() => {
     // Force reset to Arabic (RTL) - remove this after first deploy
@@ -76,8 +141,32 @@ const App: React.FC = () => {
     return finalLang;
   });
   const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Initialize auth state from localStorage immediately to prevent logout on re-mount
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    const hasAuth = !!(token && userStr);
+    console.log('[App] Initial auth state from localStorage:', hasAuth);
+    return hasAuth;
+  });
+
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        console.log('[App] Initial user from localStorage:', user?.email, 'role:', user?.role);
+        // Pre-sync the ref (will be fully synced in useEffect)
+        authStateRef.current = { isAuthenticated: true, user };
+        return user;
+      } catch (e) {
+        console.error('[App] Failed to parse initial user:', e);
+        return null;
+      }
+    }
+    return null;
+  });
 
   // Handle language change with persistence
   const handleSetLang = (newLang: 'en' | 'ar') => {
@@ -93,20 +182,28 @@ const App: React.FC = () => {
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // Check if user is already logged in
+  // Verify auth state on mount (backup check)
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
-    if (token && userStr) {
+    console.log('[App] Mount check - token exists:', !!token, ', user exists:', !!userStr, ', isAuthenticated:', isAuthenticated);
+
+    // If localStorage has auth but state doesn't, restore it
+    if (token && userStr && !isAuthenticated) {
       try {
         const user = JSON.parse(userStr);
+        console.log('[App] Restoring missing auth state:', user.email);
         setCurrentUser(user);
         setIsAuthenticated(true);
+        // Update refs
+        authStateRef.current = { isAuthenticated: true, user };
       } catch (error) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        console.error('[App] Failed to restore auth:', error);
       }
+    } else if (token && userStr && isAuthenticated && currentUser) {
+      // Sync refs with current state
+      authStateRef.current = { isAuthenticated: true, user: currentUser };
     }
   }, []);
 
@@ -119,20 +216,120 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogin = (user: any) => {
+    console.log('[App] ✅ handleLogin called for:', user?.email);
     setCurrentUser(user);
     setIsAuthenticated(true);
+
+    // Update refs
+    authStateRef.current = { isAuthenticated: true, user };
   };
 
+  // PROTECTED: Logout with stack trace and intentionality check
   const handleLogout = () => {
+    console.log('[App] 🚪 handleLogout called!');
+    console.trace('[App] 📍 Logout stack trace:');
+
+    // Log the call stack to identify unintended logouts
+    const stack = new Error().stack;
+    console.log('[App] Full stack:', stack);
+
+    // Check if this is being called from the logout button (intentional)
+    const isFromButton = stack?.includes('onClick') || stack?.includes('Sidebar');
+
+    if (!isFromButton) {
+      console.warn('[App] ⚠️ Logout called from unexpected source! Ignoring...');
+      console.warn('[App] Stack:', stack);
+      // Don't actually logout if it wasn't from the button
+      return;
+    }
+
+    console.log('[App] ✅ Intentional logout confirmed');
+    logError('intentional_logout', { timestamp: new Date().toISOString() });
     authAPI.logout();
     setCurrentUser(null);
     setIsAuthenticated(false);
   };
 
   // For demo: allow role switching (remove in production)
+  // PROTECTED: Role switch with multiple safeguards
   const setUserRole = (role: UserRole) => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, role });
+    try {
+      console.log('[App] 🔄 setUserRole called with:', role);
+      logError('role_switch_started', { newRole: role, currentRole: currentUser?.role });
+
+      // Prevent concurrent role switches
+      if (isRoleSwitchingRef.current) {
+        console.warn('[App] ⚠️ Role switch already in progress, ignoring...');
+        return;
+      }
+
+      isRoleSwitchingRef.current = true;
+
+      console.log('[App] Current user before switch:', currentUser?.email, 'role:', currentUser?.role);
+
+      // Safety check 1: Ensure we have a current user (try ref first, then state, then localStorage)
+      let userToSwitch = currentUser || authStateRef.current.user;
+
+      if (!userToSwitch) {
+        console.warn('[App] ⚠️ No currentUser in state, trying localStorage...');
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            userToSwitch = JSON.parse(userStr);
+            console.log('[App] 🔧 Recovered user from localStorage:', userToSwitch?.email);
+          } catch (e) {
+            console.error('[App] ❌ Failed to parse user from localStorage:', e);
+            isRoleSwitchingRef.current = false;
+            return;
+          }
+        } else {
+          console.error('[App] ❌ No user found anywhere! Aborting role switch.');
+          isRoleSwitchingRef.current = false;
+          return;
+        }
+      }
+
+      // Safety check 2: Ensure role is valid
+      if (!role || !Object.values(UserRole).includes(role)) {
+        console.error('[App] ❌ Invalid role:', role);
+        isRoleSwitchingRef.current = false;
+        return;
+      }
+
+      // Safety check 3: Don't switch to same role
+      if (userToSwitch.role === role) {
+        console.log('[App] ⚠️ Same role, skipping switch');
+        isRoleSwitchingRef.current = false;
+        return;
+      }
+
+      console.log('[App] ✅ Switching role from', userToSwitch.role, 'to', role);
+
+      // Create updated user with new role
+      const updatedUser = { ...userToSwitch, role };
+
+      // Update localStorage FIRST to ensure persistence
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      console.log('[App] 💾 Updated localStorage');
+
+      // Update refs BEFORE state to ensure consistency
+      authStateRef.current = { isAuthenticated: true, user: updatedUser };
+
+      // Then update React state
+      setCurrentUser(updatedUser);
+      setIsAuthenticated(true); // Ensure auth stays true
+      console.log('[App] ✅ Role switched successfully to:', role);
+
+      // Reset switching flag after a delay
+      setTimeout(() => {
+        isRoleSwitchingRef.current = false;
+        console.log('[App] 🔓 Role switch lock released');
+      }, 500);
+
+    } catch (error) {
+      console.error('[App] ❌ Error during role switch:', error);
+      isRoleSwitchingRef.current = false;
+      // Don't let errors during role switch cause logout
     }
   };
 
@@ -147,7 +344,71 @@ const App: React.FC = () => {
     return <SplashScreen />;
   }
 
+  // PROTECTED: Enhanced auth check with localStorage recovery
+  // This prevents accidental logout during role switch or component errors
   if (!isAuthenticated || !currentUser) {
+    // During role switch, don't show login - show loading instead
+    if (isRoleSwitchingRef.current) {
+      console.log('[App] 🔄 Role switch in progress, showing loading...');
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-100">
+          <div className="text-center">
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p className="text-slate-500">{lang === 'ar' ? 'جاري تبديل الدور...' : 'Switching role...'}</p>
+          </div>
+        </div>
+      );
+    }
+
+    console.log('[App] ⚠️ Auth check failed - isAuthenticated:', isAuthenticated, ', currentUser:', !!currentUser);
+    logError('auth_check_failed', {
+      isAuthenticated,
+      hasCurrentUser: !!currentUser,
+      localStorage_token: !!localStorage.getItem('token'),
+      localStorage_user: !!localStorage.getItem('user'),
+      isRoleSwitching: isRoleSwitchingRef.current,
+    });
+
+    // RECOVERY ATTEMPT: Check if localStorage has valid auth data
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+
+    console.log('[App] 🔍 Recovery check - token exists:', !!token, ', user exists:', !!userStr);
+
+    if (token && userStr) {
+      try {
+        const recoveredUser = JSON.parse(userStr);
+        console.log('[App] 🔧 RECOVERING auth state from localStorage:', recoveredUser?.email);
+
+        // Schedule state recovery on next tick to avoid render issues
+        setTimeout(() => {
+          setCurrentUser(recoveredUser);
+          setIsAuthenticated(true);
+          console.log('[App] ✅ Auth state recovered successfully!');
+        }, 0);
+
+        // Show loading during recovery instead of login
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-100">
+            <div className="text-center">
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+              </div>
+              <p className="text-slate-500">{lang === 'ar' ? 'جاري استعادة الجلسة...' : 'Restoring session...'}</p>
+            </div>
+          </div>
+        );
+      } catch (e) {
+        console.error('[App] ❌ Failed to recover auth from localStorage:', e);
+      }
+    }
+
+    // No valid localStorage data - show login
+    console.log('[App] 📋 No valid auth data found, showing Login page');
     return (
       <Login
         onLogin={handleLogin}
@@ -158,8 +419,9 @@ const App: React.FC = () => {
   }
 
   return (
-    <ConfigProvider role={currentUser.role}>
-      <HashRouter>
+    <ErrorBoundary>
+      <ConfigProvider role={currentUser.role}>
+        <HashRouter>
         <Routes>
           <Route
             path="/"
@@ -176,11 +438,18 @@ const App: React.FC = () => {
           <Route
             index
             element={
-              <Dashboard
-                lang={lang}
-                role={currentUser.role}
-                student={currentUser}
-              />
+              currentUser.role === UserRole.STUDENT ? (
+                <SimpleStudentDashboard
+                  lang={lang}
+                  student={currentUser}
+                />
+              ) : (
+                <Dashboard
+                  lang={lang}
+                  role={currentUser.role}
+                  student={currentUser}
+                />
+              )
             }
           />
           <Route
@@ -235,6 +504,10 @@ const App: React.FC = () => {
                   student={getUserProfileData(currentUser)}
                />
              }
+          />
+          <Route
+             path="debug"
+             element={<DebugPage lang={lang} />}
           />
           <Route
              path="reports"
@@ -405,8 +678,9 @@ const App: React.FC = () => {
 
         {/* PWA Install Prompt */}
         <PWAInstallPrompt lang={lang} />
-      </HashRouter>
-    </ConfigProvider>
+        </HashRouter>
+      </ConfigProvider>
+    </ErrorBoundary>
   );
 };
 

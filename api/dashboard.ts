@@ -46,60 +46,111 @@ export interface Announcement {
 export const dashboardAPI = {
   // Get dashboard statistics
   getStats: async () => {
-    const response = await apiClient.get('/dashboard/stats');
-    return response.data;
+    try {
+      const response = await apiClient.get('/dashboard/stats');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Stats fetch failed:', error?.message);
+      // Return default stats to prevent errors
+      return {
+        totalStudents: 0,
+        pendingApplications: 0,
+        monthlyRevenue: 0,
+        activeCourses: 0,
+      };
+    }
   },
 
   // Get academic calendar events
   getUpcomingEvents: async (limit: number = 5) => {
-    const response = await apiClient.get('/academic-calendar/upcoming', {
-      params: { limit }
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get('/academic-calendar/upcoming', {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Upcoming events fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get current month calendar
   getCurrentMonthCalendar: async () => {
-    const response = await apiClient.get('/academic-calendar/month');
-    return response.data;
+    try {
+      const response = await apiClient.get('/academic-calendar/month');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Calendar fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get holidays
   getHolidays: async () => {
-    const response = await apiClient.get('/academic-calendar/holidays');
-    return response.data;
+    try {
+      const response = await apiClient.get('/academic-calendar/holidays');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Holidays fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get exam dates
   getExamDates: async () => {
-    const response = await apiClient.get('/academic-calendar/exams');
-    return response.data;
+    try {
+      const response = await apiClient.get('/academic-calendar/exams');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Exams fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get deadlines
   getDeadlines: async () => {
-    const response = await apiClient.get('/academic-calendar/deadlines');
-    return response.data;
+    try {
+      const response = await apiClient.get('/academic-calendar/deadlines');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Deadlines fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get published announcements
   getAnnouncements: async (limit: number = 5) => {
-    const response = await apiClient.get('/announcements/published', {
-      params: { limit }
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get('/announcements/published', {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Announcements fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get all announcements (authenticated)
   getAllAnnouncements: async () => {
-    const response = await apiClient.get('/announcements');
-    return response.data;
+    try {
+      const response = await apiClient.get('/announcements');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] All announcements fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get current semester
   getCurrentSemester: async () => {
-    const response = await apiClient.get('/semesters/current');
-    return response.data;
+    try {
+      const response = await apiClient.get('/semesters/current');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Dashboard API] Semester fetch failed:', error?.message);
+      return null;
+    }
   },
 
   // Transform announcements to frontend format

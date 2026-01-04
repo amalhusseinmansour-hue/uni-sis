@@ -15,8 +15,13 @@ export const studentsAPI = {
 
   // Get my profile (for students) - uses /user endpoint which returns student data
   getMyProfile: async () => {
-    const response = await apiClient.get('/user');
-    return response.data;
+    try {
+      const response = await apiClient.get('/user');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Students API] Profile fetch failed:', error?.message);
+      return null;
+    }
   },
 
   // Update student (admin only)
@@ -39,16 +44,26 @@ export const studentsAPI = {
 
   // Get student enrollments
   getEnrollments: async (id: string, semester?: string, year?: number) => {
-    const response = await apiClient.get(`/students/${id}/enrollments`, {
-      params: { semester, year },
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get(`/students/${id}/enrollments`, {
+        params: { semester, year },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Students API] Enrollments fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get student grades
   getGrades: async (id: string) => {
-    const response = await apiClient.get(`/students/${id}/grades`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/students/${id}/grades`);
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Students API] Grades fetch failed:', error?.message);
+      return [];
+    }
   },
 
   // Get student financial records
@@ -77,8 +92,13 @@ export const studentsAPI = {
 
   // Get my grades (for students)
   getMyGrades: async () => {
-    const response = await apiClient.get('/my-grades');
-    return response.data;
+    try {
+      const response = await apiClient.get('/my-grades');
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Students API] My grades fetch failed:', error?.message);
+      return null;
+    }
   },
 
   // Get my academic summary (for students)

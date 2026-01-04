@@ -1,6 +1,6 @@
-const CACHE_NAME = 'vertex-sis-v1';
-const STATIC_CACHE = 'vertex-static-v1';
-const DYNAMIC_CACHE = 'vertex-dynamic-v1';
+const CACHE_NAME = 'vertex-sis-v3';
+const STATIC_CACHE = 'vertex-static-v3';
+const DYNAMIC_CACHE = 'vertex-dynamic-v3';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -95,9 +95,14 @@ async function cacheFirstStrategy(request) {
 
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(STATIC_CACHE);
-      cache.put(request, networkResponse.clone());
+    if (networkResponse.ok && networkResponse.status === 200) {
+      try {
+        const responseClone = networkResponse.clone();
+        const cache = await caches.open(STATIC_CACHE);
+        cache.put(request, responseClone);
+      } catch (cacheError) {
+        console.log('[SW] Cache put failed:', cacheError.message);
+      }
     }
     return networkResponse;
   } catch (error) {
@@ -110,9 +115,16 @@ async function cacheFirstStrategy(request) {
 async function networkFirstStrategy(request) {
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
+    // Only cache successful responses
+    if (networkResponse.ok && networkResponse.status === 200) {
+      try {
+        const responseClone = networkResponse.clone();
+        const cache = await caches.open(DYNAMIC_CACHE);
+        cache.put(request, responseClone);
+      } catch (cacheError) {
+        // Ignore cache errors (e.g., response already used)
+        console.log('[SW] Cache put failed:', cacheError.message);
+      }
     }
     return networkResponse;
   } catch (error) {
@@ -138,10 +150,15 @@ async function staleWhileRevalidate(request) {
   const cachedResponse = await caches.match(request);
 
   const fetchPromise = fetch(request).then((networkResponse) => {
-    if (networkResponse.ok) {
-      caches.open(DYNAMIC_CACHE).then((cache) => {
-        cache.put(request, networkResponse.clone());
-      });
+    if (networkResponse.ok && networkResponse.status === 200) {
+      try {
+        const responseClone = networkResponse.clone();
+        caches.open(DYNAMIC_CACHE).then((cache) => {
+          cache.put(request, responseClone);
+        });
+      } catch (cacheError) {
+        console.log('[SW] Cache put failed:', cacheError.message);
+      }
     }
     return networkResponse;
   }).catch(() => cachedResponse);

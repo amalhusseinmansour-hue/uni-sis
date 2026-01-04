@@ -271,7 +271,7 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
                 } text-white`}>
                   <span className="text-2xl font-bold">{new Date(exam.date).getDate()}</span>
                   <span className="text-xs opacity-90">
-                    {new Date(exam.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' })}
+                    {new Date(exam.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' })}
                   </span>
                 </div>
 
@@ -655,7 +655,7 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
               <div className="w-16 h-16 rounded-xl bg-blue-500 flex flex-col items-center justify-center text-white">
                 <span className="text-xl font-bold">{new Date(selectedExam.date).getDate()}</span>
                 <span className="text-xs">
-                  {new Date(selectedExam.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' })}
+                  {new Date(selectedExam.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' })}
                 </span>
               </div>
               <div className="flex-1">

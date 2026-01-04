@@ -30,7 +30,6 @@ const t: Record<string, { en: string; ar: string }> = {
   seats: { en: 'seats available', ar: 'مقعد متاح' },
   addToCart: { en: 'Select', ar: 'اختيار' },
   removeFromCart: { en: 'Remove', ar: 'إزالة' },
-  drop: { en: 'Drop', ar: 'سحب' },
   registerAll: { en: 'Confirm Registration', ar: 'تأكيد التسجيل' },
   clearCart: { en: 'Clear All', ar: 'مسح الكل' },
   totalCredits: { en: 'Total Credits', ar: 'إجمالي الساعات' },
@@ -60,7 +59,6 @@ const t: Record<string, { en: string; ar: string }> = {
   registrationPeriod: { en: 'Registration Period', ar: 'فترة التسجيل' },
   currentSemester: { en: 'Current Semester', ar: 'الفصل الحالي' },
   confirming: { en: 'Confirming...', ar: 'جاري التأكيد...' },
-  dropConfirm: { en: 'Are you sure you want to drop this course?', ar: 'هل أنت متأكد من سحب هذا المساق؟' },
   yes: { en: 'Yes', ar: 'نعم' },
   no: { en: 'No', ar: 'لا' },
   courseDetails: { en: 'Course Details', ar: 'تفاصيل المساق' },
@@ -100,7 +98,6 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentSemester, setCurrentSemester] = useState<string>('Fall 2024');
   const [maxCredits] = useState(18);
-  const [dropConfirmId, setDropConfirmId] = useState<string | null>(null);
 
   // Fetch data
   useEffect(() => {
@@ -204,19 +201,6 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
       setMessage({ type: 'error', text: error.message || t.registrationError[lang] });
     } finally {
       setRegistering(false);
-    }
-  };
-
-  // Drop course
-  const dropCourse = async (enrollmentId: string) => {
-    try {
-      await enrollmentsAPI.dropMyCourse(enrollmentId);
-      setEnrollments(enrollments.filter(e => e.id !== enrollmentId));
-      setDropConfirmId(null);
-      setMessage({ type: 'success', text: lang === 'ar' ? 'تم سحب المساق بنجاح' : 'Course dropped successfully' });
-    } catch (error: any) {
-      console.error('Drop error:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to drop course' });
     }
   };
 
@@ -617,29 +601,9 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
                           {enrollment.schedule}
                         </p>
                       </div>
-                      {dropConfirmId === enrollment.id ? (
-                        <div className="flex items-center gap-1 animate-in zoom-in duration-200">
-                          <button
-                            onClick={() => dropCourse(enrollment.id)}
-                            className="p-1.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300 rounded text-xs hover:bg-red-200 dark:hover:bg-red-900/70 transition-colors"
-                          >
-                            {t.yes[lang]}
-                          </button>
-                          <button
-                            onClick={() => setDropConfirmId(null)}
-                            className="p-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                          >
-                            {t.no[lang]}
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setDropConfirmId(enrollment.id)}
-                          className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                        >
-                          {t.drop[lang]}
-                        </button>
-                      )}
+                      <span className="px-2 py-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded">
+                        {lang === 'ar' ? 'مسجل' : 'Enrolled'}
+                      </span>
                     </div>
                   </div>
                 ))}

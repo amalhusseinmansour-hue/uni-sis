@@ -180,7 +180,7 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, records, courseAttendance
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (lang === 'ar') {
-      return date.toLocaleDateString('ar-SA');
+      return date.toLocaleDateString('ar-EG');
     }
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };

@@ -51,6 +51,7 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { TRANSLATIONS } from '../constants';
+import { exportToCSV, exportToPDF, printPage, sendViaEmail, formatTableHTML } from '../utils/exportUtils';
 
 interface ReportsProps {
   lang: 'en' | 'ar';
@@ -163,6 +164,229 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const isRTL = lang === 'ar';
+
+  // Export handlers
+  const handleExportPDF = () => {
+    setShowExportMenu(false);
+
+    // Generate report content based on active tab
+    let reportContent = '';
+    const tabTitles: Record<string, { en: string; ar: string }> = {
+      overview: { en: 'Overview Report', ar: 'تقرير نظرة عامة' },
+      enrollment: { en: 'Enrollment Report', ar: 'تقرير التسجيل' },
+      academic: { en: 'Academic Report', ar: 'تقرير الأكاديمي' },
+      financial: { en: 'Financial Report', ar: 'تقرير مالي' },
+      custom: { en: 'Custom Report', ar: 'تقرير مخصص' },
+    };
+
+    const title = tabTitles[activeTab][lang];
+
+    // Build content based on active tab
+    if (activeTab === 'overview') {
+      reportContent = `
+        <div class="content-section">
+          <h3 class="section-title">${isRTL ? 'ملخص الإحصائيات' : 'Statistics Summary'}</h3>
+          <div class="info-grid three-cols">
+            ${statCards.map(stat => `
+              <div class="info-item">
+                <label>${stat.title}</label>
+                <span>${stat.value} <small style="color: ${stat.trend === 'up' ? '#059669' : '#dc2626'}">(${stat.change})</small></span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="content-section">
+          <h3 class="section-title">${t.enrollmentTrend[lang]}</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>${isRTL ? 'الشهر' : 'Month'}</th>
+                <th>${isRTL ? 'إجمالي الطلاب' : 'Total Students'}</th>
+                <th>${isRTL ? 'التسجيلات الجديدة' : 'New Enrollments'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${enrollmentTrendData.map(row => `
+                <tr>
+                  <td>${row.month}</td>
+                  <td class="center">${row.students.toLocaleString()}</td>
+                  <td class="center">${row.newEnrollments.toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="content-section">
+          <h3 class="section-title">${t.departmentEnrollment[lang]}</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>${isRTL ? 'القسم' : 'Department'}</th>
+                <th>${isRTL ? 'عدد الطلاب' : 'Students'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${departmentData.map(row => `
+                <tr>
+                  <td>${row.name}</td>
+                  <td class="center">${row.students.toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else if (activeTab === 'enrollment') {
+      reportContent = `
+        <div class="content-section">
+          <h3 class="section-title">${t.enrollmentTrend[lang]}</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>${isRTL ? 'الشهر' : 'Month'}</th>
+                <th>${isRTL ? 'إجمالي الطلاب' : 'Total Students'}</th>
+                <th>${isRTL ? 'التسجيلات الجديدة' : 'New Enrollments'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${enrollmentTrendData.map(row => `
+                <tr>
+                  <td>${row.month}</td>
+                  <td class="center">${row.students.toLocaleString()}</td>
+                  <td class="center">${row.newEnrollments.toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else if (activeTab === 'academic') {
+      reportContent = `
+        <div class="content-section">
+          <h3 class="section-title">${t.gpaDistribution[lang]}</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>${isRTL ? 'النطاق' : 'Range'}</th>
+                <th>${isRTL ? 'التصنيف' : 'Classification'}</th>
+                <th>${isRTL ? 'العدد' : 'Count'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${gpaDistributionData.map(row => `
+                <tr>
+                  <td>${row.range}</td>
+                  <td>${row.label}</td>
+                  <td class="center">${row.count.toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else if (activeTab === 'financial') {
+      reportContent = `
+        <div class="content-section">
+          <h3 class="section-title">${t.monthlyRevenue[lang]}</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>${isRTL ? 'الشهر' : 'Month'}</th>
+                <th>${isRTL ? 'الرسوم الدراسية' : 'Tuition'}</th>
+                <th>${isRTL ? 'الرسوم' : 'Fees'}</th>
+                <th>${isRTL ? 'أخرى' : 'Other'}</th>
+                <th>${isRTL ? 'الإجمالي' : 'Total'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${revenueData.map(row => `
+                <tr>
+                  <td>${row.month}</td>
+                  <td class="center">${row.tuition.toLocaleString()}</td>
+                  <td class="center">${row.fees.toLocaleString()}</td>
+                  <td class="center">${row.other.toLocaleString()}</td>
+                  <td class="center"><strong>${(row.tuition + row.fees + row.other).toLocaleString()}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else {
+      reportContent = `
+        <div class="content-section">
+          <p style="text-align: center; padding: 40px; color: #64748b;">
+            ${isRTL ? 'يرجى إنشاء تقرير مخصص أولاً' : 'Please generate a custom report first'}
+          </p>
+        </div>
+      `;
+    }
+
+    exportToPDF(
+      tabTitles[activeTab].en,
+      reportContent,
+      `report-${activeTab}-${new Date().toISOString().split('T')[0]}`,
+      lang,
+      tabTitles[activeTab].ar
+    );
+  };
+
+  const handleExportExcel = () => {
+    setShowExportMenu(false);
+
+    let data: any[] = [];
+    let filename = 'report';
+    let headers: string[] = [];
+
+    if (activeTab === 'overview' || activeTab === 'enrollment') {
+      data = enrollmentTrendData.map(row => ({
+        [isRTL ? 'الشهر' : 'Month']: row.month,
+        [isRTL ? 'إجمالي الطلاب' : 'Total Students']: row.students,
+        [isRTL ? 'التسجيلات الجديدة' : 'New Enrollments']: row.newEnrollments,
+      }));
+      filename = `enrollment-trend-${new Date().toISOString().split('T')[0]}`;
+    } else if (activeTab === 'academic') {
+      data = gpaDistributionData.map(row => ({
+        [isRTL ? 'النطاق' : 'Range']: row.range,
+        [isRTL ? 'التصنيف' : 'Classification']: row.label,
+        [isRTL ? 'العدد' : 'Count']: row.count,
+      }));
+      filename = `gpa-distribution-${new Date().toISOString().split('T')[0]}`;
+    } else if (activeTab === 'financial') {
+      data = revenueData.map(row => ({
+        [isRTL ? 'الشهر' : 'Month']: row.month,
+        [isRTL ? 'الرسوم الدراسية' : 'Tuition']: row.tuition,
+        [isRTL ? 'الرسوم' : 'Fees']: row.fees,
+        [isRTL ? 'أخرى' : 'Other']: row.other,
+        [isRTL ? 'الإجمالي' : 'Total']: row.tuition + row.fees + row.other,
+      }));
+      filename = `financial-report-${new Date().toISOString().split('T')[0]}`;
+    } else {
+      data = departmentData.map(row => ({
+        [isRTL ? 'القسم' : 'Department']: row.name,
+        [isRTL ? 'عدد الطلاب' : 'Students']: row.students,
+      }));
+      filename = `department-enrollment-${new Date().toISOString().split('T')[0]}`;
+    }
+
+    if (data.length > 0) {
+      exportToCSV(data, filename);
+    }
+  };
+
+  const handlePrint = () => {
+    setShowExportMenu(false);
+    window.print();
+  };
+
+  const handleSendEmail = () => {
+    setShowExportMenu(false);
+    const subject = isRTL ? `تقرير ${t[activeTab as keyof typeof t]?.[lang] || activeTab}` : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Report`;
+    const body = isRTL
+      ? `مرفق تقرير ${activeTab} من نظام معلومات الطلاب - جامعة فيرتكس`
+      : `Please find attached the ${activeTab} report from Vertex University SIS.`;
+    sendViaEmail(subject, body);
+  };
 
   const tabs = [
     { key: 'overview', label: t.overview[lang], icon: BarChart3 },
@@ -855,13 +1079,35 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-slate-100 rounded-lg" title="View">
+                  <button
+                    className="p-2 hover:bg-slate-100 rounded-lg"
+                    title={isRTL ? 'عرض' : 'View'}
+                    onClick={() => alert(isRTL ? `عرض: ${report.name}` : `Viewing: ${report.name}`)}
+                  >
                     <Eye className="w-4 h-4 text-slate-500" />
                   </button>
-                  <button className="p-2 hover:bg-slate-100 rounded-lg" title="Download PDF">
+                  <button
+                    className="p-2 hover:bg-slate-100 rounded-lg"
+                    title={isRTL ? 'تحميل PDF' : 'Download PDF'}
+                    onClick={() => {
+                      const content = `<div class="content-section"><h3 class="section-title">${report.name}</h3><p>${isRTL ? 'تاريخ التقرير' : 'Report Date'}: ${report.date}</p><p>${isRTL ? 'نوع التقرير' : 'Report Type'}: ${report.type}</p></div>`;
+                      exportToPDF(report.name, content, `${report.type}-report-${report.date}`, lang, report.name);
+                    }}
+                  >
                     <FileType2 className="w-4 h-4 text-red-500" />
                   </button>
-                  <button className="p-2 hover:bg-slate-100 rounded-lg" title="Download Excel">
+                  <button
+                    className="p-2 hover:bg-slate-100 rounded-lg"
+                    title={isRTL ? 'تحميل Excel' : 'Download Excel'}
+                    onClick={() => {
+                      const data = [{
+                        [isRTL ? 'اسم التقرير' : 'Report Name']: report.name,
+                        [isRTL ? 'التاريخ' : 'Date']: report.date,
+                        [isRTL ? 'النوع' : 'Type']: report.type,
+                      }];
+                      exportToCSV(data, `${report.type}-report-${report.date}`);
+                    }}
+                  >
                     <FileSpreadsheet className="w-4 h-4 text-green-600" />
                   </button>
                 </div>
@@ -880,7 +1126,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">{t.reports[lang]}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {t.lastUpdated[lang]}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+            {t.lastUpdated[lang]}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -931,21 +1177,33 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
             </button>
             {showExportMenu && (
               <div className={`absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 ${isRTL ? 'left-0' : 'right-0'}`}>
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                <button
+                  onClick={handleExportPDF}
+                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                >
                   <FileType2 className="w-4 h-4 text-red-500" />
-                  Export as PDF
+                  {isRTL ? 'تصدير PDF' : 'Export as PDF'}
                 </button>
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                <button
+                  onClick={handleExportExcel}
+                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                >
                   <FileSpreadsheet className="w-4 h-4 text-green-600" />
-                  Export as Excel
+                  {isRTL ? 'تصدير Excel' : 'Export as Excel'}
                 </button>
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                <button
+                  onClick={handlePrint}
+                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                >
                   <Printer className="w-4 h-4 text-slate-600" />
                   {t.print[lang]}
                 </button>
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                <button
+                  onClick={handleSendEmail}
+                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                >
                   <Mail className="w-4 h-4 text-blue-600" />
-                  Send via Email
+                  {isRTL ? 'إرسال بالبريد' : 'Send via Email'}
                 </button>
               </div>
             )}

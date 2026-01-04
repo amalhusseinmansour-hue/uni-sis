@@ -499,7 +499,7 @@ export const DynamicReport: React.FC<DynamicReportProps> = ({
           {/* Meta info */}
           <div className="p-4 border-t border-gray-200 dark:border-slate-700 text-sm text-gray-500 dark:text-gray-400">
             {lang === 'ar'
-              ? `تم التوليد في: ${new Date(result.meta.generated_at).toLocaleString('ar-SA')}`
+              ? `تم التوليد في: ${new Date(result.meta.generated_at).toLocaleString('ar-EG')}`
               : `Generated at: ${new Date(result.meta.generated_at).toLocaleString()}`}
           </div>
         </>

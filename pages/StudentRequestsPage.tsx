@@ -40,12 +40,6 @@ const REQUEST_TYPES = {
     icon: Clock,
     color: 'orange',
   },
-  SEMESTER_WITHDRAWAL: {
-    name_ar: 'الانسحاب من فصل كامل',
-    name_en: 'Full Semester Withdrawal',
-    icon: XCircle,
-    color: 'red',
-  },
   RE_ENROLLMENT: {
     name_ar: 'إعادة القيد',
     name_en: 'Re-enrollment',
@@ -102,7 +96,6 @@ const REQUEST_WORKFLOWS: Record<string, string[]> = {
   EXCEPTIONAL_REGISTRATION: ['DEPT_HEAD', 'DEAN'],
   SEMESTER_POSTPONE: ['STUDENT_AFFAIRS', 'DEPT_HEAD', 'FINANCE', 'ACADEMIC_AFFAIRS'],
   SEMESTER_FREEZE: ['STUDENT_AFFAIRS', 'DEPT_HEAD', 'FINANCE', 'ACADEMIC_AFFAIRS'],
-  SEMESTER_WITHDRAWAL: ['DEPT_HEAD', 'ACADEMIC_AFFAIRS', 'STUDENT_AFFAIRS', 'FINANCE'],
   RE_ENROLLMENT: ['ADMISSIONS', 'ACADEMIC_AFFAIRS'],
   COURSE_EQUIVALENCY: ['ACADEMIC_AFFAIRS', 'FINANCE', 'DEAN'],
   EXAM_RETAKE: ['COURSE_INSTRUCTOR', 'STUDENT_AFFAIRS'],
@@ -223,7 +216,6 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
     'EXCEPTIONAL_REGISTRATION': 'exceptional_registration',
     'SEMESTER_POSTPONE': 'semester_postpone',
     'SEMESTER_FREEZE': 'semester_freeze',
-    'SEMESTER_WITHDRAWAL': 'semester_withdrawal',
     'RE_ENROLLMENT': 're_enrollment',
     'COURSE_EQUIVALENCY': 'course_equivalency',
     'EXAM_RETAKE': 'exam_retake',
@@ -623,56 +615,6 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
           </div>
         );
 
-      case 'SEMESTER_WITHDRAWAL':
-        return (
-          <div className="space-y-4">
-            <Select
-              label={lang === 'ar' ? 'الفصل المطلوب الانسحاب منه' : 'Semester to Withdraw From'}
-              options={semesters.map(s => ({ value: s.id.toString(), label: lang === 'ar' ? s.name_ar : s.name_en }))}
-              value={formData.semester_id?.toString() || ''}
-              onChange={(e) => setFormData({ ...formData, semester_id: parseInt(e.target.value) })}
-              required
-            />
-            <Textarea
-              label={lang === 'ar' ? 'سبب الانسحاب' : 'Withdrawal Reason'}
-              placeholder={lang === 'ar' ? 'اشرح سبب الانسحاب' : 'Explain the withdrawal reason'}
-              value={formData.reason || ''}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              rows={3}
-              required
-            />
-            <Input
-              label={lang === 'ar' ? 'عدد الانسحابات السابقة' : 'Previous Withdrawals'}
-              type="number"
-              min={0}
-              value={formData.previous_withdrawals_count || ''}
-              onChange={(e) => setFormData({ ...formData, previous_withdrawals_count: parseInt(e.target.value) })}
-              required
-            />
-            <Select
-              label={lang === 'ar' ? 'هل يرغب بالعودة الفصل القادم؟' : 'Return Next Semester?'}
-              options={[
-                { value: 'true', label: lang === 'ar' ? 'نعم' : 'Yes' },
-                { value: 'false', label: lang === 'ar' ? 'لا' : 'No' },
-              ]}
-              value={formData.return_next_semester?.toString() || ''}
-              onChange={(e) => setFormData({ ...formData, return_next_semester: e.target.value === 'true' })}
-              required
-            />
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-              <h4 className="font-medium text-slate-700 mb-2">
-                {lang === 'ar' ? 'المرفقات' : 'Attachments'}
-              </h4>
-              <p className="text-sm text-slate-500 mb-3">
-                {lang === 'ar'
-                  ? 'تقرير صحي (في حال كان صحي)، أو ما يعزز الطلب'
-                  : 'Medical report (if applicable), or supporting documents'}
-              </p>
-              <Input type="file" multiple onChange={(e) => setAttachments(Array.from(e.target.files || []))} />
-            </div>
-          </div>
-        );
-
       case 'RE_ENROLLMENT':
         return (
           <div className="space-y-4">
@@ -988,7 +930,7 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
                     <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {new Date(request.created_at).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                        {new Date(request.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
                       </span>
                       {request.department && (
                         <span className="flex items-center gap-1">
@@ -1219,7 +1161,7 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
               <div className="p-3 border border-slate-200 rounded-lg">
                 <p className="text-xs text-slate-500 mb-1">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created At'}</p>
                 <p className="font-medium text-slate-800">
-                  {new Date(selectedRequest.created_at).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                  {new Date(selectedRequest.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
                 </p>
               </div>
               {selectedRequest.semester && (

@@ -53,6 +53,17 @@ const t: Record<string, { en: string; ar: string }> = {
   templateModern: { en: 'Modern', ar: 'عصري' },
   templateClassic: { en: 'Classic', ar: 'كلاسيكي' },
   templateMinimal: { en: 'Minimal', ar: 'بسيط' },
+  templateCustom: { en: 'Custom Template', ar: 'قالب مخصص' },
+  uploadFrontTemplate: { en: 'Upload Front Template', ar: 'رفع قالب الوجه الأمامي' },
+  uploadBackTemplate: { en: 'Upload Back Template', ar: 'رفع قالب الوجه الخلفي' },
+  frontTemplate: { en: 'Front Side', ar: 'الوجه الأمامي' },
+  backTemplate: { en: 'Back Side', ar: 'الوجه الخلفي' },
+  customTemplateHint: { en: 'Upload a blank card template (86mm × 54mm recommended)', ar: 'ارفع قالب بطاقة فارغ (يُنصح بـ 86مم × 54مم)' },
+  fieldPositions: { en: 'Field Positions', ar: 'مواقع الحقول' },
+  photoPosition: { en: 'Photo Position', ar: 'موقع الصورة' },
+  namePosition: { en: 'Name Position', ar: 'موقع الاسم' },
+  studentIdPosition: { en: 'Student ID Position', ar: 'موقع رقم الطالب' },
+  downloadSampleTemplate: { en: 'Download Sample Template', ar: 'تحميل نموذج قالب' },
   idCardColors: { en: 'Card Colors', ar: 'ألوان البطاقة' },
   idCardPrimary: { en: 'Primary Color', ar: 'اللون الرئيسي' },
   idCardSecondary: { en: 'Secondary Color', ar: 'اللون الثانوي' },
@@ -101,6 +112,8 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const lightLogoInputRef = useRef<HTMLInputElement>(null);
   const reportLogoInputRef = useRef<HTMLInputElement>(null);
+  const frontTemplateInputRef = useRef<HTMLInputElement>(null);
+  const backTemplateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadSettings();
@@ -148,6 +161,82 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
     } catch (error) {
       console.error('Error uploading logo:', error);
     }
+  };
+
+  const handleTemplateUpload = async (file: File, type: 'idCardCustomTemplateFront' | 'idCardCustomTemplateBack') => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        setSettings(prev => prev ? { ...prev, [type]: base64 } : prev);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading template:', error);
+    }
+  };
+
+  const downloadSampleTemplate = () => {
+    // Create a sample blank template
+    const canvas = document.createElement('canvas');
+    canvas.width = 1016; // 86mm at 300dpi
+    canvas.height = 638; // 54mm at 300dpi
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Background
+      ctx.fillStyle = '#1e3a5f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Header area
+      ctx.fillStyle = '#0f2740';
+      ctx.fillRect(0, 0, canvas.width, 120);
+
+      // Guide lines (dashed)
+      ctx.setLineDash([10, 5]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 2;
+
+      // Photo area guide
+      ctx.strokeRect(40, 160, 240, 300);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(40, 160, 240, 300);
+
+      // Text guides
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '24px Arial';
+      ctx.fillText('← Photo Area', 300, 310);
+      ctx.fillText('← Name / الاسم', 300, 200);
+      ctx.fillText('← Student ID', 300, 250);
+      ctx.fillText('← College', 300, 350);
+
+      // QR code area
+      ctx.strokeRect(40, 500, 120, 120);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(40, 500, 120, 120);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '18px Arial';
+      ctx.fillText('QR', 80, 565);
+
+      // Barcode area
+      ctx.strokeRect(180, 540, 300, 60);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(180, 540, 300, 60);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillText('Barcode', 280, 575);
+
+      // Header text placeholder
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = 'bold 36px Arial';
+      ctx.fillText('UNIVERSITY NAME', 350, 70);
+      ctx.font = '24px Arial';
+      ctx.fillText('اسم الجامعة', 500, 100);
+    }
+
+    // Download
+    const link = document.createElement('a');
+    link.download = 'id-card-template.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   };
 
   const updateSetting = (key: keyof BrandingSettings, value: any) => {
@@ -436,8 +525,8 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       {t.idCardTemplate[lang]}
                     </label>
-                    <div className="grid grid-cols-3 gap-4">
-                      {(['modern', 'classic', 'minimal'] as const).map((template) => (
+                    <div className="grid grid-cols-4 gap-4">
+                      {(['modern', 'classic', 'minimal', 'custom'] as const).map((template) => (
                         <button
                           key={template}
                           onClick={() => updateSetting('idCardTemplate', template)}
@@ -447,20 +536,128 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                          <div className={`h-16 rounded mb-2 ${
+                          <div className={`h-16 rounded mb-2 flex items-center justify-center ${
                             template === 'modern' ? 'bg-gradient-to-br from-blue-600 to-blue-800' :
                             template === 'classic' ? 'bg-gradient-to-b from-gray-700 to-gray-900' :
-                            'bg-gray-100 border border-gray-300'
-                          }`} />
+                            template === 'minimal' ? 'bg-gray-100 border border-gray-300' :
+                            'bg-gradient-to-br from-purple-500 to-pink-500'
+                          }`}>
+                            {template === 'custom' && <Upload className="w-6 h-6 text-white" />}
+                          </div>
                           <span className="text-sm font-medium">
                             {template === 'modern' ? t.templateModern[lang] :
                              template === 'classic' ? t.templateClassic[lang] :
-                             t.templateMinimal[lang]}
+                             template === 'minimal' ? t.templateMinimal[lang] :
+                             t.templateCustom[lang]}
                           </span>
                         </button>
                       ))}
                     </div>
                   </div>
+
+                  {/* Custom Template Upload - Only show when custom is selected */}
+                  {settings.idCardTemplate === 'custom' && (
+                    <div className="border-2 border-dashed border-purple-300 rounded-xl p-6 bg-purple-50/50">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Upload className="w-5 h-5 text-purple-600" />
+                        <h4 className="font-semibold text-purple-900">{t.templateCustom[lang]}</h4>
+                      </div>
+                      <p className="text-sm text-purple-700 mb-4">{t.customTemplateHint[lang]}</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Front Template */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {t.frontTemplate[lang]}
+                          </label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white">
+                            {settings.idCardCustomTemplateFront ? (
+                              <div className="relative">
+                                <img
+                                  src={settings.idCardCustomTemplateFront}
+                                  alt="Front Template"
+                                  className="max-h-40 mx-auto rounded shadow-sm"
+                                />
+                                <button
+                                  onClick={() => updateSetting('idCardCustomTemplateFront', '')}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => frontTemplateInputRef.current?.click()}
+                                className="cursor-pointer py-6 hover:bg-gray-50 rounded-lg transition-colors"
+                              >
+                                <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">{t.uploadFrontTemplate[lang]}</p>
+                              </div>
+                            )}
+                            <input
+                              ref={frontTemplateInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => e.target.files?.[0] && handleTemplateUpload(e.target.files[0], 'idCardCustomTemplateFront')}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Back Template */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {t.backTemplate[lang]}
+                          </label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white">
+                            {settings.idCardCustomTemplateBack ? (
+                              <div className="relative">
+                                <img
+                                  src={settings.idCardCustomTemplateBack}
+                                  alt="Back Template"
+                                  className="max-h-40 mx-auto rounded shadow-sm"
+                                />
+                                <button
+                                  onClick={() => updateSetting('idCardCustomTemplateBack', '')}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => backTemplateInputRef.current?.click()}
+                                className="cursor-pointer py-6 hover:bg-gray-50 rounded-lg transition-colors"
+                              >
+                                <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">{t.uploadBackTemplate[lang]}</p>
+                              </div>
+                            )}
+                            <input
+                              ref={backTemplateInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => e.target.files?.[0] && handleTemplateUpload(e.target.files[0], 'idCardCustomTemplateBack')}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Download Sample Template */}
+                      <div className="mt-4 pt-4 border-t border-purple-200">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={downloadSampleTemplate}
+                          className="text-purple-700 border-purple-300 hover:bg-purple-100"
+                        >
+                          <FileText className="w-4 h-4" />
+                          {t.downloadSampleTemplate[lang]}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Colors */}
                   <div>
@@ -706,19 +903,19 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                     label={t.phone[lang]}
                     value={settings.universityPhone || ''}
                     onChange={(e) => updateSetting('universityPhone', e.target.value)}
-                    icon={<Phone className="w-4 h-4" />}
+                    icon={Phone}
                   />
                   <Input
                     label={t.email[lang]}
                     value={settings.universityEmail || ''}
                     onChange={(e) => updateSetting('universityEmail', e.target.value)}
-                    icon={<Mail className="w-4 h-4" />}
+                    icon={Mail}
                   />
                   <Input
                     label={t.website[lang]}
                     value={settings.universityWebsite || ''}
                     onChange={(e) => updateSetting('universityWebsite', e.target.value)}
-                    icon={<Globe className="w-4 h-4" />}
+                    icon={Globe}
                   />
                 </div>
               </CardBody>
@@ -814,6 +1011,108 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
 
 // ID Card Preview Component
 const IDCardPreview: React.FC<{ settings: BrandingSettings; lang: 'en' | 'ar' }> = ({ settings, lang }) => {
+  const [showBack, setShowBack] = useState(false);
+
+  // Custom template view
+  if (settings.idCardTemplate === 'custom') {
+    const templateImage = showBack ? settings.idCardCustomTemplateBack : settings.idCardCustomTemplateFront;
+
+    return (
+      <div className="space-y-4">
+        {/* Toggle Front/Back */}
+        {(settings.idCardCustomTemplateFront || settings.idCardCustomTemplateBack) && (
+          <div className="flex justify-center gap-2 mb-4">
+            <button
+              onClick={() => setShowBack(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                !showBack ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {lang === 'ar' ? 'الوجه الأمامي' : 'Front'}
+            </button>
+            <button
+              onClick={() => setShowBack(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                showBack ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {lang === 'ar' ? 'الوجه الخلفي' : 'Back'}
+            </button>
+          </div>
+        )}
+
+        <div className="flex justify-center">
+          <div className="w-[340px] h-[215px] rounded-xl overflow-hidden shadow-xl relative bg-gray-100">
+            {templateImage ? (
+              <>
+                {/* Custom Template Background */}
+                <img
+                  src={templateImage}
+                  alt="ID Card Template"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Overlay Content (only on front) */}
+                {!showBack && (
+                  <div className="absolute inset-0 p-3">
+                    {/* Sample overlay - Photo area */}
+                    <div
+                      className="absolute bg-white/80 rounded-lg flex items-center justify-center border-2 border-white/50"
+                      style={{
+                        left: '6%',
+                        top: '30%',
+                        width: '24%',
+                        height: '47%',
+                      }}
+                    >
+                      <span className="text-3xl">👤</span>
+                    </div>
+                    {/* Sample overlay - Name */}
+                    <div
+                      className="absolute text-white drop-shadow-md"
+                      style={{ left: '35%', top: '30%' }}
+                    >
+                      <div className="text-sm font-bold">أحمد محمد المنصور</div>
+                      <div className="text-xs opacity-90">Ahmed M. Al-Mansour</div>
+                    </div>
+                    {/* Sample overlay - ID */}
+                    <div
+                      className="absolute text-white drop-shadow-md text-xs"
+                      style={{ left: '35%', top: '52%' }}
+                    >
+                      <span className="opacity-70">ID: </span>
+                      <span className="font-medium">STU-2024-001</span>
+                    </div>
+                    {/* QR Code */}
+                    {settings.showQRCode && (
+                      <div
+                        className="absolute bg-white rounded p-1"
+                        style={{ left: '6%', bottom: '8%', width: '48px', height: '48px' }}
+                      >
+                        <div className="w-full h-full bg-gray-200 rounded grid grid-cols-4 gap-0.5">
+                          {[...Array(16)].map((_, i) => (
+                            <div key={i} className={`${Math.random() > 0.5 ? 'bg-gray-800' : 'bg-white'}`} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <div className="text-center">
+                  <Image className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm">{lang === 'ar' ? 'لم يتم رفع قالب' : 'No template uploaded'}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default templates (modern, classic, minimal)
   return (
     <div className="flex justify-center">
       <div

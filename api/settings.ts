@@ -79,6 +79,7 @@ export interface UserSettings {
     academic: boolean;
     financial: boolean;
     announcements: boolean;
+    soundEffects?: boolean;
   };
   accessibility: {
     fontSize: 'small' | 'medium' | 'large';

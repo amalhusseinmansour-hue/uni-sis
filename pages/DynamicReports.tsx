@@ -355,7 +355,7 @@ const DynamicReportsPage: React.FC<DynamicReportsPageProps> = ({ lang }) => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">{t.reports[lang]}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {t.lastUpdated[lang]}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+            {t.lastUpdated[lang]}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">

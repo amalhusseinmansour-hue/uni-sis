@@ -3,6 +3,7 @@ import { User } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { settingsAPI, UserSettings } from '../api/settings';
 import { studentsAPI } from '../api/students';
+import { exportToCSV } from '../utils/exportUtils';
 import {
   UserCircle,
   Bell,
@@ -173,7 +174,7 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
             financialAlerts: settings.notifications?.financial ?? true,
             eventReminders: settings.notifications?.announcements ?? true,
             systemNotifications: false,
-            soundEffects: true,
+            soundEffects: settings.notifications?.soundEffects ?? true,
           });
           // Update appearance settings
           if (settings.theme) {
@@ -253,6 +254,7 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
           academic: notifications.academicAlerts,
           financial: notifications.financialAlerts,
           announcements: notifications.eventReminders,
+          soundEffects: notifications.soundEffects,
         },
         accessibility: {
           fontSize: fontSize as 'small' | 'medium' | 'large',
@@ -954,7 +956,18 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                       <p className="text-sm text-slate-500">{t.downloadDataDesc[lang]}</p>
                     </div>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2">
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2" onClick={() => {
+                    // Export user settings and profile data
+                    const userData = {
+                      settings: {
+                        notifications: settings.notifications,
+                        privacy: settings.privacy,
+                        accessibility: settings.accessibility,
+                        language: settings.language
+                      }
+                    };
+                    exportToCSV([userData], 'my-data');
+                  }}>
                     <Download className="w-4 h-4" />
                     {lang === 'en' ? 'Download' : 'تحميل'}
                   </button>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
+import { exportToPDF } from '../utils/exportUtils';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
 import Badge, { StatusBadge } from '../components/ui/Badge';
@@ -426,7 +427,7 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
                   <div className="w-16 text-center">
                     <p className="text-2xl font-bold text-blue-600">{new Date(apt.date).getDate()}</p>
                     <p className="text-xs text-slate-500">
-                      {new Date(apt.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' })}
+                      {new Date(apt.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' })}
                     </p>
                   </div>
                   <div className="flex-1">
@@ -477,7 +478,7 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
                 <div className="w-12 text-center">
                   <p className="text-lg font-bold text-slate-600">{new Date(apt.date).getDate()}</p>
                   <p className="text-xs text-slate-400">
-                    {new Date(apt.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' })}
+                    {new Date(apt.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' })}
                   </p>
                 </div>
                 <div className="flex-1">
@@ -521,7 +522,9 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
                     }`}>
                       <FileText className="w-4 h-4" />
                       <span className="text-xs">{lang === 'ar' ? 'الخطة_الدراسية.pdf' : 'study_plan.pdf'}</span>
-                      <Download className="w-4 h-4 cursor-pointer" />
+                      <Download className="w-4 h-4 cursor-pointer hover:text-blue-600" onClick={() => {
+                        exportToPDF([{ file: lang === 'ar' ? 'الخطة_الدراسية' : 'study_plan' }], 'study_plan');
+                      }} />
                     </div>
                   )}
                   <p className={`text-xs mt-2 ${msg.from === 'student' ? 'text-blue-200' : 'text-slate-400'}`}>
@@ -563,7 +566,16 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
               {lang === 'ar' ? 'بكالوريوس علوم الحاسب - 132 ساعة' : 'BSc Computer Science - 132 Credits'}
             </p>
           </div>
-          <Button variant="outline" className="border-white/30 text-white hover:bg-white/10" icon={Download}>
+          <Button variant="outline" className="border-white/30 text-white hover:bg-white/10" icon={Download} onClick={() => {
+            const data = [{
+              program: lang === 'ar' ? 'بكالوريوس علوم الحاسب' : 'BSc Computer Science',
+              totalCredits: 132,
+              completedCredits: 96,
+              inProgressCredits: 18,
+              remainingCredits: 18
+            }];
+            exportToPDF(data, 'study-plan');
+          }}>
             {lang === 'ar' ? 'تحميل الخطة' : 'Download Plan'}
           </Button>
         </div>
@@ -707,7 +719,7 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
                       : 'border-slate-200 hover:border-blue-300'
                   }`}
                 >
-                  <p className="font-medium">{new Date(slot.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                  <p className="font-medium">{new Date(slot.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                   <p className="text-slate-500">{slot.time}</p>
                 </button>
               ))}

@@ -148,23 +148,25 @@ export function ConfigProvider({ children, role }: ConfigProviderProps) {
   };
 
   const loadConfig = async (userRole: UserRole) => {
+    console.log('[ConfigContext] Loading config for role:', userRole);
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
       const roleString = userRole.toLowerCase();
       const [menu, dashboard, theme] = await Promise.all([
-        configAPI.getMenu(roleString),
-        configAPI.getDashboard(roleString),
-        configAPI.getTheme(),
+        configAPI.getMenu(roleString).catch(e => { console.warn('[ConfigContext] Menu fetch failed:', e); return null; }),
+        configAPI.getDashboard(roleString).catch(e => { console.warn('[ConfigContext] Dashboard fetch failed:', e); return null; }),
+        configAPI.getTheme().catch(e => { console.warn('[ConfigContext] Theme fetch failed:', e); return null; }),
       ]);
 
+      console.log('[ConfigContext] Config loaded successfully');
       dispatch({
         type: 'SET_FULL_CONFIG',
         payload: { menu, dashboard, theme },
       });
     } catch (error) {
-      console.error('Error loading config:', error);
+      console.error('[ConfigContext] Error loading config:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Failed to load configuration' });
     }
   };

@@ -12,7 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { studentsAPI } from '../api/students';
 import { financeAPI } from '../api/finance';
 import { attendanceAPI } from '../api/attendance';
-import { printPage } from '../utils/exportUtils';
+import { printPage, exportToPDF } from '../utils/exportUtils';
 
 interface ProfileProps {
   lang: 'en' | 'ar';
@@ -2051,7 +2051,9 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                               <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title={t.view[lang]}>
                                 <Eye className="w-4 h-4 text-slate-500" />
                               </button>
-                              <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title={t.download[lang]}>
+                              <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title={t.download[lang]} onClick={() => {
+                                exportToPDF([{ name: doc.name, type: doc.type, status: doc.status, date: doc.date }], `document-${doc.id}`);
+                              }}>
                                 <Download className="w-4 h-4 text-slate-500" />
                               </button>
                             </div>

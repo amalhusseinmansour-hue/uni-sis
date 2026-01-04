@@ -279,7 +279,7 @@ export const EventList: React.FC<EventListProps> = ({
             <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
-                {event.date.toLocaleTimeString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+                {event.date.toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
@@ -326,7 +326,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const isRTL = lang === 'ar';
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+    return date.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

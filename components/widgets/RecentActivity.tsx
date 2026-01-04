@@ -123,7 +123,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ lang }) => {
     } else if (diffDays < 7) {
       return lang === 'ar' ? `منذ ${diffDays} يوم` : `${diffDays} days ago`;
     } else {
-      return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+      return date.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
         month: 'short',
         day: 'numeric',
       });

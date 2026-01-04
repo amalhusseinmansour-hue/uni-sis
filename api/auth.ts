@@ -58,12 +58,15 @@ export const authAPI = {
 
   // Logout
   logout: async () => {
+    // Clear local storage first to ensure immediate logout
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+
+    // Then try to invalidate token on server (optional, ignore errors)
     try {
       await apiClient.post('/logout');
     } catch (error) {
-      // Ignore errors during logout
+      // Ignore errors during logout - user is already logged out locally
     }
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
   },
 };

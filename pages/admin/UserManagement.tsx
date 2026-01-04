@@ -348,6 +348,46 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  const exportUsers = () => {
+    // Create CSV content
+    const headers = ['Email', 'First Name', 'Last Name', 'First Name (Arabic)', 'Last Name (Arabic)', 'Role', 'Student ID', 'Phone', 'Department', 'Program', 'Status', 'Created At'];
+    const rows = filteredUsers.map(user => [
+      user.email || '',
+      user.firstName || '',
+      user.lastName || '',
+      user.firstNameAr || '',
+      user.lastNameAr || '',
+      user.role || '',
+      user.studentId || '',
+      user.phone || '',
+      user.department || '',
+      user.program || '',
+      user.status || '',
+      user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
+    ]);
+
+    // Add BOM for proper Arabic encoding in Excel
+    const BOM = '\uFEFF';
+    const csvContent = BOM + [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showNotification('success', lang === 'ar' ? 'تم تصدير المستخدمين بنجاح' : 'Users exported successfully');
+  };
+
   const getRoleDisplay = (role: string) => {
     const roleLower = role?.toLowerCase() || 'unknown';
     const config = roleConfig[roleLower] || roleConfig.student;
@@ -410,7 +450,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {/* Export logic */}}
+            onClick={exportUsers}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Download className="w-4 h-4" />

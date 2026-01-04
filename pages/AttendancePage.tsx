@@ -105,7 +105,7 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
             // Calculate monthly trend
             const monthMap = new Map<string, { total: number; attended: number }>();
             allRecords.forEach(record => {
-              const month = new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' });
+              const month = new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' });
               if (!monthMap.has(month)) {
                 monthMap.set(month, { total: 0, attended: 0 });
               }
@@ -519,7 +519,7 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
                 <div className="w-12 text-center">
                   <p className="text-lg font-bold text-slate-800">{new Date(record.date).getDate()}</p>
                   <p className="text-xs text-slate-500">
-                    {new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short' })}
+                    {new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' })}
                   </p>
                 </div>
                 <div className="w-px h-10 bg-slate-200"></div>

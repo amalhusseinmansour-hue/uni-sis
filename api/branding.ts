@@ -19,13 +19,26 @@ export interface BrandingSettings {
   accentColor: string;
 
   // ID Card Settings
-  idCardTemplate: 'modern' | 'classic' | 'minimal';
+  idCardTemplate: 'modern' | 'classic' | 'minimal' | 'custom';
+  idCardCustomTemplate?: string; // Base64 of uploaded template image
+  idCardCustomTemplateFront?: string; // Front side template
+  idCardCustomTemplateBack?: string; // Back side template
   idCardPrimaryColor: string;
   idCardSecondaryColor: string;
   idCardTextColor: string;
   idCardBackgroundPattern?: string;
   showQRCode: boolean;
   showBarcode: boolean;
+  // Custom template field positions (for overlay)
+  idCardFieldPositions?: {
+    photo?: { x: number; y: number; width: number; height: number };
+    name?: { x: number; y: number; fontSize: number; color: string };
+    nameAr?: { x: number; y: number; fontSize: number; color: string };
+    studentId?: { x: number; y: number; fontSize: number; color: string };
+    college?: { x: number; y: number; fontSize: number; color: string };
+    qrCode?: { x: number; y: number; size: number };
+    barcode?: { x: number; y: number; width: number; height: number };
+  };
 
   // Report/Transcript Settings
   reportHeaderLogo: string;
@@ -62,12 +75,24 @@ const DEFAULT_BRANDING: BrandingSettings = {
   accentColor: '#f59e0b',
 
   idCardTemplate: 'modern',
+  idCardCustomTemplate: '',
+  idCardCustomTemplateFront: '',
+  idCardCustomTemplateBack: '',
   idCardPrimaryColor: '#1e3a5f',
   idCardSecondaryColor: '#2563eb',
   idCardTextColor: '#ffffff',
   idCardBackgroundPattern: '',
   showQRCode: true,
   showBarcode: true,
+  idCardFieldPositions: {
+    photo: { x: 20, y: 60, width: 80, height: 100 },
+    name: { x: 110, y: 70, fontSize: 14, color: '#ffffff' },
+    nameAr: { x: 110, y: 90, fontSize: 12, color: '#ffffff' },
+    studentId: { x: 110, y: 120, fontSize: 11, color: '#ffffff' },
+    college: { x: 110, y: 140, fontSize: 10, color: '#ffffff' },
+    qrCode: { x: 20, y: 170, size: 50 },
+    barcode: { x: 80, y: 180, width: 150, height: 30 },
+  },
 
   reportHeaderLogo: '',
   reportFooterText: 'This is an official document issued by the university',

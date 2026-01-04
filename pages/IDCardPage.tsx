@@ -121,7 +121,20 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
     setError(null);
     try {
       const data = await idCardAPI.getMyIdCard();
-      setIdCard(data);
+      // Ensure we have valid data with all required fields
+      if (data && data.student && data.validity) {
+        setIdCard({
+          ...defaultIdCard,
+          ...data,
+          student: { ...defaultIdCard.student, ...data.student },
+          academic: { ...defaultIdCard.academic, ...(data.academic || {}) },
+          validity: { ...defaultIdCard.validity, ...data.validity },
+          verification: { ...defaultIdCard.verification, ...(data.verification || {}) },
+        });
+      } else {
+        // Use default data if API returns incomplete data
+        setIdCard(defaultIdCard);
+      }
     } catch (err: any) {
       console.error('Error fetching ID card:', err);
       // Use default data on error for demo
@@ -231,7 +244,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
     <div className="space-y-6 pb-8" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 left-4 md:left-auto md:w-96 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-in slide-in-from-top ${
+        <div className={`no-print fixed top-4 right-4 left-4 md:left-auto md:w-96 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-in slide-in-from-top ${
           notification.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
         }`}>
           {notification.type === 'success' ? (
@@ -249,7 +262,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900 rounded-2xl p-6 text-white relative overflow-hidden">
+      <div className="no-print bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900 rounded-2xl p-6 text-white relative overflow-hidden">
         {/* Decorative Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
@@ -303,7 +316,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
 
       {/* Renewal Warning */}
       {(card.needs_renewal || isExpired) && (
-        <div className={`p-4 rounded-xl flex items-center gap-3 ${
+        <div className={`no-print p-4 rounded-xl flex items-center gap-3 ${
           isExpired ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'
         }`}>
           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -337,7 +350,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
         {/* Card Preview */}
         <div className="space-y-4">
           {/* Toggle Buttons */}
-          <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
+          <div className="no-print flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
             <button
               onClick={() => setShowBack(false)}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -369,7 +382,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
               {/* Front Side */}
               {!showBack && (
                 <div
-                  className="rounded-2xl shadow-2xl overflow-hidden print:break-inside-avoid"
+                  className="id-card-print rounded-2xl shadow-2xl overflow-hidden"
                   style={{
                     aspectRatio: '1.586',
                     background: branding?.idCardTemplate === 'minimal'
@@ -540,7 +553,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
         </div>
 
         {/* Card Details */}
-        <div className="space-y-4">
+        <div className="no-print space-y-4">
           {/* Student Info Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
@@ -642,21 +655,67 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
       {/* Print Styles */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          /* Hide everything except the card */
+          body, html {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
-          .print\\:break-inside-avoid,
-          .print\\:break-inside-avoid * {
-            visibility: visible;
+
+          /* Hide all elements by default */
+          body > *:not(.print-container),
+          header, nav, footer, aside,
+          button, .no-print,
+          [class*="fixed"], [class*="sticky"] {
+            display: none !important;
           }
-          .print\\:break-inside-avoid {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 85.6mm;
-            height: 54mm;
+
+          /* Show only the card */
+          .id-card-print {
+            display: block !important;
+            visibility: visible !important;
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 85.6mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          .id-card-print * {
+            visibility: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* Ensure backgrounds print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* Hide notification, buttons, and other UI */
+          .notification-container,
+          .action-buttons,
+          .card-details-section {
+            display: none !important;
+          }
+
+          /* Page settings */
+          @page {
+            size: 90mm 60mm;
+            margin: 2mm;
           }
         }
+
         .rotate-y-180 {
           transform: rotateY(180deg);
         }

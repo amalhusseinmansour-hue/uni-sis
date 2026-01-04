@@ -3,14 +3,24 @@ import apiClient from './client';
 export const financeAPI = {
   // Get student financial records
   getStudentFinancials: async (studentId: string) => {
-    const response = await apiClient.get(`/students/${studentId}/financial-records`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/students/${studentId}/financial-records`);
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Finance API] Student financials fetch failed:', error?.message);
+      return null;
+    }
   },
 
   // Get student balance
   getStudentBalance: async (studentId: string) => {
-    const response = await apiClient.get(`/students/${studentId}/balance`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/students/${studentId}/balance`);
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Finance API] Student balance fetch failed:', error?.message);
+      return { balance: 0, total_debits: 0, total_credits: 0 };
+    }
   },
 
   // Get all financial records (admin/finance)

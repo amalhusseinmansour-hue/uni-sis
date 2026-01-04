@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
+import { exportToPDF } from '../utils/exportUtils';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
 import Badge, { StatusBadge } from '../components/ui/Badge';
@@ -528,12 +529,32 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                       <div className="flex items-center justify-center gap-1">
                         {request.status === 'ready' && (
                           <>
-                            <IconButton icon={Download} size="sm" tooltip={lang === 'ar' ? 'تحميل' : 'Download'} />
+                            <IconButton icon={Download} size="sm" tooltip={lang === 'ar' ? 'تحميل' : 'Download'} onClick={() => {
+                              const data = [{
+                                id: request.id,
+                                type: request.name,
+                                date: request.requestDate,
+                                language: request.language,
+                                copies: request.copies,
+                                status: getStatusLabel(request.status)
+                              }];
+                              exportToPDF(data, `certificate-${request.id}`);
+                            }} />
                             <IconButton icon={QrCode} size="sm" tooltip={lang === 'ar' ? 'رمز الاستلام' : 'Pickup QR'} />
                           </>
                         )}
                         {request.status === 'delivered' && (
-                          <IconButton icon={Download} size="sm" tooltip={lang === 'ar' ? 'تحميل' : 'Download'} />
+                          <IconButton icon={Download} size="sm" tooltip={lang === 'ar' ? 'تحميل' : 'Download'} onClick={() => {
+                            const data = [{
+                              id: request.id,
+                              type: request.name,
+                              date: request.requestDate,
+                              language: request.language,
+                              copies: request.copies,
+                              status: getStatusLabel(request.status)
+                            }];
+                            exportToPDF(data, `certificate-${request.id}`);
+                          }} />
                         )}
                         <IconButton icon={Eye} size="sm" tooltip={lang === 'ar' ? 'عرض' : 'View'} />
                         <IconButton icon={Printer} size="sm" tooltip={lang === 'ar' ? 'طباعة' : 'Print'} />
@@ -585,7 +606,17 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                 </Badge>
                 <div className="flex gap-1">
                   <IconButton icon={Eye} size="sm" tooltip={lang === 'ar' ? 'عرض' : 'View'} />
-                  <IconButton icon={Download} size="sm" tooltip={lang === 'ar' ? 'تحميل' : 'Download'} />
+                  <IconButton icon={Download} size="sm" tooltip={lang === 'ar' ? 'تحميل' : 'Download'} onClick={() => {
+                    const data = [{
+                      id: doc.id,
+                      name: doc.name,
+                      type: doc.type,
+                      uploadDate: doc.uploadDate,
+                      status: getStatusLabel(doc.status),
+                      expiryDate: doc.expiryDate || 'N/A'
+                    }];
+                    exportToPDF(data, `document-${doc.id}`);
+                  }} />
                   <IconButton icon={RefreshCw} size="sm" tooltip={lang === 'ar' ? 'تحديث' : 'Update'} />
                 </div>
               </div>

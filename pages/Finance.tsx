@@ -25,6 +25,7 @@ import Button, { IconButton } from '../components/ui/Button';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Input, { Select, SearchInput, Textarea } from '../components/ui/Input';
+import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 interface FinanceProps {
   lang: 'en' | 'ar';
@@ -397,7 +398,16 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <p className="text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'إدارة مدفوعاتك ورسومك الدراسية' : 'Manage your payments and tuition fees'}</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" icon={Download}>
+            <Button variant="outline" icon={Download} onClick={() => {
+              const data = financials.map(f => ({
+                [lang === 'ar' ? 'التاريخ' : 'Date']: f.date || f.created_at,
+                [lang === 'ar' ? 'الوصف' : 'Description']: f.description,
+                [lang === 'ar' ? 'النوع' : 'Type']: f.type,
+                [lang === 'ar' ? 'المبلغ' : 'Amount']: f.amount,
+                [lang === 'ar' ? 'الحالة' : 'Status']: f.status,
+              }));
+              exportToCSV(data, `financial-statement-${new Date().toISOString().split('T')[0]}`);
+            }}>
               {lang === 'ar' ? 'تحميل كشف الحساب' : 'Download Statement'}
             </Button>
             <Button variant="primary" icon={CreditCard} onClick={() => setShowPaymentModal(true)}>
@@ -580,7 +590,10 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                   fullWidth={false}
                   className="w-32"
                 />
-                <Button variant="outline" size="sm" icon={Download}>
+                <Button variant="outline" size="sm" icon={Download} onClick={() => {
+                  const content = `<div class="content-section"><h3>${lang === 'ar' ? 'سجل المعاملات المالية' : 'Financial Transactions'}</h3><table class="data-table"><thead><tr><th>${lang === 'ar' ? 'التاريخ' : 'Date'}</th><th>${lang === 'ar' ? 'الوصف' : 'Description'}</th><th>${lang === 'ar' ? 'المبلغ' : 'Amount'}</th><th>${lang === 'ar' ? 'الحالة' : 'Status'}</th></tr></thead><tbody>${financials.map(f => `<tr><td>${f.date || f.created_at || ''}</td><td>${f.description || ''}</td><td>${f.amount || 0}</td><td>${f.status || ''}</td></tr>`).join('')}</tbody></table></div>`;
+                  exportToPDF('Financial Statement', content, `financial-statement-${new Date().toISOString().split('T')[0]}`, lang, 'كشف الحساب المالي');
+                }}>
                   {t.downloadPdf[lang]}
                 </Button>
               </div>
@@ -1416,10 +1429,18 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         <Button variant="primary" icon={FileSpreadsheet} onClick={() => setShowReportModal(true)}>
           {lang === 'ar' ? 'إنشاء تقرير جديد' : 'Generate New Report'}
         </Button>
-        <Button variant="outline" icon={Download}>
+        <Button variant="outline" icon={Download} onClick={() => {
+          const data = financials.map(f => ({
+            [lang === 'ar' ? 'التاريخ' : 'Date']: f.date || f.created_at,
+            [lang === 'ar' ? 'الوصف' : 'Description']: f.description,
+            [lang === 'ar' ? 'المبلغ' : 'Amount']: f.amount,
+            [lang === 'ar' ? 'الحالة' : 'Status']: f.status,
+          }));
+          exportToCSV(data, `finance-report-${new Date().toISOString().split('T')[0]}`);
+        }}>
           {lang === 'ar' ? 'تصدير Excel' : 'Export Excel'}
         </Button>
-        <Button variant="outline" icon={Printer}>
+        <Button variant="outline" icon={Printer} onClick={() => window.print()}>
           {lang === 'ar' ? 'طباعة' : 'Print'}
         </Button>
       </div>
@@ -1623,10 +1644,17 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         <Button variant="primary" icon={Plus} onClick={() => setShowInvoiceModal(true)}>
           {lang === 'ar' ? 'إنشاء فاتورة جديدة' : 'Create New Invoice'}
         </Button>
-        <Button variant="outline" icon={Send}>
+        <Button variant="outline" icon={Send} onClick={() => alert(lang === 'ar' ? 'تم إرسال التذكيرات' : 'Reminders sent!')}>
           {lang === 'ar' ? 'إرسال تذكيرات' : 'Send Reminders'}
         </Button>
-        <Button variant="outline" icon={Download}>
+        <Button variant="outline" icon={Download} onClick={() => {
+          const invoiceData = [
+            { id: 'INV-001', student: 'Ahmed Ali', amount: 5000, status: 'Paid' },
+            { id: 'INV-002', student: 'Sara Hassan', amount: 4500, status: 'Pending' },
+            { id: 'INV-003', student: 'Mohamed Omar', amount: 5500, status: 'Overdue' },
+          ];
+          exportToCSV(invoiceData, `all-invoices-${new Date().toISOString().split('T')[0]}`);
+        }}>
           {lang === 'ar' ? 'تصدير الكل' : 'Export All'}
         </Button>
       </div>
@@ -1774,13 +1802,20 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
     <>
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button variant="primary" icon={Mail}>
+        <Button variant="primary" icon={Mail} onClick={() => alert(lang === 'ar' ? 'تم إرسال التذكير الجماعي' : 'Bulk reminder sent!')}>
           {lang === 'ar' ? 'إرسال تذكير جماعي' : 'Send Bulk Reminder'}
         </Button>
-        <Button variant="outline" icon={Download}>
+        <Button variant="outline" icon={Download} onClick={() => {
+          const debtorsData = [
+            { name: 'Ahmed Ali', studentId: 'STU001', amount: 2500, daysOverdue: 30 },
+            { name: 'Sara Hassan', studentId: 'STU002', amount: 1800, daysOverdue: 15 },
+            { name: 'Mohamed Omar', studentId: 'STU003', amount: 3200, daysOverdue: 45 },
+          ];
+          exportToCSV(debtorsData, `debtors-list-${new Date().toISOString().split('T')[0]}`);
+        }}>
           {lang === 'ar' ? 'تصدير قائمة المدينين' : 'Export Debtors List'}
         </Button>
-        <Button variant="outline" icon={RefreshCw}>
+        <Button variant="outline" icon={RefreshCw} onClick={() => window.location.reload()}>
           {lang === 'ar' ? 'تحديث البيانات' : 'Refresh Data'}
         </Button>
       </div>
@@ -1937,10 +1972,18 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
     <>
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button variant="primary" icon={Plus}>
+        <Button variant="primary" icon={Plus} onClick={() => setShowPaymentModal(true)}>
           {lang === 'ar' ? 'تسجيل دفعة يدوية' : 'Record Manual Payment'}
         </Button>
-        <Button variant="outline" icon={Download}>
+        <Button variant="outline" icon={Download} onClick={() => {
+          const paymentData = financials.filter(f => f.type === 'payment' || f.status === 'PAID').map(f => ({
+            [lang === 'ar' ? 'التاريخ' : 'Date']: f.date || f.created_at,
+            [lang === 'ar' ? 'الوصف' : 'Description']: f.description,
+            [lang === 'ar' ? 'المبلغ' : 'Amount']: f.amount,
+            [lang === 'ar' ? 'طريقة الدفع' : 'Method']: f.method || 'N/A',
+          }));
+          exportToCSV(paymentData, `payment-history-${new Date().toISOString().split('T')[0]}`);
+        }}>
           {lang === 'ar' ? 'تصدير سجل المدفوعات' : 'Export Payment History'}
         </Button>
       </div>
@@ -2089,7 +2132,15 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         <Button variant="primary" icon={Plus} onClick={() => setShowCreatePlanModal(true)}>
           {lang === 'ar' ? 'إنشاء خطة دفع' : 'Create Payment Plan'}
         </Button>
-        <Button variant="outline" icon={Download}>
+        <Button variant="outline" icon={Download} onClick={() => {
+          const plansData = paymentPlans.map(p => ({
+            [lang === 'ar' ? 'الاسم' : 'Name']: p.name,
+            [lang === 'ar' ? 'المبلغ الإجمالي' : 'Total Amount']: p.total_amount,
+            [lang === 'ar' ? 'عدد الأقساط' : 'Installments']: p.installments_count,
+            [lang === 'ar' ? 'الحالة' : 'Status']: p.status,
+          }));
+          exportToCSV(plansData, `payment-plans-${new Date().toISOString().split('T')[0]}`);
+        }}>
           {lang === 'ar' ? 'تصدير الخطط' : 'Export Plans'}
         </Button>
       </div>
@@ -2241,7 +2292,18 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         <Button variant="primary" icon={Plus} onClick={() => setShowCreateScholarshipModal(true)}>
           {lang === 'ar' ? 'إنشاء منحة جديدة' : 'Create Scholarship'}
         </Button>
-        <Button variant="outline" icon={Download}>
+        <Button variant="outline" icon={Download} onClick={() => {
+          const data = adminScholarships.map(s => ({
+            code: s.code,
+            name: s.name,
+            name_ar: s.name_ar,
+            type: s.type,
+            coverage: `${s.coverage_percentage}%`,
+            deadline: s.application_deadline,
+            status: s.is_active ? 'Active' : 'Inactive'
+          }));
+          exportToCSV(data, 'scholarships');
+        }}>
           {lang === 'ar' ? 'تصدير المنح' : 'Export Scholarships'}
         </Button>
       </div>

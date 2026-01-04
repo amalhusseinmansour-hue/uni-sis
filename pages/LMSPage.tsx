@@ -274,7 +274,7 @@ const LMSPage: React.FC<LMSPageProps> = ({ lang }) => {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+    return new Date(timestamp * 1000).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -326,7 +326,7 @@ const LMSPage: React.FC<LMSPageProps> = ({ lang }) => {
                   : (lang === 'ar' ? 'وضع العرض التجريبي' : 'Demo Mode')}
               </h4>
               <p className={`text-sm ${connected ? 'text-green-600' : 'text-yellow-600'}`}>
-                {lastSync && (lang === 'ar' ? `آخر مزامنة: ${new Date(lastSync).toLocaleString('ar-SA')}` : `Last sync: ${new Date(lastSync).toLocaleString()}`)}
+                {lastSync && (lang === 'ar' ? `آخر مزامنة: ${new Date(lastSync).toLocaleString('ar-EG')}` : `Last sync: ${new Date(lastSync).toLocaleString()}`)}
               </p>
             </div>
           </div>

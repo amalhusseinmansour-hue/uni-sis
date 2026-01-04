@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Course, EnrolledStudent } from '../types';
 import { TRANSLATIONS } from '../constants';
+import { exportToCSV } from '../utils/exportUtils';
 import {
   Users,
   Calendar,
@@ -568,13 +569,26 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
                 <option value="attendance">{t.attendance[lang]}</option>
               </select>
               <div className="flex gap-2">
-                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.exportGrades[lang]}>
+                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.exportGrades[lang]} onClick={() => {
+                  const data = filteredStudents.map(s => ({
+                    name: s.name,
+                    studentId: s.studentId,
+                    attendance: s.attendance,
+                    participation: s.participation || 0,
+                    quizzes: s.quizzes || 0,
+                    midterm: s.midterm || 0,
+                    final: s.final || 0,
+                    total: ((s.participation || 0) + (s.quizzes || 0) + (s.midterm || 0) + (s.final || 0)),
+                    letterGrade: getLetterGrade((s.participation || 0) + (s.quizzes || 0) + (s.midterm || 0) + (s.final || 0))
+                  }));
+                  exportToCSV(data, 'grades-export');
+                }}>
                   <Download className="w-4 h-4 text-slate-600" />
                 </button>
                 <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.importGrades[lang]}>
                   <Upload className="w-4 h-4 text-slate-600" />
                 </button>
-                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.printReport[lang]}>
+                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.printReport[lang]} onClick={() => window.print()}>
                   <Printer className="w-4 h-4 text-slate-600" />
                 </button>
               </div>

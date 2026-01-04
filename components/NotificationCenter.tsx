@@ -290,7 +290,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     if (diffHours < 24) return lang === 'en' ? `${diffHours}h ago` : `منذ ${diffHours} ساعة`;
     if (diffDays === 1) return t.yesterday[lang];
     if (diffDays < 7) return lang === 'en' ? `${diffDays}d ago` : `منذ ${diffDays} أيام`;
-    return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' });
   };
 
   const groupNotifications = () => {
@@ -502,8 +502,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       className={`fixed inset-y-0 ${isRTL ? 'left-0' : 'right-0'} w-full sm:w-96 bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* Hidden audio for notification sound */}
-      <audio ref={audioRef} src="/notification.mp3" preload="auto" />
+      {/* Hidden audio for notification sound - using fallback URL */}
+      <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto" />
 
       {/* Header */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-900">

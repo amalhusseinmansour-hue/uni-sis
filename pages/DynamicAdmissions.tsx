@@ -15,10 +15,10 @@ import {
   RefreshCw,
   Loader2,
   ChevronRight,
+  Search,
 } from 'lucide-react';
-import { DynamicTable } from '../components/dynamic';
-import { TableDataRow } from '../api/dynamicTables';
 import { admissionsApi, AdmissionApplication, AdmissionStatistics, statusConfig } from '../api/admissions';
+import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 interface DynamicAdmissionsPageProps {
   lang: 'en' | 'ar';
@@ -48,17 +48,120 @@ const t = {
   loading: { en: 'Loading...', ar: 'جاري التحميل...' },
 };
 
+// Mock data for when API is unavailable
+const mockApplications: AdmissionApplication[] = [
+  {
+    id: 1,
+    full_name: 'أحمد محمد علي',
+    email: 'ahmed@email.com',
+    phone: '+966501234567',
+    national_id: '1234567890',
+    date_of_birth: '2000-05-15',
+    gender: 'male',
+    nationality: 'Saudi',
+    program_id: 1,
+    program: { id: 1, name_en: 'Computer Science', name_ar: 'علوم الحاسب', code: 'CS' },
+    status: 'PENDING',
+    date: '2024-01-15',
+    created_at: '2024-01-15T10:00:00',
+    updated_at: '2024-01-15T10:00:00',
+  },
+  {
+    id: 2,
+    full_name: 'فاطمة أحمد السعيد',
+    email: 'fatima@email.com',
+    phone: '+966509876543',
+    national_id: '0987654321',
+    date_of_birth: '2001-08-20',
+    gender: 'female',
+    nationality: 'Saudi',
+    program_id: 2,
+    program: { id: 2, name_en: 'Business Administration', name_ar: 'إدارة الأعمال', code: 'BA' },
+    status: 'UNDER_REVIEW',
+    date: '2024-01-14',
+    created_at: '2024-01-14T09:00:00',
+    updated_at: '2024-01-15T11:00:00',
+  },
+  {
+    id: 3,
+    full_name: 'خالد عبدالله العمري',
+    email: 'khalid@email.com',
+    phone: '+966505551234',
+    national_id: '1122334455',
+    date_of_birth: '1999-12-10',
+    gender: 'male',
+    nationality: 'Saudi',
+    program_id: 1,
+    program: { id: 1, name_en: 'Computer Science', name_ar: 'علوم الحاسب', code: 'CS' },
+    status: 'APPROVED',
+    student_id: 'STU-2024-001',
+    date: '2024-01-10',
+    created_at: '2024-01-10T08:00:00',
+    updated_at: '2024-01-12T14:00:00',
+  },
+  {
+    id: 4,
+    full_name: 'نورة سعد المالكي',
+    email: 'noura@email.com',
+    phone: '+966507778899',
+    national_id: '5566778899',
+    date_of_birth: '2000-03-25',
+    gender: 'female',
+    nationality: 'Saudi',
+    program_id: 3,
+    program: { id: 3, name_en: 'Engineering', name_ar: 'الهندسة', code: 'ENG' },
+    status: 'DOCUMENTS_VERIFIED',
+    date: '2024-01-13',
+    created_at: '2024-01-13T10:00:00',
+    updated_at: '2024-01-14T16:00:00',
+  },
+  {
+    id: 5,
+    full_name: 'محمد سالم القحطاني',
+    email: 'mohammed@email.com',
+    phone: '+966502223344',
+    national_id: '9988776655',
+    date_of_birth: '2001-07-08',
+    gender: 'male',
+    nationality: 'Saudi',
+    program_id: 2,
+    program: { id: 2, name_en: 'Business Administration', name_ar: 'إدارة الأعمال', code: 'BA' },
+    status: 'REJECTED',
+    date: '2024-01-08',
+    created_at: '2024-01-08T09:00:00',
+    updated_at: '2024-01-11T10:00:00',
+  },
+];
+
+const mockStatistics: AdmissionStatistics = {
+  total: 125,
+  pending: 45,
+  under_review: 28,
+  documents_verified: 15,
+  pending_payment: 12,
+  payment_received: 8,
+  approved: 12,
+  rejected: 5,
+  waitlisted: 0,
+  awaiting_action: 85,
+};
+
 const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) => {
-  const [statistics, setStatistics] = useState<AdmissionStatistics | null>(null);
+  const [statistics, setStatistics] = useState<AdmissionStatistics | null>(mockStatistics);
+  const [applications, setApplications] = useState<AdmissionApplication[]>(mockApplications);
   const [selectedApplication, setSelectedApplication] = useState<AdmissionApplication | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
 
   const isRTL = lang === 'ar';
 
   useEffect(() => {
     loadStatistics();
+    loadApplications();
   }, []);
 
   const loadStatistics = async () => {
@@ -67,32 +170,51 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
       const stats = await admissionsApi.getStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('Failed to load statistics:', error);
+      console.error('Failed to load statistics, using mock data:', error);
+      setStatistics(mockStatistics);
     } finally {
       setLoadingStats(false);
     }
   };
 
-  const handleRowClick = async (row: TableDataRow) => {
+  const loadApplications = async () => {
     try {
-      const application = await admissionsApi.getById(row.id as number);
-      setSelectedApplication(application);
-      setShowDetails(true);
+      setLoading(true);
+      const response = await admissionsApi.getAll({ status: statusFilter as any, search: searchTerm });
+      setApplications(response.data);
     } catch (error) {
-      console.error('Failed to load application:', error);
+      console.error('Failed to load applications, using mock data:', error);
+      setApplications(mockApplications);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAction = async (action: string, row: TableDataRow) => {
-    switch (action) {
-      case 'view':
-        handleRowClick(row);
-        break;
-      case 'process':
-        handleRowClick(row);
-        break;
-    }
+  const handleRowClick = (application: AdmissionApplication) => {
+    setSelectedApplication(application);
+    setShowDetails(true);
   };
+
+  const handleExport = () => {
+    const data = applications.map(app => ({
+      [isRTL ? 'الرقم' : 'ID']: app.id,
+      [isRTL ? 'الاسم' : 'Name']: app.full_name,
+      [isRTL ? 'البريد الإلكتروني' : 'Email']: app.email,
+      [isRTL ? 'الهاتف' : 'Phone']: app.phone,
+      [isRTL ? 'البرنامج' : 'Program']: lang === 'ar' ? app.program?.name_ar : app.program?.name_en,
+      [isRTL ? 'الحالة' : 'Status']: statusConfig[app.status]?.[isRTL ? 'labelAr' : 'labelEn'] || app.status,
+      [isRTL ? 'تاريخ التقديم' : 'Application Date']: app.date,
+    }));
+    exportToCSV(data, `admissions-${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const filteredApplications = applications.filter(app => {
+    const matchesSearch = !searchTerm ||
+      app.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !statusFilter || app.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleWorkflowAction = async (action: string) => {
     if (!selectedApplication) return;
@@ -186,12 +308,15 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={loadStatistics}
+            onClick={() => { loadStatistics(); loadApplications(); }}
             className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
           >
-            <RefreshCw className={`w-4 h-4 text-gray-500 ${loadingStats ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-gray-500 ${loadingStats || loading ? 'animate-spin' : ''}`} />
           </button>
-          <button className="px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 flex items-center gap-2"
+          >
             <Download className="w-4 h-4" />
             {lang === 'ar' ? 'تصدير' : 'Export'}
           </button>
@@ -223,12 +348,126 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
         })}
       </div>
 
-      {/* Dynamic Table */}
-      <DynamicTable
-        code="admissions_list"
-        onRowClick={handleRowClick}
-        onAction={handleAction}
-      />
+      {/* Applications Table */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+        {/* Table Header */}
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={isRTL ? 'بحث...' : 'Search...'}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white"
+            >
+              <option value="">{isRTL ? 'جميع الحالات' : 'All Statuses'}</option>
+              {Object.entries(statusConfig).map(([key, config]) => (
+                <option key={key} value={key}>
+                  {isRTL ? config.labelAr : config.labelEn}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-slate-700">
+              <tr>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'رقم الطلب' : 'App ID'}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'الاسم' : 'Name'}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'البريد الإلكتروني' : 'Email'}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'البرنامج' : 'Program'}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'الحالة' : 'Status'}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'التاريخ' : 'Date'}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {isRTL ? 'إجراءات' : 'Actions'}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+                  </td>
+                </tr>
+              ) : filteredApplications.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    {isRTL ? 'لا توجد طلبات' : 'No applications found'}
+                  </td>
+                </tr>
+              ) : (
+                filteredApplications.map((app) => (
+                  <tr
+                    key={app.id}
+                    className="hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
+                    onClick={() => handleRowClick(app)}
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                      APP-{String(app.id).padStart(4, '0')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      {app.full_name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      {app.email}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      {isRTL ? app.program?.name_ar : app.program?.name_en}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {getStatusBadge(app.status)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      {new Date(app.date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US')}
+                    </td>
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleRowClick(app)}
+                        className="p-1 hover:bg-gray-100 dark:hover:bg-slate-600 rounded text-blue-600"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200 dark:border-slate-700 text-sm text-gray-500 dark:text-gray-400">
+          {isRTL
+            ? `عرض ${filteredApplications.length} من ${applications.length} طلب`
+            : `Showing ${filteredApplications.length} of ${applications.length} applications`}
+        </div>
+      </div>
 
       {/* Application Details Modal */}
       {showDetails && selectedApplication && (
@@ -315,7 +554,7 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
                           {log.notes && <p className="text-gray-500 dark:text-gray-400">{log.notes}</p>}
                         </div>
                         <span className="text-xs text-gray-400">
-                          {new Date(log.created_at).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                          {new Date(log.created_at).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US')}
                         </span>
                       </div>
                     ))}

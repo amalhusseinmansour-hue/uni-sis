@@ -179,7 +179,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ lang }) => {
         iconColor="text-blue-600 bg-blue-50"
         action={
           <Badge variant="info">
-            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </Badge>
         }
       />
