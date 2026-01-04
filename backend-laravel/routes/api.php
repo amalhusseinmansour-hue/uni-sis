@@ -44,6 +44,134 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// TEMPORARY: Setup test users (Remove in production!)
+Route::get('/setup-test-users', function () {
+    $created = [];
+
+    // Create Admin
+    $admin = \App\Models\User::updateOrCreate(
+        ['email' => 'admin@vertexuniversity.edu.eu'],
+        [
+            'name' => 'Admin User',
+            'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
+            'role' => 'ADMIN',
+            'email_verified_at' => now(),
+        ]
+    );
+    $created[] = ['email' => 'admin@vertexuniversity.edu.eu', 'password' => 'admin123', 'role' => 'ADMIN'];
+
+    // Create Student User
+    $studentUser = \App\Models\User::updateOrCreate(
+        ['email' => 'student@university.edu'],
+        [
+            'name' => 'Demo Student',
+            'password' => \Illuminate\Support\Facades\Hash::make('student123'),
+            'role' => 'STUDENT',
+            'email_verified_at' => now(),
+        ]
+    );
+
+    // Create Student Profile
+    $program = \App\Models\Program::first();
+    if (!$program) {
+        $department = \App\Models\Department::first();
+        if (!$department) {
+            $college = \App\Models\College::first();
+            if (!$college) {
+                $college = \App\Models\College::create([
+                    'code' => 'COE',
+                    'name_en' => 'College of Engineering',
+                    'name_ar' => 'كلية الهندسة',
+                    'is_active' => true,
+                ]);
+            }
+            $department = \App\Models\Department::create([
+                'college_id' => $college->id,
+                'code' => 'CS',
+                'name_en' => 'Computer Science',
+                'name_ar' => 'علوم الحاسوب',
+                'is_active' => true,
+            ]);
+        }
+        $program = \App\Models\Program::create([
+            'department_id' => $department->id,
+            'code' => 'BSCS',
+            'name_en' => 'Bachelor of Computer Science',
+            'name_ar' => 'بكالوريوس علوم الحاسوب',
+            'degree' => 'BACHELOR',
+            'duration_years' => 4,
+            'total_credits' => 132,
+            'is_active' => true,
+        ]);
+    }
+
+    if ($program) {
+        $studentRecord = \App\Models\Student::updateOrCreate(
+            ['user_id' => $studentUser->id],
+            [
+                'program_id' => $program->id,
+                'student_id' => 'STU-' . str_pad($studentUser->id, 6, '0', STR_PAD_LEFT),
+                'full_name_en' => 'Demo Student',
+                'full_name_ar' => 'طالب تجريبي',
+                'national_id' => '1234567890',
+                'date_of_birth' => '2000-01-15',
+                'gender' => 'MALE',
+                'nationality' => 'Syrian',
+                'status' => 'ACTIVE',
+                'academic_year' => 1,
+                'gpa' => 3.50,
+                'total_credits' => 30,
+                'enrollment_date' => now()->subMonths(6),
+            ]
+        );
+        $created[] = [
+            'email' => 'student@university.edu',
+            'password' => 'student123',
+            'role' => 'STUDENT',
+            'student_id' => $studentRecord->student_id,
+            'has_profile' => true
+        ];
+    } else {
+        $created[] = [
+            'email' => 'student@university.edu',
+            'password' => 'student123',
+            'role' => 'STUDENT',
+            'warning' => 'No program found'
+        ];
+    }
+
+    // Create Finance
+    \App\Models\User::updateOrCreate(
+        ['email' => 'finance@university.edu'],
+        [
+            'name' => 'Finance User',
+            'password' => \Illuminate\Support\Facades\Hash::make('finance123'),
+            'role' => 'FINANCE',
+            'email_verified_at' => now(),
+        ]
+    );
+    $created[] = ['email' => 'finance@university.edu', 'password' => 'finance123', 'role' => 'FINANCE'];
+
+    // Create Lecturer
+    \App\Models\User::updateOrCreate(
+        ['email' => 'lecturer@university.edu'],
+        [
+            'name' => 'Demo Lecturer',
+            'password' => \Illuminate\Support\Facades\Hash::make('lecturer123'),
+            'role' => 'LECTURER',
+            'email_verified_at' => now(),
+        ]
+    );
+    $created[] = ['email' => 'lecturer@university.edu', 'password' => 'lecturer123', 'role' => 'LECTURER'];
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Test users created/updated successfully!',
+        'users' => $created,
+        'programs_count' => \App\Models\Program::count()
+    ]);
+});
+
 // Public announcements
 Route::get('/announcements/published', [AnnouncementController::class, 'published']);
 
