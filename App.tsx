@@ -418,6 +418,44 @@ const App: React.FC = () => {
     );
   }
 
+  // TEMPORARY: For students, show a super simple page without Layout/ConfigProvider
+  if (currentUser.role === UserRole.STUDENT) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-slate-100 p-8" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-green-100 border-2 border-green-500 rounded-lg p-6 mb-6">
+              <h1 className="text-2xl font-bold text-green-800 mb-2">
+                ✅ {lang === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login Successful!'}
+              </h1>
+              <p className="text-green-700">
+                {lang === 'ar' ? 'أنت مسجل دخول كطالب' : 'You are logged in as a Student'}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4">User Info:</h2>
+              <p><strong>Email:</strong> {currentUser.email}</p>
+              <p><strong>Name:</strong> {currentUser.name}</p>
+              <p><strong>Role:</strong> {currentUser.role}</p>
+            </div>
+
+            <button
+              onClick={() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+              }}
+              className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600"
+            >
+              {lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}
+            </button>
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ConfigProvider role={currentUser.role}>
@@ -438,18 +476,11 @@ const App: React.FC = () => {
           <Route
             index
             element={
-              currentUser.role === UserRole.STUDENT ? (
-                <SimpleStudentDashboard
-                  lang={lang}
-                  student={currentUser}
-                />
-              ) : (
-                <Dashboard
-                  lang={lang}
-                  role={currentUser.role}
-                  student={currentUser}
-                />
-              )
+              <Dashboard
+                lang={lang}
+                role={currentUser.role}
+                student={currentUser}
+              />
             }
           />
           <Route
