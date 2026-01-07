@@ -670,48 +670,9 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Grades Tab - Read-only from LMS */}
+      {/* Grades Tab */}
       {activeTab === 'grades' && (
         <div className="space-y-4">
-          {/* LMS Info Banner */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <BookOpen className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-blue-800">
-                  {lang === 'ar' ? 'الدرجات من نظام إدارة التعلم (LMS)' : 'Grades from Learning Management System (LMS)'}
-                </p>
-                <p className="text-sm text-blue-600">
-                  {lang === 'ar' ? 'يتم جلب الدرجات تلقائياً من Moodle' : 'Grades are automatically fetched from Moodle'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  const { lmsSyncAPI } = await import('../api/lms');
-                  if (selectedCourse) {
-                    await lmsSyncAPI.importGrades(parseInt(selectedCourse.id));
-                  }
-                  setShowSaveNotification(true);
-                  setTimeout(() => setShowSaveNotification(false), 3000);
-                } catch (error) {
-                  console.error('Error syncing grades:', error);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              {lang === 'ar' ? 'مزامنة من LMS' : 'Sync from LMS'}
-            </button>
-          </div>
-
           {/* Filters */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex flex-wrap items-center gap-4">

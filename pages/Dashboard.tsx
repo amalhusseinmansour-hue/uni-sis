@@ -24,8 +24,6 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import DynamicDashboard from '../components/DynamicDashboard';
 import { useConfig } from '../context/ConfigContext';
-import { LMSSummaryCard } from '../components/LMSWidgets';
-import useLMSData from '../hooks/useLMSData';
 import { useBranding } from '../context/BrandingContext';
 
 interface DashboardProps {
@@ -67,9 +65,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [gpaHistory, setGpaHistory] = useState<any[]>([]);
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
-
-  // LMS Data hook
-  const { data: lmsData } = useLMSData();
 
   // Fetch data from APIs
   useEffect(() => {
@@ -502,16 +497,6 @@ const Dashboard: React.FC<DashboardProps> = ({
               )}
             </CardBody>
           </Card>
-
-          {/* LMS Summary Widget */}
-          <LMSSummaryCard
-            lang={lang}
-            courses={lmsData.courses}
-            assignments={lmsData.assignments}
-            attendance={lmsData.attendance}
-            grades={lmsData.grades}
-            isConnected={lmsData.isConnected}
-          />
         </div>
 
         {/* Right Sidebar */}

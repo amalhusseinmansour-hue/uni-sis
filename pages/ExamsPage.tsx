@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { examsAPI } from '../api/exams';
-import { lmsAPI } from '../api/lms';
 import { studentsAPI } from '../api/students';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
@@ -39,39 +38,13 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
     setReminders(getReminders());
   }, []);
 
-  // Fetch exam data from LMS and API
+  // Fetch exam data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Try to fetch from LMS first, then fallback to regular API
-        let lmsEvents: any[] = [];
-        let lmsAssignments: any[] = [];
-        let lmsGrades: any[] = [];
-
-        try {
-          // Fetch from LMS
-          const [calendarRes, assignmentsRes, gradesRes] = await Promise.all([
-            lmsAPI.getCalendarEvents().catch(() => ({ events: [] })),
-            lmsAPI.getMyAssignments().catch(() => []),
-            lmsAPI.getMyGrades().catch(() => []),
-          ]);
-
-          lmsEvents = calendarRes.events || [];
-          lmsAssignments = assignmentsRes || [];
-          lmsGrades = gradesRes || [];
-
-          console.log('[ExamsPage] LMS data loaded:', {
-            events: lmsEvents.length,
-            assignments: lmsAssignments.length,
-            grades: lmsGrades.length,
-          });
-        } catch (lmsError) {
-          console.warn('[ExamsPage] LMS fetch failed, using regular API:', lmsError);
-        }
-
-        // Also fetch from regular exams API as fallback
+        // Fetch from exams API
         const [examsRes, apiGradesRes] = await Promise.all([
           examsAPI.getExamCalendar().catch(() => []),
           examsAPI.getMyGrades().catch(() => []),
@@ -80,86 +53,12 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
 
-        // Transform LMS calendar events to exam format
-        const lmsExams = lmsEvents
-          .filter((event: any) =>
-            event.eventtype === 'exam' ||
-            event.eventtype === 'quiz' ||
-            event.modulename === 'quiz' ||
-            event.name?.toLowerCase().includes('exam') ||
-            event.name?.toLowerCase().includes('اختبار') ||
-            event.name?.toLowerCase().includes('امتحان')
-          )
-          .map((event: any) => {
-            const startDate = new Date(event.timestart * 1000);
-            const durationMins = Math.floor(event.timeduration / 60) || 120;
-            const endDate = new Date(startDate.getTime() + durationMins * 60 * 1000);
-
-            return {
-              id: `lms-${event.id}`,
-              course: event.courseid ? `Course ${event.courseid}` : 'LMS',
-              title: event.name,
-              type: event.modulename === 'quiz' ? 'quiz' : 'final',
-              date: startDate.toISOString().split('T')[0],
-              time: `${startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - ${endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`,
-              duration: durationMins,
-              location: lang === 'ar' ? 'منصة التعلم الإلكتروني' : 'Online LMS',
-              seat: '-',
-              instructor: '',
-              topics: [],
-              materials: event.description || '',
-              notes: lang === 'ar' ? 'اختبار إلكتروني عبر منصة LMS' : 'Online exam via LMS platform',
-              source: 'lms',
-            };
-          });
-
-        // Transform LMS assignments (quizzes/exams) to exam format
-        const assignmentExams = lmsAssignments
-          .filter((assign: any) =>
-            assign.name?.toLowerCase().includes('exam') ||
-            assign.name?.toLowerCase().includes('quiz') ||
-            assign.name?.toLowerCase().includes('اختبار') ||
-            assign.name?.toLowerCase().includes('امتحان')
-          )
-          .map((assign: any) => {
-            const dueDate = new Date(assign.duedate * 1000);
-
-            return {
-              id: `lms-assign-${assign.id}`,
-              course: assign.coursename || `Course ${assign.course}`,
-              title: assign.name,
-              type: assign.name?.toLowerCase().includes('quiz') ? 'quiz' : 'midterm',
-              date: dueDate.toISOString().split('T')[0],
-              time: dueDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-              duration: 60,
-              location: lang === 'ar' ? 'منصة التعلم الإلكتروني' : 'Online LMS',
-              seat: '-',
-              instructor: '',
-              topics: [],
-              materials: assign.intro || '',
-              notes: lang === 'ar' ? 'تسليم عبر منصة LMS' : 'Submit via LMS platform',
-              grade: assign.usergrade,
-              maxGrade: assign.grade || 100,
-              status: assign.graded ? 'graded' : (assign.submitted ? 'submitted' : 'pending'),
-              source: 'lms',
-            };
-          });
-
-        // Process regular API exams
+        // Process API exams
         const apiExams = examsAPI.transformExams(examsRes.data || examsRes || [], lang);
 
-        // Combine all exams (remove duplicates by title similarity)
-        const allExams = [...lmsExams, ...assignmentExams, ...apiExams];
-        const uniqueExams = allExams.filter((exam, index, self) =>
-          index === self.findIndex(e =>
-            e.title === exam.title ||
-            (e.course === exam.course && e.date === exam.date)
-          )
-        );
-
         // Split into upcoming and past
-        const upcoming = uniqueExams.filter(e => e.date >= todayStr);
-        const past = uniqueExams.filter(e => e.date < todayStr);
+        const upcoming = apiExams.filter((e: any) => e.date >= todayStr);
+        const past = apiExams.filter((e: any) => e.date < todayStr);
 
         if (upcoming.length > 0) {
           setUpcomingExams(upcoming);
@@ -168,8 +67,8 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
           setPastExams(past);
         }
 
-        // Process LMS grades for results
-        const allGrades = [...lmsGrades, ...(apiGradesRes.data || apiGradesRes || [])];
+        // Process grades for results
+        const allGrades = apiGradesRes.data || apiGradesRes || [];
 
         if (allGrades.length > 0) {
           const courseResults = new Map<string, any>();

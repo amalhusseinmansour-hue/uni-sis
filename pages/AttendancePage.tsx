@@ -12,7 +12,6 @@ import {
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
 import { attendanceAPI } from '../api/attendance';
-import { lmsAPI } from '../api/lms';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
 import Badge, { StatusBadge } from '../components/ui/Badge';
@@ -49,15 +48,6 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
       try {
         setLoading(true);
 
-        // Try to fetch from LMS first
-        let lmsAttendance: any[] = [];
-        try {
-          lmsAttendance = await lmsAPI.getUserAttendance().catch(() => []);
-          console.log('[AttendancePage] LMS attendance loaded:', lmsAttendance.length);
-        } catch (lmsError) {
-          console.warn('[AttendancePage] LMS attendance fetch failed:', lmsError);
-        }
-
         // Fetch student profile and enrollments from regular API
         const profileRes = await studentsAPI.getMyProfile().catch(() => null);
         const studentId = profileRes?.student?.id || profileRes?.id;
@@ -85,20 +75,8 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
           });
         }
 
-        // Transform LMS attendance to our format
-        const lmsRecords = lmsAttendance.map((record: any) => ({
-          id: `lms-${record.sessionid}`,
-          date: new Date(record.sessiondate * 1000).toISOString().split('T')[0],
-          course: record.coursename || `Course ${record.courseid}`,
-          title: record.coursename || (lang === 'ar' ? 'مقرر LMS' : 'LMS Course'),
-          status: record.status,
-          time: `${Math.floor(record.duration / 60)} ${lang === 'ar' ? 'دقيقة' : 'min'}`,
-          excuse: record.remarks || '',
-          source: 'lms',
-        }));
-
-        // Combine records (LMS takes priority for same date/course)
-        const allRecords = [...lmsRecords, ...apiRecords];
+        // Use API records
+        const allRecords = [...apiRecords];
         const uniqueRecords = allRecords.filter((record, index, self) =>
           index === self.findIndex(r =>
             r.date === record.date && r.course === record.course
