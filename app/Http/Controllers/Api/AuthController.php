@@ -19,15 +19,26 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'username' => 'required|string',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $username = $request->username;
+
+        // Try to find user by email or student_id
+        $user = User::where('email', $username)->first();
+
+        // If not found by email, try to find by student_id
+        if (!$user) {
+            $student = \App\Models\Student::where('student_id', $username)->first();
+            if ($student) {
+                $user = $student->user;
+            }
+        }
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'username' => ['بيانات الدخول غير صحيحة / The provided credentials are incorrect.'],
             ]);
         }
 
