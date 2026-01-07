@@ -540,7 +540,10 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                               }];
                               exportToPDF(data, `certificate-${request.id}`);
                             }} />
-                            <IconButton icon={QrCode} size="sm" tooltip={lang === 'ar' ? 'رمز الاستلام' : 'Pickup QR'} />
+                            <IconButton icon={QrCode} size="sm" tooltip={lang === 'ar' ? 'رمز الاستلام' : 'Pickup QR'} onClick={() => {
+                              setSelectedCertificate(request);
+                              setShowPreviewModal(true);
+                            }} />
                           </>
                         )}
                         {request.status === 'delivered' && (
@@ -556,8 +559,42 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                             exportToPDF(data, `certificate-${request.id}`);
                           }} />
                         )}
-                        <IconButton icon={Eye} size="sm" tooltip={lang === 'ar' ? 'عرض' : 'View'} />
-                        <IconButton icon={Printer} size="sm" tooltip={lang === 'ar' ? 'طباعة' : 'Print'} />
+                        <IconButton icon={Eye} size="sm" tooltip={lang === 'ar' ? 'عرض' : 'View'} onClick={() => {
+                          setSelectedCertificate(request);
+                          setShowPreviewModal(true);
+                        }} />
+                        <IconButton icon={Printer} size="sm" tooltip={lang === 'ar' ? 'طباعة' : 'Print'} onClick={() => {
+                          const printContent = `
+                            <html dir="${lang === 'ar' ? 'rtl' : 'ltr'}">
+                            <head>
+                              <title>${request.name}</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 40px; }
+                                .header { text-align: center; margin-bottom: 30px; }
+                                .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                                .info { margin: 10px 0; }
+                                .label { font-weight: bold; }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="header">
+                                <div class="title">${request.name}</div>
+                              </div>
+                              <div class="info"><span class="label">${lang === 'ar' ? 'رقم الطلب:' : 'Request #:'}</span> ${request.id}</div>
+                              <div class="info"><span class="label">${lang === 'ar' ? 'تاريخ الطلب:' : 'Request Date:'}</span> ${request.requestDate}</div>
+                              <div class="info"><span class="label">${lang === 'ar' ? 'اللغة:' : 'Language:'}</span> ${request.language === 'ar' ? 'العربية' : 'English'}</div>
+                              <div class="info"><span class="label">${lang === 'ar' ? 'عدد النسخ:' : 'Copies:'}</span> ${request.copies}</div>
+                              <div class="info"><span class="label">${lang === 'ar' ? 'الحالة:' : 'Status:'}</span> ${getStatusLabel(request.status)}</div>
+                            </body>
+                            </html>
+                          `;
+                          const printWindow = window.open('', '_blank');
+                          if (printWindow) {
+                            printWindow.document.write(printContent);
+                            printWindow.document.close();
+                            printWindow.print();
+                          }
+                        }} />
                       </div>
                     </td>
                   </tr>
@@ -792,6 +829,88 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Preview/QR Modal */}
+      <Modal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        title={lang === 'ar' ? 'تفاصيل الطلب' : 'Request Details'}
+        size="md"
+      >
+        {selectedCertificate && (
+          <div className="space-y-6">
+            {/* Certificate Info */}
+            <div className="p-4 bg-slate-50 rounded-xl space-y-3">
+              <div className="flex justify-between">
+                <span className="text-slate-500">{lang === 'ar' ? 'رقم الطلب:' : 'Request #:'}</span>
+                <span className="font-mono font-semibold text-blue-600">{selectedCertificate.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">{lang === 'ar' ? 'نوع الشهادة:' : 'Certificate:'}</span>
+                <span className="font-medium">{selectedCertificate.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">{lang === 'ar' ? 'تاريخ الطلب:' : 'Request Date:'}</span>
+                <span>{selectedCertificate.requestDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">{lang === 'ar' ? 'الحالة:' : 'Status:'}</span>
+                <Badge variant={getStatusVariant(selectedCertificate.status)}>
+                  {getStatusLabel(selectedCertificate.status)}
+                </Badge>
+              </div>
+              {selectedCertificate.trackingNumber && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{lang === 'ar' ? 'رقم التتبع:' : 'Tracking #:'}</span>
+                  <span className="font-mono">{selectedCertificate.trackingNumber}</span>
+                </div>
+              )}
+            </div>
+
+            {/* QR Code for Pickup */}
+            {selectedCertificate.status === 'ready' && (
+              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                <h4 className="font-semibold text-slate-800 mb-4">
+                  {lang === 'ar' ? 'رمز الاستلام' : 'Pickup QR Code'}
+                </h4>
+                <div className="inline-block p-4 bg-white rounded-xl shadow-sm">
+                  {/* Simple QR placeholder - can be replaced with actual QR library */}
+                  <div className="w-40 h-40 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center">
+                    <QrCode className="w-20 h-20 text-white" />
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500 mt-4">
+                  {lang === 'ar'
+                    ? 'قدم هذا الرمز عند الاستلام من مكتب شؤون الطلاب'
+                    : 'Present this code when picking up from Student Affairs'}
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button variant="outline" fullWidth onClick={() => setShowPreviewModal(false)}>
+                {lang === 'ar' ? 'إغلاق' : 'Close'}
+              </Button>
+              {selectedCertificate.status === 'ready' && (
+                <Button variant="primary" fullWidth icon={Download} onClick={() => {
+                  const data = [{
+                    id: selectedCertificate.id,
+                    type: selectedCertificate.name,
+                    date: selectedCertificate.requestDate,
+                    language: selectedCertificate.language,
+                    copies: selectedCertificate.copies,
+                    status: getStatusLabel(selectedCertificate.status)
+                  }];
+                  exportToPDF(data, `certificate-${selectedCertificate.id}`);
+                }}>
+                  {lang === 'ar' ? 'تحميل' : 'Download'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
