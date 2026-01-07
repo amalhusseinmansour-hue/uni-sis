@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { reportCardAPI, ReportCardData, ReportCardListItem, downloadReportCard } from '../api/reportCard';
 import { studentsAPI } from '../api/students';
-import { printPage } from '../utils/exportUtils';
+import { exportToPDF } from '../utils/exportUtils';
 
 interface TranscriptPageProps {
   lang: 'en' | 'ar';
@@ -40,10 +40,15 @@ const t = {
   academicStanding: { en: 'Academic Standing', ar: 'الحالة الأكاديمية' },
   semesterRecords: { en: 'Semester Records', ar: 'سجلات الفصول' },
   semester: { en: 'Semester', ar: 'الفصل الدراسي' },
-  courseCode: { en: 'Course Code', ar: 'رمز المقرر' },
-  courseName: { en: 'Course Name', ar: 'اسم المقرر' },
-  credits: { en: 'Credits', ar: 'الساعات' },
-  grade: { en: 'Grade', ar: 'الدرجة' },
+  courseCode: { en: 'Course Code', ar: 'رمز المساق' },
+  courseName: { en: 'Course Name', ar: 'اسم المساق' },
+  semesterCol: { en: 'Semester', ar: 'الفصل الدراسي' },
+  credits: { en: 'Credit Hours', ar: 'الساعات المعتمدة' },
+  coursework: { en: 'Coursework (20)', ar: 'أعمال الفصل (20)' },
+  midterm: { en: 'Midterm (40)', ar: 'النصفي (40)' },
+  final: { en: 'Final (40)', ar: 'النهائي (40)' },
+  total: { en: 'Total', ar: 'المجموع' },
+  grade: { en: 'Grade', ar: 'التقدير' },
   points: { en: 'Points', ar: 'النقاط' },
   status: { en: 'Status', ar: 'الحالة' },
   semesterGPA: { en: 'Semester GPA', ar: 'معدل الفصل' },
@@ -100,11 +105,11 @@ const defaultTranscriptData = {
       academic_year: '2024-2025',
       gpa: 3.75,
       courses: [
-        { code: 'CS301', name_en: 'Data Structures', name_ar: 'هياكل البيانات', credits: 3, grade: 'A', points: 4.0, passed: true },
-        { code: 'CS302', name_en: 'Algorithms', name_ar: 'الخوارزميات', credits: 3, grade: 'A-', points: 3.7, passed: true },
-        { code: 'CS303', name_en: 'Database Systems', name_ar: 'أنظمة قواعد البيانات', credits: 3, grade: 'B+', points: 3.3, passed: true },
-        { code: 'MATH301', name_en: 'Linear Algebra', name_ar: 'الجبر الخطي', credits: 3, grade: 'B', points: 3.0, passed: true },
-        { code: 'ENG301', name_en: 'Technical Writing', name_ar: 'الكتابة الفنية', credits: 2, grade: 'A', points: 4.0, passed: true },
+        { code: 'CS301', name_en: 'Data Structures', name_ar: 'هياكل البيانات', credits: 3, grade: 'A', points: 4.0, passed: true, coursework: 18, midterm: 36, final: 38, total: 92 },
+        { code: 'CS302', name_en: 'Algorithms', name_ar: 'الخوارزميات', credits: 3, grade: 'A-', points: 3.7, passed: true, coursework: 17, midterm: 35, final: 36, total: 88 },
+        { code: 'CS303', name_en: 'Database Systems', name_ar: 'أنظمة قواعد البيانات', credits: 3, grade: 'B+', points: 3.3, passed: true, coursework: 16, midterm: 32, final: 35, total: 83 },
+        { code: 'MATH301', name_en: 'Linear Algebra', name_ar: 'الجبر الخطي', credits: 3, grade: 'B', points: 3.0, passed: true, coursework: 15, midterm: 30, final: 32, total: 77 },
+        { code: 'ENG301', name_en: 'Technical Writing', name_ar: 'الكتابة الفنية', credits: 2, grade: 'A', points: 4.0, passed: true, coursework: 19, midterm: 38, final: 37, total: 94 },
       ],
       total_credits: 14,
       earned_credits: 14,
@@ -116,10 +121,10 @@ const defaultTranscriptData = {
       academic_year: '2023-2024',
       gpa: 3.58,
       courses: [
-        { code: 'CS201', name_en: 'Object-Oriented Programming', name_ar: 'البرمجة الكائنية', credits: 3, grade: 'A-', points: 3.7, passed: true },
-        { code: 'CS202', name_en: 'Computer Networks', name_ar: 'شبكات الحاسب', credits: 3, grade: 'B+', points: 3.3, passed: true },
-        { code: 'CS203', name_en: 'Operating Systems', name_ar: 'أنظمة التشغيل', credits: 3, grade: 'B+', points: 3.3, passed: true },
-        { code: 'MATH201', name_en: 'Calculus II', name_ar: 'التفاضل والتكامل 2', credits: 3, grade: 'B', points: 3.0, passed: true },
+        { code: 'CS201', name_en: 'Object-Oriented Programming', name_ar: 'البرمجة الكائنية', credits: 3, grade: 'A-', points: 3.7, passed: true, coursework: 17, midterm: 35, final: 36, total: 88 },
+        { code: 'CS202', name_en: 'Computer Networks', name_ar: 'شبكات الحاسب', credits: 3, grade: 'B+', points: 3.3, passed: true, coursework: 16, midterm: 33, final: 34, total: 83 },
+        { code: 'CS203', name_en: 'Operating Systems', name_ar: 'أنظمة التشغيل', credits: 3, grade: 'B+', points: 3.3, passed: true, coursework: 16, midterm: 32, final: 35, total: 83 },
+        { code: 'MATH201', name_en: 'Calculus II', name_ar: 'التفاضل والتكامل 2', credits: 3, grade: 'B', points: 3.0, passed: true, coursework: 15, midterm: 30, final: 32, total: 77 },
       ],
       total_credits: 12,
       earned_credits: 12,
@@ -131,11 +136,11 @@ const defaultTranscriptData = {
       academic_year: '2023-2024',
       gpa: 3.45,
       courses: [
-        { code: 'CS101', name_en: 'Introduction to Programming', name_ar: 'مقدمة في البرمجة', credits: 3, grade: 'A', points: 4.0, passed: true },
-        { code: 'CS102', name_en: 'Computer Fundamentals', name_ar: 'أساسيات الحاسب', credits: 3, grade: 'B+', points: 3.3, passed: true },
-        { code: 'MATH101', name_en: 'Calculus I', name_ar: 'التفاضل والتكامل 1', credits: 3, grade: 'B', points: 3.0, passed: true },
-        { code: 'PHY101', name_en: 'Physics I', name_ar: 'الفيزياء 1', credits: 3, grade: 'B-', points: 2.7, passed: true },
-        { code: 'ENG101', name_en: 'English I', name_ar: 'اللغة الإنجليزية 1', credits: 2, grade: 'A-', points: 3.7, passed: true },
+        { code: 'CS101', name_en: 'Introduction to Programming', name_ar: 'مقدمة في البرمجة', credits: 3, grade: 'A', points: 4.0, passed: true, coursework: 18, midterm: 38, final: 36, total: 92 },
+        { code: 'CS102', name_en: 'Computer Fundamentals', name_ar: 'أساسيات الحاسب', credits: 3, grade: 'B+', points: 3.3, passed: true, coursework: 16, midterm: 33, final: 34, total: 83 },
+        { code: 'MATH101', name_en: 'Calculus I', name_ar: 'التفاضل والتكامل 1', credits: 3, grade: 'B', points: 3.0, passed: true, coursework: 14, midterm: 30, final: 33, total: 77 },
+        { code: 'PHY101', name_en: 'Physics I', name_ar: 'الفيزياء 1', credits: 3, grade: 'B-', points: 2.7, passed: true, coursework: 13, midterm: 28, final: 32, total: 73 },
+        { code: 'ENG101', name_en: 'English I', name_ar: 'اللغة الإنجليزية 1', credits: 2, grade: 'A-', points: 3.7, passed: true, coursework: 17, midterm: 35, final: 36, total: 88 },
       ],
       total_credits: 14,
       earned_credits: 14,
@@ -151,6 +156,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
   const [expandedSemesters, setExpandedSemesters] = useState<number[]>([]);
   const [transcriptData, setTranscriptData] = useState<typeof defaultTranscriptData>(defaultTranscriptData);
   const [reportCards, setReportCards] = useState<ReportCardListItem[]>([]);
+  const [isUsingFallbackData, setIsUsingFallbackData] = useState(false);
 
   const isRTL = lang === 'ar';
 
@@ -158,6 +164,8 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      setIsUsingFallbackData(false);
+
       try {
         // Try to fetch from API
         const [transcriptResponse, reportCardsResponse] = await Promise.all([
@@ -165,15 +173,69 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
           reportCardAPI.getMyReportCards().catch(() => null),
         ]);
 
-        if (transcriptResponse) {
-          setTranscriptData(transcriptResponse);
+        if (transcriptResponse && transcriptResponse.student) {
+          // Transform API response to match UI expected structure
+          const apiData = transcriptResponse;
+          const transformedData = {
+            student: {
+              id: apiData.student?.id,
+              student_id: apiData.student?.student_id,
+              name_en: apiData.student?.name_en,
+              name_ar: apiData.student?.name_ar,
+              level: apiData.student?.level || 1,
+              gpa: apiData.summary?.cumulative_gpa || 0,
+              academic_standing: apiData.summary?.academic_standing || 'Good Standing',
+              academic_standing_ar: apiData.summary?.academic_standing === 'Good Standing' ? 'وضع جيد' : apiData.summary?.academic_standing,
+              total_credits_required: apiData.student?.total_credits_required || 132,
+              credits_earned: apiData.summary?.total_credits || 0,
+              expected_graduation: apiData.student?.expected_graduation || '',
+            },
+            program: {
+              name_en: apiData.student?.program?.name_en || 'Bachelor Program',
+              name_ar: apiData.student?.program?.name_ar || 'برنامج البكالوريوس',
+              degree: 'Bachelor',
+              department: apiData.student?.department?.name_en || '',
+              department_ar: apiData.student?.department?.name_ar || '',
+              college: '',
+              college_ar: '',
+            },
+            semesters: (apiData.semesters || []).map((sem: any) => ({
+              id: sem.semester?.id,
+              name: sem.semester?.name_en || sem.semester?.name,
+              name_ar: sem.semester?.name_ar || sem.semester?.name,
+              academic_year: sem.semester?.year || '',
+              gpa: sem.semester_gpa || 0,
+              courses: (sem.courses || []).map((course: any) => ({
+                code: course.code,
+                name_en: course.name_en,
+                name_ar: course.name_ar,
+                credits: course.credits,
+                grade: course.grade,
+                points: course.points / (course.credits || 1), // Convert total points to GPA points
+                passed: !['F', 'D-'].includes(course.grade),
+                coursework: course.coursework || 0,
+                midterm: course.midterm || 0,
+                final: course.final || 0,
+                total: course.total || (course.coursework || 0) + (course.midterm || 0) + (course.final || 0),
+              })),
+              total_credits: sem.semester_credits || 0,
+              earned_credits: sem.semester_credits || 0,
+            })),
+          };
+          setTranscriptData(transformedData);
+          setIsUsingFallbackData(false);
+        } else {
+          // Using fallback data
+          setIsUsingFallbackData(true);
         }
+
         if (reportCardsResponse) {
           setReportCards(reportCardsResponse.report_cards || []);
         }
       } catch (err) {
         console.error('Error fetching transcript data:', err);
         // Use default data on error
+        setIsUsingFallbackData(true);
       } finally {
         setLoading(false);
       }
@@ -205,25 +267,250 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
   const handleDownloadFullTranscript = async () => {
     setDownloadingFull(true);
     try {
-      // Download all semester reports as one combined PDF
-      const blob = await reportCardAPI.downloadMyReportCard(0, lang); // 0 = full transcript
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `transcript_${transcriptData.student.student_id}_${lang}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // Use transcriptData directly since local variables are defined later
+      const studentData = transcriptData.student;
+      const programData = transcriptData.program;
+      const semestersData = transcriptData.semesters;
+      const currentDate = new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      // Generate a full transcript PDF locally since we have all the data
+      const printContent = `
+        <!-- Student Information Card -->
+        <div class="content-section" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px;">
+          <h3 class="section-title" style="color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            ${lang === 'ar' ? 'بيانات الطالب' : 'Student Information'}
+          </h3>
+          <div class="info-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;">
+            <div class="info-item">
+              <label style="font-size: 11px; color: #64748b; text-transform: uppercase;">${lang === 'ar' ? 'الاسم' : 'Full Name'}</label>
+              <span style="font-size: 16px; font-weight: 600; color: #1e293b;">${lang === 'ar' ? studentData.name_ar : studentData.name_en}</span>
+            </div>
+            <div class="info-item">
+              <label style="font-size: 11px; color: #64748b; text-transform: uppercase;">${lang === 'ar' ? 'الرقم الجامعي' : 'Student ID'}</label>
+              <span style="font-size: 16px; font-weight: 600; color: #3b82f6;">${studentData.student_id}</span>
+            </div>
+            <div class="info-item">
+              <label style="font-size: 11px; color: #64748b; text-transform: uppercase;">${lang === 'ar' ? 'البرنامج' : 'Program'}</label>
+              <span style="font-size: 14px; font-weight: 500; color: #1e293b;">${lang === 'ar' ? programData.name_ar : programData.name_en}</span>
+            </div>
+            <div class="info-item">
+              <label style="font-size: 11px; color: #64748b; text-transform: uppercase;">${lang === 'ar' ? 'المستوى الحالي' : 'Current Level'}</label>
+              <span style="font-size: 14px; font-weight: 500; color: #1e293b;">${studentData.level}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Academic Summary Box -->
+        <div class="content-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; border-radius: 12px; padding: 20px; margin-top: 20px;">
+          <div style="display: flex; justify-content: space-around; text-align: center;">
+            <div>
+              <div style="font-size: 32px; font-weight: bold; color: ${studentData.gpa >= 3.0 ? '#059669' : '#d97706'};">${studentData.gpa.toFixed(2)}</div>
+              <div style="font-size: 12px; color: #64748b;">${lang === 'ar' ? 'المعدل التراكمي' : 'Cumulative GPA'}</div>
+              <div style="font-size: 10px; color: #94a3b8;">${lang === 'ar' ? 'من 4.00' : 'out of 4.00'}</div>
+            </div>
+            <div style="border-left: 2px solid #86efac; padding-left: 30px;">
+              <div style="font-size: 32px; font-weight: bold; color: #1e40af;">${studentData.credits_earned}</div>
+              <div style="font-size: 12px; color: #64748b;">${lang === 'ar' ? 'الساعات المكتسبة' : 'Credits Earned'}</div>
+              <div style="font-size: 10px; color: #94a3b8;">${lang === 'ar' ? `من ${studentData.total_credits_required}` : `of ${studentData.total_credits_required}`}</div>
+            </div>
+            <div style="border-left: 2px solid #86efac; padding-left: 30px;">
+              <div style="font-size: 18px; font-weight: bold; color: #059669; padding: 8px 16px; background: #d1fae5; border-radius: 20px;">${lang === 'ar' ? studentData.academic_standing_ar : studentData.academic_standing}</div>
+              <div style="font-size: 12px; color: #64748b; margin-top: 5px;">${lang === 'ar' ? 'الحالة الأكاديمية' : 'Academic Standing'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Semester Records -->
+        ${semestersData.map((semester, idx) => `
+          <div class="content-section" style="margin-top: 25px; page-break-inside: avoid;">
+            <h3 class="section-title" style="background: #1e40af; color: white; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0;">
+              ${lang === 'ar' ? semester.name_ar : semester.name} - ${semester.academic_year}
+              <span style="float: ${lang === 'ar' ? 'left' : 'right'}; font-size: 14px; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 10px;">
+                GPA: ${semester.gpa.toFixed(2)}
+              </span>
+            </h3>
+            <table class="data-table" style="border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
+              <thead>
+                <tr style="background: #f8fafc;">
+                  <th style="width: 12%;">${lang === 'ar' ? 'الرمز' : 'Code'}</th>
+                  <th style="width: 28%;">${lang === 'ar' ? 'اسم المساق' : 'Course Name'}</th>
+                  <th class="center" style="width: 8%;">${lang === 'ar' ? 'س.م' : 'CR'}</th>
+                  <th class="center" style="width: 10%;">${lang === 'ar' ? 'أعمال' : 'CW'}</th>
+                  <th class="center" style="width: 10%;">${lang === 'ar' ? 'نصفي' : 'Mid'}</th>
+                  <th class="center" style="width: 10%;">${lang === 'ar' ? 'نهائي' : 'Final'}</th>
+                  <th class="center" style="width: 10%;">${lang === 'ar' ? 'المجموع' : 'Total'}</th>
+                  <th class="center" style="width: 12%;">${lang === 'ar' ? 'التقدير' : 'Grade'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${semester.courses.map((course: any, cIdx: number) => `
+                  <tr style="background: ${cIdx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                    <td style="font-weight: 600; color: #3b82f6;">${course.code}</td>
+                    <td>${lang === 'ar' ? course.name_ar : course.name_en}</td>
+                    <td class="center">${course.credits}</td>
+                    <td class="center">${course.coursework || '-'}</td>
+                    <td class="center">${course.midterm || '-'}</td>
+                    <td class="center">${course.final || '-'}</td>
+                    <td class="center" style="font-weight: bold;">${course.total || '-'}</td>
+                    <td class="center">
+                      <span style="font-weight: bold; padding: 3px 8px; border-radius: 4px; background: ${
+                        course.grade.startsWith('A') ? '#d1fae5' :
+                        course.grade.startsWith('B') ? '#dbeafe' :
+                        course.grade.startsWith('C') ? '#fef3c7' : '#fee2e2'
+                      }; color: ${
+                        course.grade.startsWith('A') ? '#059669' :
+                        course.grade.startsWith('B') ? '#2563eb' :
+                        course.grade.startsWith('C') ? '#d97706' : '#dc2626'
+                      };">${course.grade}</span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background: #f1f5f9; font-weight: bold;">
+                  <td colspan="2" style="text-align: ${lang === 'ar' ? 'right' : 'left'};">${lang === 'ar' ? 'مجموع الفصل' : 'Semester Total'}</td>
+                  <td class="center">${semester.total_credits}</td>
+                  <td colspan="4"></td>
+                  <td class="center" style="color: #1e40af; font-size: 14px;">${semester.gpa.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        `).join('')}
+
+        <!-- Footer with Signature Area -->
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div style="text-align: center; width: 200px;">
+              <div style="border-bottom: 1px solid #cbd5e1; margin-bottom: 5px; height: 40px;"></div>
+              <div style="font-size: 11px; color: #64748b;">${lang === 'ar' ? 'توقيع المسجل' : 'Registrar Signature'}</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 11px; color: #64748b;">${lang === 'ar' ? 'تاريخ الإصدار' : 'Issue Date'}</div>
+              <div style="font-weight: 600; color: #1e293b;">${currentDate}</div>
+            </div>
+            <div style="text-align: center; width: 200px;">
+              <div style="border-bottom: 1px solid #cbd5e1; margin-bottom: 5px; height: 40px;"></div>
+              <div style="font-size: 11px; color: #64748b;">${lang === 'ar' ? 'الختم الرسمي' : 'Official Stamp'}</div>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #94a3b8;">
+            ${lang === 'ar'
+              ? 'هذه الوثيقة صادرة إلكترونياً وتعتبر صالحة بدون توقيع أو ختم'
+              : 'This document is electronically generated and is valid without signature or stamp'}
+          </div>
+        </div>
+      `;
+
+      // Use the exportToPDF function to generate the transcript
+      exportToPDF(
+        'Official Academic Transcript',
+        printContent,
+        `transcript_${studentData.student_id}`,
+        lang,
+        'السجل الأكاديمي الرسمي'
+      );
     } catch (err) {
-      console.error('Error downloading full transcript:', err);
+      console.error('Error generating full transcript:', err);
     } finally {
       setDownloadingFull(false);
     }
   };
 
   const handlePrint = () => {
-    printPage(undefined, 'Academic Transcript', 'السجل الأكاديمي', lang);
+    // Use transcriptData directly since local variables are defined later
+    const studentData = transcriptData.student;
+    const programData = transcriptData.program;
+    const semestersData = transcriptData.semesters;
+
+    // Create a printable version with all transcript data
+    const printContent = `
+      <div class="content-section">
+        <h3 class="section-title">${lang === 'ar' ? 'بيانات الطالب' : 'Student Information'}</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>${lang === 'ar' ? 'الاسم' : 'Name'}</label>
+            <span>${lang === 'ar' ? studentData.name_ar : studentData.name_en}</span>
+          </div>
+          <div class="info-item">
+            <label>${lang === 'ar' ? 'الرقم الجامعي' : 'Student ID'}</label>
+            <span>${studentData.student_id}</span>
+          </div>
+          <div class="info-item">
+            <label>${lang === 'ar' ? 'البرنامج' : 'Program'}</label>
+            <span>${lang === 'ar' ? programData.name_ar : programData.name_en}</span>
+          </div>
+          <div class="info-item">
+            <label>${lang === 'ar' ? 'المعدل التراكمي' : 'GPA'}</label>
+            <span style="color: ${studentData.gpa >= 3.0 ? '#059669' : '#d97706'}; font-weight: bold;">${studentData.gpa.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+      ${semestersData.map(semester => `
+        <div class="content-section">
+          <h3 class="section-title">${lang === 'ar' ? semester.name_ar : semester.name} (${semester.academic_year})</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>${lang === 'ar' ? 'رمز المساق' : 'Code'}</th>
+                <th>${lang === 'ar' ? 'اسم المساق' : 'Course'}</th>
+                <th class="center">${lang === 'ar' ? 'الساعات المعتمدة' : 'Credits'}</th>
+                <th class="center">${lang === 'ar' ? 'أعمال الفصل (20)' : 'Coursework'}</th>
+                <th class="center">${lang === 'ar' ? 'النصفي (40)' : 'Midterm'}</th>
+                <th class="center">${lang === 'ar' ? 'النهائي (40)' : 'Final'}</th>
+                <th class="center">${lang === 'ar' ? 'المجموع' : 'Total'}</th>
+                <th class="center">${lang === 'ar' ? 'التقدير' : 'Grade'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${semester.courses.map((course: any) => `
+                <tr>
+                  <td>${course.code}</td>
+                  <td>${lang === 'ar' ? course.name_ar : course.name_en}</td>
+                  <td class="center">${course.credits}</td>
+                  <td class="center">${course.coursework || '-'}</td>
+                  <td class="center">${course.midterm || '-'}</td>
+                  <td class="center">${course.final || '-'}</td>
+                  <td class="center" style="font-weight: bold;">${course.total || '-'}</td>
+                  <td class="center" style="font-weight: bold; color: ${course.grade.startsWith('A') ? '#059669' : course.grade.startsWith('B') ? '#3b82f6' : '#d97706'};">${course.grade}</td>
+                </tr>
+              `).join('')}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td colspan="2">${lang === 'ar' ? 'معدل الفصل' : 'Semester GPA'}</td>
+                <td class="center">${semester.total_credits}</td>
+                <td class="center" colspan="4"></td>
+                <td class="center">${semester.gpa.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `).join('')}
+      <div class="content-section">
+        <div class="info-grid">
+          <div class="info-item">
+            <label>${lang === 'ar' ? 'إجمالي الساعات المكتسبة' : 'Total Credits Earned'}</label>
+            <span>${studentData.credits_earned}</span>
+          </div>
+          <div class="info-item">
+            <label>${lang === 'ar' ? 'المعدل التراكمي النهائي' : 'Cumulative GPA'}</label>
+            <span style="font-size: 18px; color: ${studentData.gpa >= 3.0 ? '#059669' : '#d97706'}; font-weight: bold;">${studentData.gpa.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Use the exportToPDF function with the generated content
+    exportToPDF(
+      'Academic Transcript',
+      printContent,
+      `transcript_${studentData.student_id}`,
+      lang,
+      'السجل الأكاديمي'
+    );
   };
 
   const getGradeColor = (grade: string) => {
@@ -301,6 +588,23 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
           </button>
         </div>
       </div>
+
+      {/* Fallback Data Warning */}
+      {isUsingFallbackData && (
+        <div className="p-4 rounded-xl flex items-center gap-3 bg-amber-50 text-amber-800 border border-amber-200">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">
+              {lang === 'ar' ? 'بيانات تجريبية' : 'Demo Data'}
+            </p>
+            <p className="text-sm text-amber-600">
+              {lang === 'ar'
+                ? 'هذه البيانات تجريبية للعرض فقط. سيتم عرض بياناتك الحقيقية عند الاتصال بالخادم.'
+                : 'This is demo data for display purposes. Your real data will be shown when connected to the server.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Program Info & Academic Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -485,58 +789,66 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                           <table className="w-full">
                             <thead>
                               <tr className="bg-slate-100">
-                                <th className="px-4 py-3 text-sm font-medium text-slate-600 text-start">
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-start">
                                   {t.courseCode[lang]}
                                 </th>
-                                <th className="px-4 py-3 text-sm font-medium text-slate-600 text-start">
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-start">
                                   {t.courseName[lang]}
                                 </th>
-                                <th className="px-4 py-3 text-sm font-medium text-slate-600 text-center">
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
+                                  {t.semesterCol[lang]}
+                                </th>
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
                                   {t.credits[lang]}
                                 </th>
-                                <th className="px-4 py-3 text-sm font-medium text-slate-600 text-center">
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
+                                  {t.coursework[lang]}
+                                </th>
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
+                                  {t.midterm[lang]}
+                                </th>
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
+                                  {t.final[lang]}
+                                </th>
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
+                                  {t.total[lang]}
+                                </th>
+                                <th className="px-3 py-3 text-sm font-medium text-slate-600 text-center">
                                   {t.grade[lang]}
-                                </th>
-                                <th className="px-4 py-3 text-sm font-medium text-slate-600 text-center">
-                                  {t.points[lang]}
-                                </th>
-                                <th className="px-4 py-3 text-sm font-medium text-slate-600 text-center">
-                                  {t.status[lang]}
                                 </th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
-                              {semester.courses.map((course, idx) => (
+                              {semester.courses.map((course: any, idx: number) => (
                                 <tr key={idx} className="bg-white hover:bg-slate-50">
-                                  <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                                  <td className="px-3 py-3 text-sm font-medium text-slate-800">
                                     {course.code}
                                   </td>
-                                  <td className="px-4 py-3 text-sm text-slate-600">
+                                  <td className="px-3 py-3 text-sm text-slate-600">
                                     {lang === 'ar' ? course.name_ar : course.name_en}
                                   </td>
-                                  <td className="px-4 py-3 text-sm text-slate-600 text-center">
+                                  <td className="px-3 py-3 text-sm text-slate-600 text-center">
+                                    {lang === 'ar' ? semester.name_ar : semester.name}
+                                  </td>
+                                  <td className="px-3 py-3 text-sm text-slate-600 text-center">
                                     {course.credits}
                                   </td>
-                                  <td className="px-4 py-3 text-center">
+                                  <td className="px-3 py-3 text-sm text-slate-600 text-center">
+                                    {course.coursework || '-'}
+                                  </td>
+                                  <td className="px-3 py-3 text-sm text-slate-600 text-center">
+                                    {course.midterm || '-'}
+                                  </td>
+                                  <td className="px-3 py-3 text-sm text-slate-600 text-center">
+                                    {course.final || '-'}
+                                  </td>
+                                  <td className="px-3 py-3 text-sm font-medium text-slate-800 text-center">
+                                    {course.total || '-'}
+                                  </td>
+                                  <td className="px-3 py-3 text-center">
                                     <span className={`px-2 py-1 rounded-lg text-sm font-medium ${getGradeColor(course.grade)}`}>
                                       {course.grade}
                                     </span>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-slate-600 text-center">
-                                    {course.points.toFixed(1)}
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    {course.passed ? (
-                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                                        <Check className="w-3 h-3" />
-                                        {t.passed[lang]}
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">
-                                        <X className="w-3 h-3" />
-                                        {t.failed[lang]}
-                                      </span>
-                                    )}
                                   </td>
                                 </tr>
                               ))}

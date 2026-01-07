@@ -16,7 +16,6 @@ export { settingsAPI } from './settings';
 export { advisingAPI } from './advising';
 export { certificatesAPI } from './certificates';
 export { academicStatusAPI } from './academicStatus';
-export { lmsAPI } from './lms';
 export { paymentPlansAPI } from './paymentPlans';
 export { brandingAPI } from './branding';
 export { usersAPI } from './users';

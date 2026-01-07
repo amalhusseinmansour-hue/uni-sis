@@ -25,7 +25,7 @@ export const generateAIResponse = async (
     
     // Construct a system prompt with context
     const systemInstruction = `
-      You are a helpful university Student Information System (SIS) assistant named "UniBot".
+      You are a helpful university academic assistant named "UniBot". Our motto: "Learn from anywhere, Lead everywhere" (تعلم من أي مكان وكن قائداً في كل مكان).
       The user is a student.
       
       IMPORTANT: You MUST reply in ${language === 'ar' ? 'Arabic (العربية)' : 'English'} ONLY.

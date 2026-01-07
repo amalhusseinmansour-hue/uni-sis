@@ -90,7 +90,6 @@ export const MOCK_STUDENT: Student = {
 
   // Systems & Accounts
   sisUsername: 'ahmed.m',
-  lmsUsername: 'ahmed.m',
   accountStatus: 'ACTIVE',
   lastLogin: '2024-02-15 10:30:00',
 
@@ -497,7 +496,7 @@ export const TRANSLATIONS: Translation = {
 
   // Systems & Accounts Section
   systemsAccounts: { en: 'Systems & Accounts', ar: 'الأنظمة والحسابات' },
-  sisLmsUsername: { en: 'SIS & LMS Username', ar: 'اسم المستخدم للنظام' },
+  sisUsername: { en: 'Username', ar: 'اسم المستخدم' },
   accountStatusLabel: { en: 'Account Status', ar: 'حالة الحساب' },
   accountActive: { en: 'Active', ar: 'نشط' },
   accountLocked: { en: 'Locked', ar: 'مقفل' },

@@ -248,43 +248,6 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ lang }) => {
             fullWidth={false}
             className="w-40"
           />
-          <Button
-            variant="outline"
-            icon={Download}
-            onClick={() => {
-              const headers = [
-                lang === 'ar' ? 'اليوم' : 'Day',
-                lang === 'ar' ? 'المقرر' : 'Course',
-                lang === 'ar' ? 'العنوان' : 'Title',
-                lang === 'ar' ? 'الوقت' : 'Time',
-                lang === 'ar' ? 'المكان' : 'Location',
-                lang === 'ar' ? 'المحاضر' : 'Instructor',
-              ];
-              const days = lang === 'ar'
-                ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-                : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-              const rows = scheduleEvents.map(e => [
-                days[e.day],
-                e.courseCode,
-                lang === 'ar' && e.titleAr ? e.titleAr : e.title,
-                `${e.startTime} - ${e.endTime}`,
-                e.location,
-                e.instructor
-              ]);
-              const tableHTML = formatTableHTML(headers, rows, lang);
-              exportToPDF(
-                lang === 'ar' ? 'الجدول الدراسي' : 'Class Schedule',
-                tableHTML,
-                'class-schedule',
-                lang
-              );
-            }}
-          >
-            {lang === 'ar' ? 'تصدير PDF' : 'Export PDF'}
-          </Button>
-          <Button variant="outline" icon={Printer} onClick={() => printPage(undefined, 'Class Schedule', 'الجدول الدراسي', lang)}>
-            {lang === 'ar' ? 'طباعة' : 'Print'}
-          </Button>
         </div>
       </div>
 

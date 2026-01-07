@@ -1,7 +1,7 @@
 import apiClient from './client';
 
 export interface LoginCredentials {
-  email: string;
+  username: string; // Can be email or student_id
   password: string;
 }
 

@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Palette, Upload, Image, Eye, Save, RotateCcw, Check, AlertCircle,
   CreditCard, FileText, Building2, Globe, Mail, Phone, MapPin,
-  Loader2, X, Settings, Paintbrush, Layout, QrCode, Barcode
+  Loader2, X, Settings, Paintbrush, Layout, QrCode, Barcode, DollarSign
 } from 'lucide-react';
 import { brandingAPI, BrandingSettings } from '../../api/branding';
+import { useBranding } from '../../context/BrandingContext';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import Button, { IconButton } from '../../components/ui/Button';
 import Input, { Textarea } from '../../components/ui/Input';
@@ -24,6 +25,7 @@ const t: Record<string, { en: string; ar: string }> = {
   idCardTab: { en: 'ID Card', ar: 'البطاقة الجامعية' },
   reportsTab: { en: 'Reports & Documents', ar: 'التقارير والوثائق' },
   contactTab: { en: 'Contact Info', ar: 'معلومات الاتصال' },
+  financeTab: { en: 'Finance', ar: 'المالية' },
 
   // General Settings
   universityInfo: { en: 'University Information', ar: 'معلومات الجامعة' },
@@ -89,6 +91,15 @@ const t: Record<string, { en: string; ar: string }> = {
   email: { en: 'Email', ar: 'البريد الإلكتروني' },
   website: { en: 'Website', ar: 'الموقع الإلكتروني' },
 
+  // Currency Settings
+  currencySettings: { en: 'Currency Settings', ar: 'إعدادات العملة' },
+  currency: { en: 'Currency', ar: 'العملة' },
+  currencySymbol: { en: 'Currency Symbol', ar: 'رمز العملة' },
+  currencyPosition: { en: 'Symbol Position', ar: 'موضع الرمز' },
+  currencyBefore: { en: 'Before amount ($100)', ar: 'قبل المبلغ ($100)' },
+  currencyAfter: { en: 'After amount (100$)', ar: 'بعد المبلغ (100$)' },
+  currencyPreview: { en: 'Preview', ar: 'معاينة' },
+
   // Actions
   save: { en: 'Save Changes', ar: 'حفظ التغييرات' },
   saving: { en: 'Saving...', ar: 'جاري الحفظ...' },
@@ -101,7 +112,8 @@ const t: Record<string, { en: string; ar: string }> = {
 
 const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => {
   const isRTL = lang === 'ar';
-  const [activeTab, setActiveTab] = useState<'general' | 'idcard' | 'reports' | 'contact'>('general');
+  const { refreshBranding } = useBranding();
+  const [activeTab, setActiveTab] = useState<'general' | 'idcard' | 'reports' | 'contact' | 'finance'>('general');
   const [settings, setSettings] = useState<BrandingSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -137,6 +149,8 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
     try {
       setSaving(true);
       await brandingAPI.updateSettings(settings);
+      // Refresh branding context so changes are reflected everywhere
+      await refreshBranding();
       setMessage({ type: 'success', text: t.saved[lang] });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
@@ -150,6 +164,8 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
     if (confirm(lang === 'ar' ? 'هل أنت متأكد من إعادة الإعدادات للقيم الافتراضية؟' : 'Are you sure you want to reset to defaults?')) {
       const defaults = await brandingAPI.resetToDefaults();
       setSettings(defaults);
+      // Refresh branding context so changes are reflected everywhere
+      await refreshBranding();
       setMessage({ type: 'success', text: lang === 'ar' ? 'تمت إعادة الإعدادات' : 'Settings reset' });
     }
   };
@@ -257,6 +273,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
     { id: 'idcard', label: t.idCardTab[lang], icon: CreditCard },
     { id: 'reports', label: t.reportsTab[lang], icon: FileText },
     { id: 'contact', label: t.contactTab[lang], icon: Building2 },
+    { id: 'finance', label: t.financeTab[lang], icon: DollarSign },
   ];
 
   return (
@@ -917,6 +934,149 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                     onChange={(e) => updateSetting('universityWebsite', e.target.value)}
                     icon={Globe}
                   />
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* Finance Tab */}
+          {activeTab === 'finance' && (
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
+                  {t.currencySettings[lang]}
+                </h3>
+              </CardHeader>
+              <CardBody className="space-y-6">
+                {/* Currency Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.currency[lang]}
+                    </label>
+                    <select
+                      value={settings.currency || 'USD'}
+                      onChange={(e) => {
+                        const currency = e.target.value;
+                        const currencyData: Record<string, { symbol: string; position: 'before' | 'after' }> = {
+                          'USD': { symbol: '$', position: 'before' },
+                          'EUR': { symbol: '€', position: 'before' },
+                          'GBP': { symbol: '£', position: 'before' },
+                          'SAR': { symbol: 'ر.س', position: 'after' },
+                          'AED': { symbol: 'د.إ', position: 'after' },
+                          'KWD': { symbol: 'د.ك', position: 'after' },
+                          'QAR': { symbol: 'ر.ق', position: 'after' },
+                          'BHD': { symbol: 'د.ب', position: 'after' },
+                          'OMR': { symbol: 'ر.ع', position: 'after' },
+                          'EGP': { symbol: 'ج.م', position: 'after' },
+                          'JOD': { symbol: 'د.أ', position: 'after' },
+                          'LBP': { symbol: 'ل.ل', position: 'after' },
+                          'TRY': { symbol: '₺', position: 'after' },
+                          'INR': { symbol: '₹', position: 'before' },
+                          'CNY': { symbol: '¥', position: 'before' },
+                          'JPY': { symbol: '¥', position: 'before' },
+                        };
+                        const data = currencyData[currency] || { symbol: currency, position: 'before' };
+                        updateSetting('currency', currency);
+                        updateSetting('currencySymbol', data.symbol);
+                        updateSetting('currencyPosition', data.position);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <optgroup label={lang === 'ar' ? 'العملات الرئيسية' : 'Major Currencies'}>
+                        <option value="USD">USD - US Dollar ($)</option>
+                        <option value="EUR">EUR - Euro (€)</option>
+                        <option value="GBP">GBP - British Pound (£)</option>
+                      </optgroup>
+                      <optgroup label={lang === 'ar' ? 'عملات الخليج' : 'Gulf Currencies'}>
+                        <option value="SAR">SAR - Saudi Riyal (ر.س)</option>
+                        <option value="AED">AED - UAE Dirham (د.إ)</option>
+                        <option value="KWD">KWD - Kuwaiti Dinar (د.ك)</option>
+                        <option value="QAR">QAR - Qatari Riyal (ر.ق)</option>
+                        <option value="BHD">BHD - Bahraini Dinar (د.ب)</option>
+                        <option value="OMR">OMR - Omani Rial (ر.ع)</option>
+                      </optgroup>
+                      <optgroup label={lang === 'ar' ? 'عملات عربية أخرى' : 'Other Arab Currencies'}>
+                        <option value="EGP">EGP - Egyptian Pound (ج.م)</option>
+                        <option value="JOD">JOD - Jordanian Dinar (د.أ)</option>
+                        <option value="LBP">LBP - Lebanese Pound (ل.ل)</option>
+                      </optgroup>
+                      <optgroup label={lang === 'ar' ? 'عملات أخرى' : 'Other Currencies'}>
+                        <option value="TRY">TRY - Turkish Lira (₺)</option>
+                        <option value="INR">INR - Indian Rupee (₹)</option>
+                        <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                        <option value="JPY">JPY - Japanese Yen (¥)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.currencySymbol[lang]}
+                    </label>
+                    <Input
+                      value={settings.currencySymbol || '$'}
+                      onChange={(e) => updateSetting('currencySymbol', e.target.value)}
+                      placeholder="$"
+                    />
+                  </div>
+                </div>
+
+                {/* Symbol Position */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    {t.currencyPosition[lang]}
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="currencyPosition"
+                        value="before"
+                        checked={settings.currencyPosition === 'before'}
+                        onChange={(e) => updateSetting('currencyPosition', e.target.value)}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm">{t.currencyBefore[lang]}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="currencyPosition"
+                        value="after"
+                        checked={settings.currencyPosition === 'after'}
+                        onChange={(e) => updateSetting('currencyPosition', e.target.value)}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm">{t.currencyAfter[lang]}</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.currencyPreview[lang]}
+                  </label>
+                  <div className="flex items-center gap-4 text-lg font-semibold text-gray-800">
+                    <span>1,000.00 → </span>
+                    <span className="text-green-600">
+                      {settings.currencyPosition === 'before'
+                        ? `${settings.currencySymbol || '$'}1,000.00`
+                        : `1,000.00 ${settings.currencySymbol || '$'}`
+                      }
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-lg font-semibold text-gray-800 mt-2">
+                    <span>-500.00 → </span>
+                    <span className="text-red-600">
+                      {settings.currencyPosition === 'before'
+                        ? `${settings.currencySymbol || '$'}500.00`
+                        : `500.00 ${settings.currencySymbol || '$'}`
+                      }
+                    </span>
+                  </div>
                 </div>
               </CardBody>
             </Card>

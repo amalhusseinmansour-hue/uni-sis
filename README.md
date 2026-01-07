@@ -1,6 +1,6 @@
-# 🎓 Universe SIS - Student Information System
+# 🎓 Universe SIS - تعلم من أي مكان وكن قائداً في كل مكان
 
-نظام إدارة معلومات الطلاب الشامل | Comprehensive Student Information System
+نظام إدارة معلومات الطلاب الشامل | Learn from anywhere, Lead everywhere
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Universe SIS** هو نظام متكامل لإدارة الشؤون الأكاديمية والإدارية للطلبة من مرحلة القبول وحتى التخرج، مع تكامل كامل مع Moodle LMS وأنظمة الدفع الإلكتروني.
 
-A comprehensive student information system for managing academic and administrative affairs from admission to graduation, with full integration with Moodle LMS and payment gateways.
+A comprehensive academic system for managing academic and administrative affairs from admission to graduation - Learn from anywhere, Lead everywhere.
 
 ---
 

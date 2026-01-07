@@ -56,6 +56,11 @@ export interface BrandingSettings {
   universityEmail?: string;
   universityWebsite?: string;
 
+  // Currency Settings
+  currency: string; // Currency code (USD, EUR, SAR, etc.)
+  currencySymbol: string; // Currency symbol ($, €, ر.س, etc.)
+  currencyPosition: 'before' | 'after'; // Symbol position relative to amount
+
   updatedAt?: string;
 }
 
@@ -107,6 +112,11 @@ const DEFAULT_BRANDING: BrandingSettings = {
   universityPhone: '+966 11 123 4567',
   universityEmail: 'info@university.edu',
   universityWebsite: 'www.university.edu',
+
+  // Currency defaults - USD
+  currency: 'USD',
+  currencySymbol: '$',
+  currencyPosition: 'before',
 };
 
 // Local storage key

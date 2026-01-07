@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area
@@ -11,6 +12,7 @@ import {
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
 import { attendanceAPI } from '../api/attendance';
+import { lmsAPI } from '../api/lms';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
 import Badge, { StatusBadge } from '../components/ui/Badge';
@@ -24,6 +26,7 @@ interface AttendancePageProps {
 
 const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
   const t = TRANSLATIONS;
+  const navigate = useNavigate();
   const [selectedCourse, setSelectedCourse] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -40,87 +43,153 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
   const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
 
-  // Fetch attendance data from API
+  // Fetch attendance data from LMS and API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Fetch student profile and enrollments
+        // Try to fetch from LMS first
+        let lmsAttendance: any[] = [];
+        try {
+          lmsAttendance = await lmsAPI.getUserAttendance().catch(() => []);
+          console.log('[AttendancePage] LMS attendance loaded:', lmsAttendance.length);
+        } catch (lmsError) {
+          console.warn('[AttendancePage] LMS attendance fetch failed:', lmsError);
+        }
+
+        // Fetch student profile and enrollments from regular API
         const profileRes = await studentsAPI.getMyProfile().catch(() => null);
         const studentId = profileRes?.student?.id || profileRes?.id;
+
+        let apiRecords: any[] = [];
+        let enrollments: any[] = [];
 
         if (studentId) {
           // Fetch enrollments with attendance
           const enrollmentsRes = await studentsAPI.getEnrollments(studentId).catch(() => []);
-          const enrollments = enrollmentsRes.data || enrollmentsRes || [];
+          enrollments = enrollmentsRes.data || enrollmentsRes || [];
 
-          if (enrollments.length > 0) {
-            // Calculate course-wise attendance
-            const courseData = attendanceAPI.calculateCourseAttendance(enrollments, lang);
-            setCourseAttendance(courseData);
-
-            // Calculate overall stats
-            let totalClasses = 0;
-            let totalAttended = 0;
-            let totalAbsent = 0;
-            let totalExcused = 0;
-
-            courseData.forEach(course => {
-              totalClasses += course.total;
-              totalAttended += course.attended;
-              totalAbsent += course.absent;
-              totalExcused += course.excused;
-            });
-
-            const rate = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 90;
-
-            setOverallStats({
-              totalClasses: totalClasses || 120,
-              attended: totalAttended || 108,
-              absent: totalAbsent || 8,
-              excused: totalExcused || 4,
-              rate: rate || 90,
-            });
-
-            // Collect recent records from all enrollments
-            const allRecords: any[] = [];
-            enrollments.forEach((enrollment: any) => {
-              const records = enrollment.attendance_records || [];
-              records.forEach((record: any) => {
-                allRecords.push({
-                  ...record,
-                  course: enrollment.course?.code || enrollment.courseCode,
-                  title: lang === 'ar'
-                    ? (enrollment.course?.name_ar || enrollment.courseName)
-                    : (enrollment.course?.name_en || enrollment.courseName),
-                });
+          // Collect API attendance records
+          enrollments.forEach((enrollment: any) => {
+            const records = enrollment.attendance_records || [];
+            records.forEach((record: any) => {
+              apiRecords.push({
+                ...record,
+                course: enrollment.course?.code || enrollment.courseCode,
+                title: lang === 'ar'
+                  ? (enrollment.course?.name_ar || enrollment.courseName)
+                  : (enrollment.course?.name_en || enrollment.courseName),
               });
             });
-
-            // Sort by date and take recent 10
-            allRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setRecentRecords(allRecords.slice(0, 10));
-
-            // Calculate monthly trend
-            const monthMap = new Map<string, { total: number; attended: number }>();
-            allRecords.forEach(record => {
-              const month = new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' });
-              if (!monthMap.has(month)) {
-                monthMap.set(month, { total: 0, attended: 0 });
-              }
-              const data = monthMap.get(month)!;
-              data.total++;
-              if (record.status === 'present') data.attended++;
-            });
-
-            const trend = Array.from(monthMap.entries()).map(([month, data]) => ({
-              month,
-              rate: data.total > 0 ? Math.round((data.attended / data.total) * 100) : 0,
-            }));
-            setMonthlyTrend(trend);
-          }
+          });
         }
+
+        // Transform LMS attendance to our format
+        const lmsRecords = lmsAttendance.map((record: any) => ({
+          id: `lms-${record.sessionid}`,
+          date: new Date(record.sessiondate * 1000).toISOString().split('T')[0],
+          course: record.coursename || `Course ${record.courseid}`,
+          title: record.coursename || (lang === 'ar' ? 'مقرر LMS' : 'LMS Course'),
+          status: record.status,
+          time: `${Math.floor(record.duration / 60)} ${lang === 'ar' ? 'دقيقة' : 'min'}`,
+          excuse: record.remarks || '',
+          source: 'lms',
+        }));
+
+        // Combine records (LMS takes priority for same date/course)
+        const allRecords = [...lmsRecords, ...apiRecords];
+        const uniqueRecords = allRecords.filter((record, index, self) =>
+          index === self.findIndex(r =>
+            r.date === record.date && r.course === record.course
+          )
+        );
+
+        // Sort by date and take recent 10
+        uniqueRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setRecentRecords(uniqueRecords.slice(0, 10));
+
+        // Calculate course-wise attendance from combined records
+        const courseMap = new Map<string, { code: string; name: string; total: number; attended: number; absent: number; excused: number }>();
+
+        uniqueRecords.forEach(record => {
+          const code = record.course;
+          if (!courseMap.has(code)) {
+            courseMap.set(code, {
+              code,
+              name: record.title,
+              total: 0,
+              attended: 0,
+              absent: 0,
+              excused: 0,
+            });
+          }
+          const data = courseMap.get(code)!;
+          data.total++;
+          if (record.status === 'present') data.attended++;
+          else if (record.status === 'excused') data.excused++;
+          else data.absent++;
+        });
+
+        // Also add course data from enrollments if not in records
+        if (enrollments.length > 0) {
+          const enrollmentCourseData = attendanceAPI.calculateCourseAttendance(enrollments, lang);
+          enrollmentCourseData.forEach(course => {
+            if (!courseMap.has(course.code)) {
+              courseMap.set(course.code, course);
+            }
+          });
+        }
+
+        const courseData = Array.from(courseMap.values()).map(c => ({
+          ...c,
+          id: c.code,
+          rate: c.total > 0 ? Math.round((c.attended / c.total) * 100) : 0,
+        }));
+
+        setCourseAttendance(courseData);
+
+        // Calculate overall stats
+        let totalClasses = 0;
+        let totalAttended = 0;
+        let totalAbsent = 0;
+        let totalExcused = 0;
+
+        courseData.forEach(course => {
+          totalClasses += course.total;
+          totalAttended += course.attended;
+          totalAbsent += course.absent;
+          totalExcused += course.excused;
+        });
+
+        const rate = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 90;
+
+        setOverallStats({
+          totalClasses: totalClasses || 120,
+          attended: totalAttended || 108,
+          absent: totalAbsent || 8,
+          excused: totalExcused || 4,
+          rate: rate || 90,
+        });
+
+        // Calculate monthly trend
+        const monthMap = new Map<string, { total: number; attended: number }>();
+        uniqueRecords.forEach(record => {
+          const month = new Date(record.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' });
+          if (!monthMap.has(month)) {
+            monthMap.set(month, { total: 0, attended: 0 });
+          }
+          const data = monthMap.get(month)!;
+          data.total++;
+          if (record.status === 'present') data.attended++;
+        });
+
+        const trend = Array.from(monthMap.entries()).map(([month, data]) => ({
+          month,
+          rate: data.total > 0 ? Math.round((data.attended / data.total) * 100) : 0,
+        }));
+        setMonthlyTrend(trend);
+
       } catch (error) {
         console.error('Error fetching attendance data:', error);
       } finally {
@@ -222,34 +291,7 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            icon={Download}
-            onClick={() => {
-              const headers = [
-                lang === 'ar' ? 'رمز المقرر' : 'Course Code',
-                lang === 'ar' ? 'اسم المقرر' : 'Course Name',
-                lang === 'ar' ? 'إجمالي المحاضرات' : 'Total Classes',
-                lang === 'ar' ? 'الحضور' : 'Attended',
-                lang === 'ar' ? 'الغياب' : 'Absent',
-                lang === 'ar' ? 'معذور' : 'Excused',
-                lang === 'ar' ? 'نسبة الحضور' : 'Rate %',
-              ];
-              const rows = displayCourseAttendance.map(c => [
-                c.code, c.name, c.total, c.attended, c.absent, c.excused, `${c.rate}%`
-              ]);
-              const tableHTML = formatTableHTML(headers, rows, lang);
-              exportToPDF(
-                lang === 'ar' ? 'تقرير الحضور' : 'Attendance Report',
-                tableHTML,
-                'attendance-report',
-                lang
-              );
-            }}
-          >
-            {lang === 'ar' ? 'تحميل التقرير' : 'Download Report'}
-          </Button>
-          <Button variant="primary" icon={FileText}>
+          <Button variant="primary" icon={FileText} onClick={() => navigate('/requests')}>
             {lang === 'ar' ? 'طلب عذر' : 'Request Excuse'}
           </Button>
         </div>
@@ -600,7 +642,7 @@ const AttendancePage: React.FC<AttendancePageProps> = ({ lang }) => {
             )}
 
             {selectedRecord.status === 'absent' && !selectedRecord.excuse && (
-              <Button variant="primary" fullWidth icon={FileText}>
+              <Button variant="primary" fullWidth icon={FileText} onClick={() => navigate('/requests')}>
                 {lang === 'ar' ? 'تقديم طلب عذر' : 'Submit Excuse Request'}
               </Button>
             )}

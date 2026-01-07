@@ -13,6 +13,16 @@ class Program extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that should be hidden for serialization.
+     * Prevents circular reference when serializing through student relationships.
+     *
+     * @var array<string>
+     */
+    protected $hidden = [
+        'students', // Prevent circular reference: Program -> students -> program...
+    ];
+
     protected $fillable = [
         'department_id',
         'name_en',

@@ -111,7 +111,11 @@ const t = {
   status: { en: 'Status', ar: 'الحالة' },
   actions: { en: 'Actions', ar: 'الإجراءات' },
   all: { en: 'All', ar: 'الكل' },
-  nationalId: { en: 'National ID', ar: 'الرقم الوطني' },
+  passportNumber: { en: 'Passport Number', ar: 'رقم جواز السفر' },
+  registeredStudents: { en: 'Registered Students', ar: 'الطلاب المسجلين' },
+  studentId: { en: 'Student ID', ar: 'رقم الطالب' },
+  enrollmentDate: { en: 'Enrollment Date', ar: 'تاريخ التسجيل' },
+  noStudentsFound: { en: 'No registered students found', ar: 'لم يتم العثور على طلاب مسجلين' },
   approve: { en: 'Approve', ar: 'قبول' },
   reject: { en: 'Reject', ar: 'رفض' },
   fullName: { en: 'Full Name', ar: 'الاسم الكامل' },
@@ -145,15 +149,17 @@ const COLORS = ['#3b82f6', '#22c55e', '#f97316', '#8b5cf6', '#ec4899'];
 
 const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
   const [apps, setApps] = useState<AdmissionApplication[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(false);
 
   // Fetch applications from API
   useEffect(() => {
     const fetchApps = async () => {
       try {
         setLoading(true);
-        const { admissionsAPI } = await import('../api/admissions');
-        const response = await admissionsAPI.getAll();
+        const { admissionsApi } = await import('../api/admissions');
+        const response = await admissionsApi.getAll();
         setApps(response.data || response || []);
       } catch (error) {
         console.error('Error fetching applications:', error);
@@ -163,7 +169,49 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
     };
     fetchApps();
   }, []);
-  const [view, setView] = useState<'dashboard' | 'list' | 'register'>('dashboard');
+
+  // Fetch registered students
+  const fetchStudents = async () => {
+    try {
+      setStudentsLoading(true);
+      const { default: apiClient } = await import('../api/client');
+      const response = await apiClient.get('/students');
+      setStudents(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  // Initialize view from URL parameter
+  const getInitialView = () => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const tab = params.get('tab');
+    if (tab === 'students') return 'students';
+    if (tab === 'applications') return 'list';
+    if (tab === 'register') return 'register';
+    return 'dashboard';
+  };
+
+  const [view, setView] = useState<'dashboard' | 'list' | 'register' | 'students'>(getInitialView);
+
+  // Fetch students when switching to students view
+  useEffect(() => {
+    if (view === 'students') {
+      fetchStudents();
+    }
+  }, [view]);
+
+  // Update URL when view changes
+  useEffect(() => {
+    const baseUrl = window.location.hash.split('?')[0];
+    if (view === 'dashboard') {
+      window.history.replaceState(null, '', baseUrl);
+    } else {
+      window.history.replaceState(null, '', `${baseUrl}?tab=${view === 'list' ? 'applications' : view}`);
+    }
+  }, [view]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [programFilter, setProgramFilter] = useState<string>('all');
@@ -179,7 +227,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
     fullNameAr: '',
     email: '',
     phone: '',
-    nationalId: '',
+    passportNumber: '',
     dob: '',
     gender: 'male',
     city: '',
@@ -197,9 +245,9 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
   // Filter applications
   const filteredApps = apps.filter((app) => {
     const matchesSearch =
-      app.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.nationalId.includes(searchQuery);
+      app.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.passportNumber || app.nationalId || '').includes(searchQuery);
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
     const matchesProgram = programFilter === 'all' || app.program === programFilter;
     return matchesSearch && matchesStatus && matchesProgram;
@@ -274,7 +322,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
       fullNameAr: '',
       email: '',
       phone: '',
-      nationalId: '',
+      passportNumber: '',
       dob: '',
       gender: 'male',
       city: '',
@@ -318,8 +366,15 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
               onClick={() => setView('list')}
               className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2"
             >
-              <Users className="w-4 h-4" />
+              <FileText className="w-4 h-4" />
               {t.applications[lang]}
+            </button>
+            <button
+              onClick={() => setView('students')}
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              {t.registeredStudents[lang]}
             </button>
             <button
               onClick={() => setView('register')}
@@ -607,7 +662,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                 const data = filteredApps.map(app => ({
                   fullName: app.fullName,
                   email: app.email,
-                  nationalId: app.nationalId,
+                  passportNumber: app.passportNumber || app.nationalId,
                   program: app.program,
                   highSchoolScore: app.highSchoolScore,
                   date: app.date,
@@ -673,7 +728,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     />
                   </th>
                   <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.applicant[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.nationalId[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.passportNumber[lang]}</th>
                   <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.score[lang]}</th>
                   <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.program[lang]}</th>
                   <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.applicationDate[lang]}</th>
@@ -703,7 +758,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                         <p className="font-medium text-slate-800">{app.fullName}</p>
                         <p className="text-xs text-slate-500">{app.email}</p>
                       </td>
-                      <td className="p-4 text-slate-600 font-mono">{app.nationalId}</td>
+                      <td className="p-4 text-slate-600 font-mono">{app.passportNumber || app.nationalId}</td>
                       <td className="p-4">
                         <span
                           className={`font-bold ${
@@ -814,8 +869,8 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     <p className="font-medium text-slate-800">{showDetailModal.fullName}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500 uppercase">{t.nationalId[lang]}</label>
-                    <p className="font-medium text-slate-800 font-mono">{showDetailModal.nationalId}</p>
+                    <label className="text-xs text-slate-500 uppercase">{t.passportNumber[lang]}</label>
+                    <p className="font-medium text-slate-800 font-mono">{showDetailModal.passportNumber || showDetailModal.nationalId}</p>
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 uppercase">{t.email[lang]}</label>
@@ -860,6 +915,145 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // --- Students View ---
+  if (view === 'students') {
+    return (
+      <div className={`space-y-6 animate-in fade-in duration-300 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setView('dashboard')}
+              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"
+            >
+              <ArrowLeft className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
+            </button>
+            <h2 className="text-2xl font-bold text-slate-800">{t.registeredStudents[lang]}</h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setView('list')}
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              {t.applications[lang]}
+            </button>
+            <button
+              onClick={() => setView('register')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              {t.registerNewStudent[lang]}
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={lang === 'ar' ? 'بحث عن طالب...' : 'Search students...'}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+            <button
+              onClick={fetchStudents}
+              className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+              title={t.refresh[lang]}
+            >
+              <RefreshCw className={`w-4 h-4 text-slate-600 ${studentsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Students Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentId[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.fullName[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.email[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.program[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.enrollmentDate[lang]}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {studentsLoading ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+                      {lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      {t.noStudentsFound[lang]}
+                    </td>
+                  </tr>
+                ) : (
+                  students
+                    .filter(student =>
+                      !searchQuery ||
+                      student.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      student.full_name_en?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      student.full_name_ar?.includes(searchQuery) ||
+                      student.user?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((student) => (
+                      <tr key={student.id} className="hover:bg-slate-50">
+                        <td className="p-4 font-mono text-blue-600 font-medium">{student.student_id}</td>
+                        <td className="p-4">
+                          <p className="font-medium text-slate-800">
+                            {lang === 'ar' ? student.full_name_ar : student.full_name_en}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {lang === 'ar' ? student.full_name_en : student.full_name_ar}
+                          </p>
+                        </td>
+                        <td className="p-4 text-slate-600">{student.user?.email || '-'}</td>
+                        <td className="p-4 text-slate-600">
+                          {student.program ? (lang === 'ar' ? student.program.name_ar : student.program.name_en) : '-'}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              student.status === 'ACTIVE'
+                                ? 'bg-green-100 text-green-700'
+                                : student.status === 'GRADUATED'
+                                ? 'bg-blue-100 text-blue-700'
+                                : student.status === 'SUSPENDED'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}
+                          >
+                            {student.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-500 text-sm">
+                          {student.enrollment_date ? new Date(student.enrollment_date).toLocaleDateString() : '-'}
+                        </td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }
@@ -969,10 +1163,10 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.nationalId[lang]}</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.passportNumber[lang]}</label>
                   <input
-                    name="nationalId"
-                    value={formData.nationalId}
+                    name="passportNumber"
+                    value={formData.passportNumber}
                     onChange={handleInputChange}
                     className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1169,8 +1363,8 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     <p className="font-medium text-slate-800">{formData.phone || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.nationalId[lang]}</p>
-                    <p className="font-medium text-slate-800">{formData.nationalId || '-'}</p>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.passportNumber[lang]}</p>
+                    <p className="font-medium text-slate-800">{formData.passportNumber || '-'}</p>
                   </div>
                   <div>
                     <p className="text-slate-500 text-xs uppercase tracking-wide">{t.program[lang]}</p>

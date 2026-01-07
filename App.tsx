@@ -58,7 +58,6 @@ import TranscriptPage from './pages/TranscriptPage';
 import AdvisingPage from './pages/AdvisingPage';
 import CertificatesPage from './pages/CertificatesPage';
 import AcademicWarningsPage from './pages/AcademicWarningsPage';
-import LMSPage from './pages/LMSPage';
 import DebugPage from './pages/DebugPage';
 import SimpleStudentDashboard from './pages/SimpleStudentDashboard';
 import SplashScreen from './components/SplashScreen';
@@ -79,7 +78,9 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 // Mock data removed - using real API data only
 import { UserRole } from './types';
 import { authAPI } from './api';
+import { preferencesAPI } from './api/preferences';
 import { ConfigProvider } from './context/ConfigContext';
+import { BrandingProvider } from './context/BrandingContext';
 
 // Helper to get user profile data from API response
 const getUserProfileData = (user: any) => {
@@ -168,12 +169,22 @@ const App: React.FC = () => {
     return null;
   });
 
-  // Handle language change with persistence
-  const handleSetLang = (newLang: 'en' | 'ar') => {
+  // Handle language change with persistence (localStorage + database)
+  const handleSetLang = async (newLang: 'en' | 'ar') => {
     setLang(newLang);
     localStorage.setItem('app_language', newLang);
     document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = newLang;
+
+    // Save to database if authenticated
+    if (isAuthenticated) {
+      try {
+        await preferencesAPI.updateSingle('language', newLang);
+        console.log('[App] Language preference saved to DB:', newLang);
+      } catch (error) {
+        console.error('[App] Failed to save language preference:', error);
+      }
+    }
   };
 
   // Set document direction based on language
@@ -215,13 +226,33 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleLogin = (user: any) => {
+  const handleLogin = async (user: any) => {
     console.log('[App] ✅ handleLogin called for:', user?.email);
     setCurrentUser(user);
     setIsAuthenticated(true);
 
     // Update refs
     authStateRef.current = { isAuthenticated: true, user };
+
+    // Load user preferences from database
+    try {
+      const prefs = await preferencesAPI.get();
+      console.log('[App] Loaded preferences from DB:', prefs);
+
+      // Apply language preference
+      if (prefs.language) {
+        setLang(prefs.language);
+        localStorage.setItem('app_language', prefs.language);
+        document.documentElement.dir = prefs.language === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = prefs.language;
+      }
+
+      // Store preferences in localStorage as cache
+      localStorage.setItem('user_preferences', JSON.stringify(prefs));
+    } catch (error) {
+      console.error('[App] Failed to load preferences:', error);
+      // Use localStorage cache if API fails
+    }
   };
 
   // PROTECTED: Logout with stack trace and intentionality check
@@ -410,56 +441,21 @@ const App: React.FC = () => {
     // No valid localStorage data - show login
     console.log('[App] 📋 No valid auth data found, showing Login page');
     return (
-      <Login
-        onLogin={handleLogin}
-        lang={lang}
-        setLang={handleSetLang}
-      />
-    );
-  }
-
-  // TEMPORARY: For students, show a super simple page without Layout/ConfigProvider
-  if (currentUser.role === UserRole.STUDENT) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-slate-100 p-8" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-green-100 border-2 border-green-500 rounded-lg p-6 mb-6">
-              <h1 className="text-2xl font-bold text-green-800 mb-2">
-                ✅ {lang === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login Successful!'}
-              </h1>
-              <p className="text-green-700">
-                {lang === 'ar' ? 'أنت مسجل دخول كطالب' : 'You are logged in as a Student'}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">User Info:</h2>
-              <p><strong>Email:</strong> {currentUser.email}</p>
-              <p><strong>Name:</strong> {currentUser.name}</p>
-              <p><strong>Role:</strong> {currentUser.role}</p>
-            </div>
-
-            <button
-              onClick={() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.reload();
-              }}
-              className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600"
-            >
-              {lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}
-            </button>
-          </div>
-        </div>
-      </ErrorBoundary>
+      <BrandingProvider>
+        <Login
+          onLogin={handleLogin}
+          lang={lang}
+          setLang={handleSetLang}
+        />
+      </BrandingProvider>
     );
   }
 
   return (
     <ErrorBoundary>
-      <ConfigProvider role={currentUser.role}>
-        <HashRouter>
+      <BrandingProvider>
+        <ConfigProvider role={currentUser.role}>
+          <HashRouter>
         <Routes>
           <Route
             path="/"
@@ -628,14 +624,6 @@ const App: React.FC = () => {
                : <Navigate to="/" />
              }
           />
-          <Route
-             path="lms"
-             element={
-               (currentUser.role === UserRole.STUDENT)
-               ? <LMSPage lang={lang} />
-               : <Navigate to="/" />
-             }
-          />
           {/* Admin Routes */}
           <Route
              path="admin/tables"
@@ -709,8 +697,9 @@ const App: React.FC = () => {
 
         {/* PWA Install Prompt */}
         <PWAInstallPrompt lang={lang} />
-        </HashRouter>
-      </ConfigProvider>
+          </HashRouter>
+        </ConfigProvider>
+      </BrandingProvider>
     </ErrorBoundary>
   );
 };

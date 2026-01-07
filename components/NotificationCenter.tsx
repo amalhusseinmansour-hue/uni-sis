@@ -31,6 +31,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { notificationsAPI } from '../api';
+import { preferencesAPI } from '../api/preferences';
 import Badge from './ui/Badge';
 import {
   requestNotificationPermission,
@@ -110,77 +111,6 @@ const typeConfig: Record<NotificationType, { icon: typeof Bell; color: string; b
   request: { icon: FileText, color: 'text-cyan-600', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30' },
 };
 
-// Demo notifications
-const DEMO_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'grade',
-    title: 'New Grade Posted',
-    title_ar: 'تم نشر درجة جديدة',
-    message: 'Your grade for CS101 - Introduction to Programming has been posted: A',
-    message_ar: 'تم نشر درجتك في مقرر CS101 - مقدمة في البرمجة: A',
-    read: false,
-    created_at: new Date().toISOString(),
-    action_url: '/academic?tab=grades',
-    priority: 'high',
-  },
-  {
-    id: '2',
-    type: 'financial',
-    title: 'Payment Due Reminder',
-    title_ar: 'تذكير بموعد الدفع',
-    message: 'Your tuition payment of 5,000 SAR is due in 3 days.',
-    message_ar: 'موعد سداد الرسوم الدراسية بمبلغ 5,000 ريال بعد 3 أيام.',
-    read: false,
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    action_url: '/finance',
-    priority: 'urgent',
-  },
-  {
-    id: '3',
-    type: 'announcement',
-    title: 'Registration Period Open',
-    title_ar: 'فتح باب التسجيل',
-    message: 'Course registration for Spring 2025 is now open until January 15.',
-    message_ar: 'تم فتح باب تسجيل المقررات لفصل الربيع 2025 حتى 15 يناير.',
-    read: false,
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    action_url: '/registration',
-  },
-  {
-    id: '4',
-    type: 'request',
-    title: 'Request Approved',
-    title_ar: 'تم قبول الطلب',
-    message: 'Your course withdrawal request has been approved by the department.',
-    message_ar: 'تم قبول طلب انسحابك من المقرر من قبل القسم.',
-    read: true,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    action_url: '/requests',
-  },
-  {
-    id: '5',
-    type: 'academic',
-    title: 'Exam Schedule Published',
-    title_ar: 'تم نشر جدول الامتحانات',
-    message: 'Final exam schedule for Fall 2024 has been published. Check your exam dates.',
-    message_ar: 'تم نشر جدول الامتحانات النهائية لفصل الخريف 2024. راجع مواعيد امتحاناتك.',
-    read: true,
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    action_url: '/exams',
-  },
-  {
-    id: '6',
-    type: 'reminder',
-    title: 'Assignment Due Tomorrow',
-    title_ar: 'موعد تسليم الواجب غداً',
-    message: 'MATH201 - Problem Set 5 is due tomorrow at 11:59 PM.',
-    message_ar: 'MATH201 - مجموعة المسائل 5 موعد تسليمها غداً الساعة 11:59 مساءً.',
-    read: true,
-    created_at: new Date(Date.now() - 259200000).toISOString(),
-    action_url: '/lms',
-  },
-];
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({
   lang,
@@ -222,11 +152,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     setLoading(true);
     try {
       const data = await notificationsAPI.getAll();
-      const notifs = Array.isArray(data) ? data : data?.data || DEMO_NOTIFICATIONS;
+      const notifs = Array.isArray(data) ? data : data?.data || [];
       setNotifications(notifs);
     } catch (error) {
-      console.warn('Using demo notifications');
-      setNotifications(DEMO_NOTIFICATIONS);
+      console.warn('Failed to fetch notifications:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -379,10 +309,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     }
   };
 
-  const toggleSound = () => {
+  const toggleSound = async () => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
     localStorage.setItem('notification_sound', String(newValue));
+
+    // Save to database
+    try {
+      await preferencesAPI.updateSingle('notification_sound', newValue);
+    } catch (error) {
+      console.error('Failed to save notification sound preference:', error);
+    }
   };
 
   const handleRequestPermission = async () => {

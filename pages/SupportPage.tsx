@@ -35,49 +35,18 @@ const SupportPage: React.FC<SupportPageProps> = ({ lang }) => {
     description: '',
   });
 
-  // Mock tickets data
-  const myTickets = [
-    {
-      id: 'TKT-2024-001',
-      subject: lang === 'ar' ? 'استفسار عن التسجيل' : 'Registration Inquiry',
-      category: 'academic',
-      status: 'open',
-      priority: 'high',
-      createdAt: '2024-11-28',
-      lastUpdate: '2024-11-29',
-      messages: 3,
-    },
-    {
-      id: 'TKT-2024-002',
-      subject: lang === 'ar' ? 'مشكلة في الدفع' : 'Payment Issue',
-      category: 'financial',
-      status: 'in_progress',
-      priority: 'medium',
-      createdAt: '2024-11-25',
-      lastUpdate: '2024-11-27',
-      messages: 5,
-    },
-    {
-      id: 'TKT-2024-003',
-      subject: lang === 'ar' ? 'طلب وثيقة' : 'Document Request',
-      category: 'documents',
-      status: 'resolved',
-      priority: 'low',
-      createdAt: '2024-11-20',
-      lastUpdate: '2024-11-22',
-      messages: 2,
-    },
-    {
-      id: 'TKT-2024-004',
-      subject: lang === 'ar' ? 'مشكلة تقنية في النظام' : 'Technical System Issue',
-      category: 'technical',
-      status: 'closed',
-      priority: 'medium',
-      createdAt: '2024-11-15',
-      lastUpdate: '2024-11-16',
-      messages: 4,
-    },
-  ];
+  // Tickets data - empty until backend API is implemented
+  // TODO: Replace with API call to fetch real tickets
+  const myTickets: Array<{
+    id: string;
+    subject: string;
+    category: string;
+    status: string;
+    priority: string;
+    createdAt: string;
+    lastUpdate: string;
+    messages: number;
+  }> = [];
 
   // FAQ data
   const faqCategories = [
@@ -322,17 +291,30 @@ const SupportPage: React.FC<SupportPageProps> = ({ lang }) => {
                   !ticket.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
               return true;
             }).length === 0 && (
-              <EmptyState
-                type="no-results"
-                lang={lang}
-                action={{
-                  label: lang === 'ar' ? 'مسح الفلاتر' : 'Clear Filters',
-                  onClick: () => {
-                    setSearchQuery('');
-                    setSelectedStatus('all');
-                  }
-                }}
-              />
+              myTickets.length === 0 ? (
+                <EmptyState
+                  type="no-data"
+                  lang={lang}
+                  title={lang === 'ar' ? 'لا توجد تذاكر' : 'No Tickets'}
+                  description={lang === 'ar' ? 'لم تقم بإنشاء أي تذاكر دعم بعد' : "You haven't created any support tickets yet"}
+                  action={{
+                    label: lang === 'ar' ? 'إنشاء تذكرة' : 'Create Ticket',
+                    onClick: () => setShowNewTicketModal(true)
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  type="no-results"
+                  lang={lang}
+                  action={{
+                    label: lang === 'ar' ? 'مسح الفلاتر' : 'Clear Filters',
+                    onClick: () => {
+                      setSearchQuery('');
+                      setSelectedStatus('all');
+                    }
+                  }}
+                />
+              )
             )}
           </div>
         </CardBody>

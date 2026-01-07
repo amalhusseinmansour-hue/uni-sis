@@ -30,7 +30,7 @@ class StudentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'student_id' => 'required|unique:students',
+            'student_id' => 'nullable|unique:students',
             'name_ar' => 'required',
             'name_en' => 'required',
             'national_id' => 'required|unique:students',
@@ -41,8 +41,11 @@ class StudentController extends Controller
             'phone' => 'required',
             'personal_email' => 'required|email',
             'university_email' => 'required|email|unique:students',
+            'program_id' => 'nullable|exists:programs,id',
+            'user_id' => 'nullable|exists:users,id',
         ]);
 
+        // Student ID will be auto-generated in the model's boot method if not provided
         $student = Student::create($validated);
 
         return response()->json($student, 201);

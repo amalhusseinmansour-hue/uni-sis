@@ -57,53 +57,6 @@ const pageNames: Record<string, { en: string; ar: string }> = {
   '/reports': { en: 'Reports', ar: 'التقارير' },
 };
 
-// Default notifications (fallback when API is not available)
-const defaultNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'academic',
-    title: 'New Grade Posted',
-    titleAr: 'درجة جديدة',
-    message: 'Your grade for CS301 Final Exam has been posted.',
-    messageAr: 'تم نشر درجتك في الاختبار النهائي لـ CS301.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    read: false,
-    actionUrl: '/academic?tab=grades',
-    actionLabel: 'View Grades',
-  },
-  {
-    id: '2',
-    type: 'financial',
-    title: 'Payment Due',
-    titleAr: 'دفعة مستحقة',
-    message: 'Your tuition payment of $2,500 is due in 5 days.',
-    messageAr: 'دفعة الرسوم الدراسية بقيمة 2,500$ مستحقة خلال 5 أيام.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    read: false,
-    actionUrl: '/finance?tab=payments',
-    actionLabel: 'Pay Now',
-  },
-  {
-    id: '3',
-    type: 'announcement',
-    title: 'Campus Closure Notice',
-    titleAr: 'إشعار إغلاق الحرم',
-    message: 'The campus will be closed on Friday for maintenance.',
-    messageAr: 'سيتم إغلاق الحرم الجامعي يوم الجمعة للصيانة.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'reminder',
-    title: 'Assignment Due Tomorrow',
-    titleAr: 'واجب مستحق غداً',
-    message: 'CS401 Project submission deadline is tomorrow at 11:59 PM.',
-    messageAr: 'موعد تسليم مشروع CS401 غداً الساعة 11:59 مساءً.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    read: true,
-  },
-];
 
 const Header: React.FC<HeaderProps> = ({
   lang,
@@ -130,9 +83,9 @@ const Header: React.FC<HeaderProps> = ({
     clearAll: apiClearAll,
   } = useNotifications();
 
-  // Use API data or fallback to defaults
-  const notifications = apiNotifications.length > 0 ? apiNotifications : defaultNotifications;
-  const unreadCount = apiNotifications.length > 0 ? apiUnreadCount : defaultNotifications.filter((n) => !n.read).length;
+  // Use API data only
+  const notifications = apiNotifications;
+  const unreadCount = apiUnreadCount;
 
   const isRTL = lang === 'ar';
 
@@ -251,7 +204,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* Notifications */}
             <div className="relative">
               <NotificationBell
-                count={unreadCount}
+                lang={lang}
                 onClick={() => setIsNotificationsOpen(true)}
               />
             </div>

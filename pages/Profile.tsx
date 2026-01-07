@@ -3,16 +3,18 @@ import {
   Mail, Hash, BookOpen, Award, Calendar, Phone, MapPin, CheckCircle, User,
   CreditCard, Building, GraduationCap, FileText, Shield, Clock, AlertCircle,
   Users, Heart, Globe, Briefcase, FolderOpen, Download, Eye, ChevronDown, ChevronUp,
-  Edit, Camera, QrCode, Flag, Home, UserCheck, Stethoscope, Laptop, Tag,
+  Edit, Camera, Flag, Home, UserCheck, Stethoscope, Laptop, Tag,
   Upload, Check, X, BookMarked, Target, TrendingUp, BarChart2, ClipboardList,
   MessageSquare, Printer, ExternalLink, Lock, Unlock, History, FileCheck,
   AlertTriangle, Star, Activity, Layers, Play, Pause, XCircle, Loader2
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { studentsAPI } from '../api/students';
 import { financeAPI } from '../api/finance';
 import { attendanceAPI } from '../api/attendance';
 import { printPage, exportToPDF } from '../utils/exportUtils';
+import { useBranding } from '../context/BrandingContext';
 
 interface ProfileProps {
   lang: 'en' | 'ar';
@@ -65,6 +67,7 @@ const t: Record<string, { en: string; ar: string }> = {
   firstNameEn: { en: 'First Name (English)', ar: 'الاسم الأول بالإنجليزي' },
   middleNameEn: { en: 'Middle Name (English)', ar: 'اسم الأب بالإنجليزي' },
   lastNameEn: { en: 'Last Name (English)', ar: 'اسم العائلة بالإنجليزي' },
+  studentIdNumber: { en: 'Student ID', ar: 'الرقم الجامعي' },
   nationalId: { en: 'National ID / Passport', ar: 'رقم الهوية / جواز السفر' },
   idType: { en: 'ID Type', ar: 'نوع الهوية' },
   nationalIdCard: { en: 'National ID Card', ar: 'هوية وطنية' },
@@ -377,6 +380,18 @@ const t: Record<string, { en: string; ar: string }> = {
 };
 
 const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
+  const { branding } = useBranding();
+
+  // Currency formatting helper
+  const formatCurrency = (amount: number) => {
+    const symbol = branding?.currencySymbol || '$';
+    const position = branding?.currencyPosition || 'before';
+    const formattedAmount = Math.abs(amount).toLocaleString();
+    return position === 'before'
+      ? `${symbol}${formattedAmount}`
+      : `${formattedAmount} ${symbol}`;
+  };
+
   const [activeTab, setActiveTab] = useState<'personal' | 'academic' | 'financial' | 'documents'>('personal');
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
@@ -599,30 +614,6 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
     </div>
   );
 
-  // Default mock data for demonstration (fallback)
-  const defaultStudyPlanCourses = [
-    { code: 'CS101', name: lang === 'ar' ? 'مقدمة في علوم الحاسب' : 'Intro to CS', credits: 3, type: 'mandatory', status: 'completed', grade: 'A', prerequisite: '-' },
-    { code: 'MATH101', name: lang === 'ar' ? 'التفاضل والتكامل 1' : 'Calculus I', credits: 4, type: 'mandatory', status: 'completed', grade: 'B+', prerequisite: '-' },
-    { code: 'CS201', name: lang === 'ar' ? 'هياكل البيانات' : 'Data Structures', credits: 3, type: 'mandatory', status: 'inProgress', grade: '-', prerequisite: 'CS101' },
-    { code: 'CS301', name: lang === 'ar' ? 'الخوارزميات' : 'Algorithms', credits: 3, type: 'mandatory', status: 'notTaken', grade: '-', prerequisite: 'CS201' },
-  ];
-
-  const defaultCurrentCourses = [
-    { code: 'CS201', name: lang === 'ar' ? 'هياكل البيانات' : 'Data Structures', section: 'A', credits: 3, instructor: 'Dr. Ahmed', schedule: lang === 'ar' ? 'أحد، ثلاثاء 10:00-11:30' : 'Sun, Tue 10:00-11:30' },
-    { code: 'CS202', name: lang === 'ar' ? 'قواعد البيانات' : 'Databases', section: 'B', credits: 3, instructor: 'Dr. Sarah', schedule: lang === 'ar' ? 'إثنين، أربعاء 14:00-15:30' : 'Mon, Wed 14:00-15:30' },
-  ];
-
-  const defaultAttendance = [
-    { course: 'CS201', rate: 92, absences: 2, warning: false },
-    { course: 'CS202', rate: 85, absences: 4, warning: true },
-  ];
-
-  const defaultDocuments = [
-    { id: '1', type: 'highSchoolCertificate', name: lang === 'ar' ? 'شهادة الثانوية العامة' : 'High School Certificate', uploadDate: '2024-01-15', uploadedBy: 'student', status: 'approved' },
-    { id: '2', type: 'idCopy', name: lang === 'ar' ? 'صورة الهوية' : 'ID Copy', uploadDate: '2024-01-15', uploadedBy: 'student', status: 'approved' },
-    { id: '3', type: 'personalPhoto', name: lang === 'ar' ? 'صورة شخصية' : 'Personal Photo', uploadDate: '2024-01-15', uploadedBy: 'student', status: 'pending' },
-  ];
-
   // Transform API data to display format
   const transformCourses = (apiCourses: any[]) => {
     return apiCourses.map((c: any) => ({
@@ -650,14 +641,14 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
     }));
   };
 
-  // Use API data with fallback to defaults
+  // Use API data only (no demo fallback)
   const displayStudyPlanCourses = academicData?.courses?.length > 0
     ? transformCourses(academicData.courses)
-    : defaultStudyPlanCourses;
+    : [];
 
   const displayCurrentCourses = academicData?.currentEnrollments?.length > 0
     ? transformCourses(academicData.currentEnrollments)
-    : defaultCurrentCourses;
+    : [];
 
   const displayAttendance = attendanceData?.length > 0
     ? attendanceData.map((a: any) => ({
@@ -666,11 +657,11 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
         absences: a.absences || 0,
         warning: a.warning || a.absences > 3,
       }))
-    : defaultAttendance;
+    : [];
 
   const displayDocuments = documentsData?.length > 0
     ? transformDocuments(documentsData)
-    : defaultDocuments;
+    : [];
 
   // Financial summary from API
   const displayFinancial = financialData ? {
@@ -681,13 +672,8 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
     status: financialData.status || 'pending',
   } : null;
 
-  // GPA History Data for Chart
-  const gpaHistoryData = academicData?.gpaHistory || [
-    { term: lang === 'ar' ? 'خريف 2022' : 'Fall 2022', gpa: 3.2, cumulative: 3.2 },
-    { term: lang === 'ar' ? 'ربيع 2023' : 'Spring 2023', gpa: 3.4, cumulative: 3.3 },
-    { term: lang === 'ar' ? 'خريف 2023' : 'Fall 2023', gpa: 3.7, cumulative: 3.43 },
-    { term: lang === 'ar' ? 'ربيع 2024' : 'Spring 2024', gpa: 3.55, cumulative: 3.55 },
-  ];
+  // GPA History Data for Chart (API data only)
+  const gpaHistoryData = academicData?.gpaHistory || [];
 
   // Credit distribution for Pie Chart
   const creditDistribution = [
@@ -833,7 +819,12 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                 {safeGet(student, 'currentSemester', '2024/2025 - Sem 1')}
               </span>
               <div className="p-2 bg-white border border-slate-200 rounded-lg">
-                <QrCode className="w-8 h-8 text-slate-400" />
+                <QRCodeSVG
+                  value={`https://sistest.vertexuniversity.edu.eu/#/profile`}
+                  size={32}
+                  level="M"
+                  fgColor="#1e293b"
+                />
               </div>
             </div>
           </div>
@@ -843,7 +834,7 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
             <div className="flex items-center gap-2 text-sm">
               <Hash className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.nationalId[lang].split('/')[0]}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.studentIdNumber[lang]}</p>
                 <p className="font-mono font-bold text-slate-800 dark:text-slate-200">{safeGet(student, 'studentId', 'STU-2024-001')}</p>
               </div>
             </div>
@@ -859,13 +850,6 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.program[lang]}</p>
                 <p className="font-medium text-slate-800 dark:text-slate-200">{safeGet(student, 'major', 'Computer Science')}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.universityEmail[lang]}</p>
-                <p className="font-medium text-slate-800 dark:text-slate-200 truncate">{safeGet(student, 'universityEmail', safeGet(student, 'email', 'student@university.edu'))}</p>
               </div>
             </div>
           </div>
@@ -942,7 +926,6 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                 <InfoItem label={t.secondaryMobile[lang]} value={safeGet(student, 'secondaryPhone', '-')} icon={Phone} />
                 <InfoItem label={t.landline[lang]} value={safeGet(student, 'landline', '-')} icon={Phone} />
                 <InfoItem label={t.personalEmail[lang]} value={safeGet(student, 'personalEmail', 'ahmed@gmail.com')} icon={Mail} />
-                <InfoItem label={t.universityEmail[lang]} value={safeGet(student, 'universityEmail', safeGet(student, 'email', 'ahmed@student.university.edu'))} icon={Mail} />
                 <InfoItem label={t.linkedIn[lang]} value={safeGet(student, 'linkedin', '-')} icon={ExternalLink} />
                 <InfoItem label={t.telegram[lang]} value={safeGet(student, 'telegram', '-')} icon={MessageSquare} />
               </div>
@@ -1143,14 +1126,6 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                         {t.active[lang]}
                       </span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">{t.officialEmail[lang]}</p>
-                      <p className="font-medium text-slate-800">{safeGet(student, 'universityEmail', safeGet(student, 'email', 'ahmed@student.university.edu'))}</p>
-                    </div>
-                    <Mail className="w-5 h-5 text-slate-400" />
                   </div>
 
                   <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
@@ -1972,14 +1947,14 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
             {expandedSections.financial && (
               <div className="p-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  <StatCard label={t.totalFees[lang]} value={`${Number(safeGet(student, 'totalFees', 15000)).toLocaleString()} SAR`} color="bg-slate-100 text-slate-700" />
-                  <StatCard label={t.amountPaid[lang]} value={`${Number(safeGet(student, 'paidAmount', 14550)).toLocaleString()} SAR`} color="bg-green-50 text-green-700" />
+                  <StatCard label={t.totalFees[lang]} value={formatCurrency(Number(safeGet(student, 'totalFees', 0)))} color="bg-slate-100 text-slate-700" />
+                  <StatCard label={t.amountPaid[lang]} value={formatCurrency(Number(safeGet(student, 'paidAmount', 0)))} color="bg-green-50 text-green-700" />
                   <StatCard
                     label={t.currentBalance[lang]}
-                    value={`${Math.abs(Number(safeGet(student, 'currentBalance', -450))).toLocaleString()} SAR`}
-                    color={safeGet(student, 'currentBalance', -450) < 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}
+                    value={formatCurrency(Number(safeGet(student, 'currentBalance', 0)))}
+                    color={safeGet(student, 'currentBalance', 0) < 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}
                   />
-                  <StatCard label={t.scholarships[lang]} value={`${Number(safeGet(student, 'scholarships', 2000)).toLocaleString()} SAR`} color="bg-purple-50 text-purple-700" icon={Award} />
+                  <StatCard label={t.scholarships[lang]} value={formatCurrency(Number(safeGet(student, 'scholarships', 0)))} color="bg-purple-50 text-purple-700" icon={Award} />
                 </div>
 
                 <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">

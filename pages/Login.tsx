@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowRight, Globe, AlertCircle, Eye, EyeOff, GraduationCap, Users, BookOpen, Award, Shield, Sparkles, Languages, ChevronDown } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Globe, AlertCircle, Eye, EyeOff, GraduationCap, Users, BookOpen, Award, Shield, Sparkles, Languages, ChevronDown, User } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { authAPI } from '../api';
+import { useBranding } from '../context/BrandingContext';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -12,8 +13,9 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
   const t = TRANSLATIONS;
+  const { branding } = useBranding();
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -58,7 +60,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
     setError('');
 
     try {
-      const response = await authAPI.login({ email, password });
+      const response = await authAPI.login({ username, password });
       onLogin(response.user);
     } catch (err: any) {
       // Better error handling
@@ -72,7 +74,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
       } else if (errorData?.error) {
         setError(errorData.error);
       } else {
-        setError('Login failed. Please check your credentials.');
+        setError(lang === 'ar' ? 'فشل تسجيل الدخول. تحقق من بياناتك.' : 'Login failed. Please check your credentials.');
       }
       console.error('Login error:', err.response?.data);
     } finally {
@@ -103,10 +105,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
          }}></div>
 
          <div className="relative z-10">
-             <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-blue-500/30">
-                <GraduationCap className="w-7 h-7" />
-             </div>
-             <h1 className="text-5xl font-bold mb-4 leading-tight">{t.universityName[lang]}</h1>
+             <img
+              src="/logo-white.png"
+              alt="Logo"
+              className="w-14 h-14 object-contain mb-8"
+            />
+             <h1 className="text-5xl font-bold mb-4 leading-tight">
+               {isRTL ? (branding?.universityNameAr || t.universityName[lang]) : (branding?.universityName || t.universityName[lang])}
+             </h1>
+             <p className="text-2xl font-semibold text-white mb-4 leading-relaxed">
+               {lang === 'ar'
+                 ? 'تَعَلَّمْ مِنْ أَيِّ مَكَانٍ وَكُنْ قَائِدًا فِي كُلِّ مَكَانٍ'
+                 : 'Learn from anywhere and be a leader everywhere'
+               }
+             </p>
              <p className="text-blue-200 text-lg max-w-md mb-12">
                 {lang === 'ar'
                   ? 'تمكين الجيل القادم من القادة بتجربة أكاديمية رقمية متكاملة'
@@ -138,23 +150,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
              </div>
          </div>
 
-         {/* Stats */}
+         {/* Footer */}
          <div className="relative z-10">
-           <div className="grid grid-cols-3 gap-6 mb-8">
-             <div className="text-center">
-               <p className="text-3xl font-bold">5,000+</p>
-               <p className="text-blue-300 text-sm">{lang === 'ar' ? 'طالب' : 'Students'}</p>
-             </div>
-             <div className="text-center">
-               <p className="text-3xl font-bold">200+</p>
-               <p className="text-blue-300 text-sm">{lang === 'ar' ? 'مقرر' : 'Courses'}</p>
-             </div>
-             <div className="text-center">
-               <p className="text-3xl font-bold">50+</p>
-               <p className="text-blue-300 text-sm">{lang === 'ar' ? 'تخصص' : 'Majors'}</p>
-             </div>
-           </div>
-           <p className="text-sm text-slate-400">© 2024 VERTIX UNIVERSITY. {lang === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved'}.</p>
+           <p className="text-sm text-slate-400">© 2024 {branding?.universityName || 'VERTIX UNIVERSITY'}. {lang === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved'}.</p>
          </div>
       </div>
 
@@ -213,7 +211,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
 
          <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className={`text-center ${isRTL ? 'lg:text-right' : 'lg:text-left'}`}>
-               <div className="lg:hidden w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center mx-auto mb-6 text-white font-bold text-xl">V</div>
+               <img
+                 src="/logo-color.png"
+                 alt="Logo"
+                 className="lg:hidden w-12 h-12 object-contain mx-auto mb-6"
+               />
                <h2 className="text-3xl font-bold text-slate-900">{t.welcomeBack[lang]}</h2>
                <p className="text-slate-500 mt-2">{t.loginSubtitle[lang]}</p>
             </div>
@@ -230,19 +232,35 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                    </div>
                  </div>
                )}
+
+               {/* Support Contact Info */}
+               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                 <p className="text-sm text-blue-800">
+                   {lang === 'ar' ? 'للتواصل مع قسم الدعم الفني' : 'For technical support contact'}
+                 </p>
+                 <a
+                   href="mailto:technical.support@vertexuniversity.edu.eu"
+                   className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                 >
+                   technical.support@vertexuniversity.edu.eu
+                 </a>
+               </div>
+
                <div className="space-y-4">
                   <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-1">{t.email[lang]}</label>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                       {lang === 'ar' ? 'الرقم الجامعي أو البريد الإلكتروني' : 'Student ID or Email'}
+                     </label>
                      <div className="relative">
                         <div className={`absolute top-3 ${lang === 'ar' ? 'right-3' : 'left-3'} text-slate-400`}>
-                           <Mail className="w-5 h-5" />
+                           <User className="w-5 h-5" />
                         </div>
-                        <input 
-                          type="email" 
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
                           className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-slate-50 focus:bg-white ${lang === 'ar' ? 'pr-10' : 'pl-10'}`}
-                          placeholder="name@university.edu"
+                          placeholder={lang === 'ar' ? '202312345 أو name@university.edu' : '202312345 or name@university.edu'}
                         />
                      </div>
                   </div>
@@ -281,7 +299,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
 
                <button
                  type="submit"
-                 disabled={isLoading || !email || !password}
+                 disabled={isLoading || !username || !password}
                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3.5 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                >
                  {isLoading ? (

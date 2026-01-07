@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Search, Filter, X, ClipboardList, Plus, Minus, Clock, Users, MapPin,
-  CheckCircle, AlertCircle, BookOpen, Calendar, GraduationCap, ChevronDown,
-  ChevronUp, Trash2, ArrowRight, Info, AlertTriangle, Loader2, Check
+  Clock, Users, MapPin, CheckCircle, BookOpen, Calendar, GraduationCap,
+  Loader2, Info, Building, CreditCard, Plus, Trash2, AlertCircle, Search,
+  Filter, X, ShoppingCart, Check, Lock, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { enrollmentsAPI } from '../api/enrollments';
-import { coursesAPI } from '../api/courses';
-import { studentsAPI } from '../api/students';
 import { settingsAPI } from '../api/settings';
+import { coursesAPI } from '../api/courses';
 
 interface CourseRegistrationProps {
   lang: 'en' | 'ar';
@@ -15,160 +14,208 @@ interface CourseRegistrationProps {
 
 // Translations
 const t: Record<string, { en: string; ar: string }> = {
-  pageTitle: { en: 'Course Registration', ar: 'تسجيل المساقات' },
-  subtitle: { en: 'Register for your courses this semester', ar: 'سجّل في مساقاتك لهذا الفصل' },
-  searchPlaceholder: { en: 'Search courses...', ar: 'ابحث عن المساقات...' },
-  availableCourses: { en: 'Available Courses', ar: 'المساقات المتاحة' },
-  myCart: { en: 'Selected Courses', ar: 'المقررات المختارة' },
-  myEnrollments: { en: 'My Enrollments', ar: 'تسجيلاتي' },
+  pageTitle: { en: 'Course Registration', ar: 'تسجيل المقررات' },
+  subtitle: { en: 'Register and manage your courses for this semester', ar: 'تسجيل وإدارة مقرراتك لهذا الفصل' },
   credits: { en: 'Credits', ar: 'ساعات' },
   section: { en: 'Section', ar: 'الشعبة' },
   instructor: { en: 'Instructor', ar: 'المدرس' },
   schedule: { en: 'Schedule', ar: 'الجدول' },
   location: { en: 'Location', ar: 'القاعة' },
-  capacity: { en: 'Capacity', ar: 'السعة' },
-  seats: { en: 'seats available', ar: 'مقعد متاح' },
-  addToCart: { en: 'Select', ar: 'اختيار' },
-  removeFromCart: { en: 'Remove', ar: 'إزالة' },
-  registerAll: { en: 'Confirm Registration', ar: 'تأكيد التسجيل' },
-  clearCart: { en: 'Clear All', ar: 'مسح الكل' },
-  totalCredits: { en: 'Total Credits', ar: 'إجمالي الساعات' },
-  maxCredits: { en: 'Max Credits', ar: 'الحد الأقصى' },
-  currentCredits: { en: 'Current Credits', ar: 'الساعات الحالية' },
-  prerequisite: { en: 'Prerequisite', ar: 'المتطلب السابق' },
-  prerequisites: { en: 'Prerequisites', ar: 'المتطلبات السابقة' },
-  noPrerequisites: { en: 'No prerequisites', ar: 'لا يوجد متطلبات' },
-  filters: { en: 'Filters', ar: 'الفلاتر' },
-  department: { en: 'Department', ar: 'القسم' },
-  allDepartments: { en: 'All Departments', ar: 'جميع الأقسام' },
-  allInstructors: { en: 'All Instructors', ar: 'جميع المدرسين' },
-  allTimes: { en: 'All Times', ar: 'جميع الأوقات' },
-  morning: { en: 'Morning', ar: 'صباحي' },
-  afternoon: { en: 'Afternoon', ar: 'مسائي' },
-  clearFilters: { en: 'Clear Filters', ar: 'مسح الفلاتر' },
-  loading: { en: 'Loading courses...', ar: 'جاري تحميل المساقات...' },
-  noCourses: { en: 'No courses found', ar: 'لا توجد مساقات' },
-  emptyCart: { en: 'No courses selected', ar: 'لم يتم اختيار مقررات' },
-  addCourses: { en: 'Select courses to register', ar: 'اختر مقررات للتسجيل' },
-  registrationSuccess: { en: 'Registration successful!', ar: 'تم التسجيل بنجاح!' },
-  registrationError: { en: 'Registration failed', ar: 'فشل التسجيل' },
-  conflictWarning: { en: 'Time conflict detected', ar: 'تعارض في الوقت' },
-  alreadyEnrolled: { en: 'Already enrolled', ar: 'مسجل مسبقاً' },
-  courseFull: { en: 'Course is full', ar: 'المساق ممتلئ' },
-  prerequisiteNotMet: { en: 'Prerequisites not met', ar: 'المتطلبات غير مستوفاة' },
-  registrationPeriod: { en: 'Registration Period', ar: 'فترة التسجيل' },
+  loading: { en: 'Loading courses...', ar: 'جاري تحميل المقررات...' },
+  myEnrollments: { en: 'My Registered Courses', ar: 'مقرراتي المسجلة' },
+  availableCourses: { en: 'Available Courses', ar: 'المقررات المتاحة' },
   currentSemester: { en: 'Current Semester', ar: 'الفصل الحالي' },
-  confirming: { en: 'Confirming...', ar: 'جاري التأكيد...' },
-  yes: { en: 'Yes', ar: 'نعم' },
-  no: { en: 'No', ar: 'لا' },
-  courseDetails: { en: 'Course Details', ar: 'تفاصيل المساق' },
-  description: { en: 'Description', ar: 'الوصف' },
+  totalCredits: { en: 'Total Credits', ar: 'إجمالي الساعات' },
+  registeredCredits: { en: 'Registered Credits', ar: 'الساعات المسجلة' },
+  enrolled: { en: 'Enrolled', ar: 'مسجل' },
+  noEnrollments: { en: 'No courses registered yet', ar: 'لا توجد مقررات مسجلة بعد' },
+  startRegistering: { en: 'Start registering courses from the available list below', ar: 'ابدأ بتسجيل المقررات من القائمة المتاحة أدناه' },
+  courseCode: { en: 'Course Code', ar: 'رمز المقرر' },
+  courseName: { en: 'Course Name', ar: 'اسم المقرر' },
+  status: { en: 'Status', ar: 'الحالة' },
+  grade: { en: 'Grade', ar: 'الدرجة' },
+  pending: { en: 'In Progress', ar: 'قيد الدراسة' },
+  addCourse: { en: 'Add Course', ar: 'إضافة مقرر' },
+  dropCourse: { en: 'Drop Course', ar: 'حذف المقرر' },
+  register: { en: 'Register', ar: 'تسجيل' },
+  drop: { en: 'Drop', ar: 'حذف' },
+  confirmDrop: { en: 'Are you sure you want to drop this course?', ar: 'هل أنت متأكد من حذف هذا المقرر؟' },
+  registering: { en: 'Registering...', ar: 'جاري التسجيل...' },
+  dropping: { en: 'Dropping...', ar: 'جاري الحذف...' },
+  registered: { en: 'Registered successfully', ar: 'تم التسجيل بنجاح' },
+  dropped: { en: 'Dropped successfully', ar: 'تم الحذف بنجاح' },
+  error: { en: 'An error occurred', ar: 'حدث خطأ' },
+  searchCourses: { en: 'Search courses...', ar: 'البحث عن مقررات...' },
+  noAvailableCourses: { en: 'No available courses found', ar: 'لا توجد مقررات متاحة' },
+  seats: { en: 'Seats', ar: 'المقاعد' },
+  available: { en: 'available', ar: 'متاح' },
+  full: { en: 'Full', ar: 'ممتلئ' },
+  maxCredits: { en: 'Maximum credits', ar: 'الحد الأقصى للساعات' },
+  minCredits: { en: 'Minimum credits', ar: 'الحد الأدنى للساعات' },
+  prerequisites: { en: 'Prerequisites', ar: 'المتطلبات السابقة' },
+  registrationOpen: { en: 'Registration Open', ar: 'التسجيل مفتوح' },
+  registrationClosed: { en: 'Registration Closed', ar: 'التسجيل مغلق' },
+  alreadyRegistered: { en: 'Already Registered', ar: 'مسجل مسبقاً' },
+  cart: { en: 'Registration Cart', ar: 'سلة التسجيل' },
+  addToCart: { en: 'Add to Cart', ar: 'أضف للسلة' },
+  removeFromCart: { en: 'Remove', ar: 'إزالة' },
+  confirmRegistration: { en: 'Confirm Registration', ar: 'تأكيد التسجيل' },
+  emptyCart: { en: 'Your cart is empty', ar: 'السلة فارغة' },
+  capacity: { en: 'Capacity', ar: 'السعة' },
+  prerequisitesRequired: { en: 'Prerequisites Required', ar: 'متطلبات سابقة مطلوبة' },
+  prerequisitesNotMet: { en: 'You must complete the following courses first', ar: 'يجب إكمال المقررات التالية أولاً' },
+  checkingEligibility: { en: 'Checking eligibility...', ar: 'جاري التحقق من الأهلية...' },
+  eligible: { en: 'Eligible', ar: 'مؤهل' },
+  notEligible: { en: 'Not Eligible', ar: 'غير مؤهل' },
+  connectionError: { en: 'Connection error. Showing cached data.', ar: 'خطأ في الاتصال. عرض البيانات المخزنة.' },
+  retry: { en: 'Retry', ar: 'إعادة المحاولة' },
+  noConnection: { en: 'Unable to connect to server', ar: 'تعذر الاتصال بالخادم' },
+  usingCachedData: { en: 'Using cached data', ar: 'استخدام البيانات المخزنة' },
+  maxCreditsReached: { en: 'Maximum credits limit reached', ar: 'تم الوصول للحد الأقصى من الساعات' },
+  minCreditsWarning: { en: 'Minimum credits not met', ar: 'الحد الأدنى من الساعات غير مستوفى' },
 };
-
-// Default mock data
-const defaultCourses = [
-  { id: '1', code: 'CS201', name_en: 'Data Structures', name_ar: 'هياكل البيانات', credits: 3, section: 'A', instructor: 'Dr. Ahmed Ali', schedule: 'Sun, Tue 10:00-11:30', location: 'Building A, Room 101', capacity: 35, enrolled: 28, prerequisites: ['CS101'], department: 'Computer Science' },
-  { id: '2', code: 'CS202', name_en: 'Database Systems', name_ar: 'قواعد البيانات', credits: 3, section: 'A', instructor: 'Dr. Sarah Hassan', schedule: 'Mon, Wed 14:00-15:30', location: 'Building B, Room 205', capacity: 30, enrolled: 25, prerequisites: ['CS101'], department: 'Computer Science' },
-  { id: '3', code: 'MATH301', name_en: 'Linear Algebra', name_ar: 'الجبر الخطي', credits: 3, section: 'B', instructor: 'Dr. Mohammed Nasser', schedule: 'Sun, Tue 08:00-09:30', location: 'Building C, Room 102', capacity: 40, enrolled: 35, prerequisites: ['MATH201'], department: 'Mathematics' },
-  { id: '4', code: 'CS301', name_en: 'Algorithms', name_ar: 'الخوارزميات', credits: 3, section: 'A', instructor: 'Dr. Fatima Al-Zahra', schedule: 'Mon, Wed 10:00-11:30', location: 'Building A, Room 203', capacity: 30, enrolled: 22, prerequisites: ['CS201'], department: 'Computer Science' },
-  { id: '5', code: 'ENG201', name_en: 'Technical Writing', name_ar: 'الكتابة التقنية', credits: 2, section: 'A', instructor: 'Dr. Layla Ibrahim', schedule: 'Thu 12:00-14:00', location: 'Building D, Room 101', capacity: 25, enrolled: 18, prerequisites: [], department: 'English' },
-  { id: '6', code: 'CS303', name_en: 'Computer Networks', name_ar: 'شبكات الحاسب', credits: 3, section: 'A', instructor: 'Dr. Khaled Omar', schedule: 'Sun, Tue 14:00-15:30', location: 'Building A, Room 305', capacity: 30, enrolled: 30, prerequisites: ['CS201'], department: 'Computer Science' },
-];
-
-const defaultEnrollments = [
-  { id: 'e1', code: 'CS101', name_en: 'Introduction to Programming', name_ar: 'مقدمة في البرمجة', credits: 3, section: 'A', instructor: 'Dr. Ali Hassan', schedule: 'Sun, Tue 12:00-13:30', status: 'ENROLLED' },
-];
 
 const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
   const isRTL = lang === 'ar';
   const [loading, setLoading] = useState(true);
-  const [courses, setCourses] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [cart, setCart] = useState<any[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
+  const [currentSemester, setCurrentSemester] = useState<string>('');
+  const [semesterNameAr, setSemesterNameAr] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    department: '',
-    instructor: '',
-    time: '',
-    credits: '',
-  });
-  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+  const [cart, setCart] = useState<any[]>([]);
   const [registering, setRegistering] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [currentSemester, setCurrentSemester] = useState<string>('Fall 2024');
-  const [maxCredits] = useState(18);
+  const [dropping, setDropping] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'warning'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<'enrolled' | 'available'>('enrolled');
+  const [isOffline, setIsOffline] = useState(false);
+  const [checkingEligibility, setCheckingEligibility] = useState<string | null>(null);
+  const [eligibilityCache, setEligibilityCache] = useState<Record<string, { eligible: boolean; missingPrerequisites?: string[] }>>({});
+  const [showPrerequisiteModal, setShowPrerequisiteModal] = useState(false);
+  const [selectedCoursePrerequisites, setSelectedCoursePrerequisites] = useState<{ course: any; prerequisites: string[] } | null>(null);
+  const [maxCredits] = useState(21); // Maximum credits per semester
+  const [minCredits] = useState(12); // Minimum credits per semester
 
   // Fetch data
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch available courses
-        const [coursesData, enrollmentsData, semesterData] = await Promise.all([
-          coursesAPI.getAvailableSections().catch(() => []),
-          enrollmentsAPI.getMyEnrollments().catch(() => []),
-          settingsAPI.getCurrentSemester().catch(() => null),
-        ]);
+  const fetchData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    setIsOffline(false);
 
-        setCourses(coursesData?.data || coursesData?.length > 0 ? coursesData : defaultCourses);
-        setEnrollments(enrollmentsData?.data || enrollmentsData?.length > 0 ? enrollmentsData : defaultEnrollments);
-        if (semesterData?.name) {
-          setCurrentSemester(lang === 'ar' ? semesterData.name_ar : semesterData.name);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setCourses(defaultCourses);
-        setEnrollments(defaultEnrollments);
-      } finally {
-        setLoading(false);
+    try {
+      const [enrollmentsData, semesterData, coursesData] = await Promise.all([
+        enrollmentsAPI.getMyEnrollments().catch(() => null),
+        settingsAPI.getCurrentSemester().catch(() => null),
+        enrollmentsAPI.getAvailableSections().catch(() =>
+          coursesAPI.getAll().catch(() => null)
+        ),
+      ]);
+
+      // Check if we got any data from API
+      const hasApiData = enrollmentsData !== null || coursesData !== null;
+
+      if (!hasApiData) {
+        setIsOffline(true);
+        setMessage({ type: 'warning', text: t.connectionError[lang] });
       }
-    };
 
+      const enrollmentsList = enrollmentsData?.data || enrollmentsData || [];
+      setEnrollments(enrollmentsList);
+
+      // Get available courses that student is not already enrolled in
+      const enrolledCourseIds = enrollmentsList.map((e: any) =>
+        e.course_id || e.course?.id || e.id
+      );
+
+      let coursesList = coursesData?.data || coursesData || [];
+      // Filter out already enrolled courses
+      coursesList = coursesList.filter((c: any) =>
+        !enrolledCourseIds.includes(c.id) && !enrolledCourseIds.includes(c.course_id)
+      );
+      setAvailableCourses(coursesList);
+
+      if (semesterData) {
+        setCurrentSemester(semesterData.name_en || semesterData.name || '');
+        setSemesterNameAr(semesterData.name_ar || semesterData.name || '');
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setIsOffline(true);
+      setMessage({ type: 'error', text: t.noConnection[lang] });
+      setEnrollments([]);
+      setAvailableCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [lang]);
 
-  // Get unique values for filters
-  const departments = useMemo(() => [...new Set(courses.map(c => c.department || 'Other'))], [courses]);
-  const instructors = useMemo(() => [...new Set(courses.map(c => c.instructor))], [courses]);
-
-  // Filter courses
-  const filteredCourses = useMemo(() => {
-    return courses.filter(course => {
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery ||
-        course.code?.toLowerCase().includes(searchLower) ||
-        course.name_en?.toLowerCase().includes(searchLower) ||
-        course.name_ar?.includes(searchQuery) ||
-        course.instructor?.toLowerCase().includes(searchLower);
-
-      const matchesDepartment = !filters.department || course.department === filters.department;
-      const matchesInstructor = !filters.instructor || course.instructor === filters.instructor;
-      const matchesCredits = !filters.credits || course.credits === parseInt(filters.credits);
-
-      return matchesSearch && matchesDepartment && matchesInstructor && matchesCredits;
-    });
-  }, [courses, searchQuery, filters]);
-
-  // Calculate credits
-  const currentEnrolledCredits = enrollments.reduce((sum, e) => sum + (e.credits || 0), 0);
-  const cartCredits = cart.reduce((sum, c) => sum + (c.credits || 0), 0);
-  const totalCredits = currentEnrolledCredits + cartCredits;
-
-  // Check if course is in cart
-  const isInCart = (courseId: string) => cart.some(c => c.id === courseId);
-
-  // Check if already enrolled
-  const isEnrolled = (courseCode: string) => enrollments.some(e => e.code === courseCode);
-
-  // Check if course is full
-  const isFull = (course: any) => (course.enrolled || 0) >= (course.capacity || 30);
-
-  // Add to cart
-  const addToCart = (course: any) => {
-    if (!isInCart(course.id) && !isEnrolled(course.code) && !isFull(course)) {
-      setCart([...cart, course]);
+  // Check course eligibility (prerequisites)
+  const checkCourseEligibility = async (courseId: string): Promise<{ eligible: boolean; missingPrerequisites?: string[] }> => {
+    // Check cache first
+    if (eligibilityCache[courseId]) {
+      return eligibilityCache[courseId];
     }
+
+    setCheckingEligibility(courseId);
+
+    try {
+      const result = await coursesAPI.checkEligibility(courseId);
+      const eligibility = {
+        eligible: result.eligible ?? true,
+        missingPrerequisites: result.missing_prerequisites || result.missingPrerequisites || [],
+      };
+
+      // Cache the result
+      setEligibilityCache(prev => ({ ...prev, [courseId]: eligibility }));
+      return eligibility;
+    } catch (error) {
+      console.error('Error checking eligibility:', error);
+      // Default to eligible if API fails (to not block registration)
+      return { eligible: true };
+    } finally {
+      setCheckingEligibility(null);
+    }
+  };
+
+  // Calculate total credits
+  const totalCredits = enrollments.reduce((sum, e) => {
+    const credits = e.credits || e.course?.credits || 0;
+    return sum + credits;
+  }, 0);
+
+  const cartCredits = cart.reduce((sum, c) => {
+    return sum + (c.credits || 3);
+  }, 0);
+
+  // Add to cart with prerequisites check
+  const addToCart = async (course: any) => {
+    if (cart.find(c => c.id === course.id)) return;
+
+    // Check if adding this course would exceed max credits
+    const courseCredits = course.credits || 3;
+    if (totalCredits + cartCredits + courseCredits > maxCredits) {
+      setMessage({ type: 'warning', text: t.maxCreditsReached[lang] });
+      return;
+    }
+
+    // Check prerequisites
+    const eligibility = await checkCourseEligibility(course.id);
+
+    if (!eligibility.eligible && eligibility.missingPrerequisites && eligibility.missingPrerequisites.length > 0) {
+      // Show prerequisites modal
+      setSelectedCoursePrerequisites({
+        course,
+        prerequisites: eligibility.missingPrerequisites,
+      });
+      setShowPrerequisiteModal(true);
+      return;
+    }
+
+    setCart([...cart, course]);
+    setMessage({ type: 'success', text: `${lang === 'ar' ? 'تمت إضافة' : 'Added'} ${course.code} ${lang === 'ar' ? 'للسلة' : 'to cart'}` });
   };
 
   // Remove from cart
@@ -176,39 +223,82 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
     setCart(cart.filter(c => c.id !== courseId));
   };
 
-  // Clear cart
-  const clearCart = () => setCart([]);
+  // Check if course is in cart
+  const isInCart = (courseId: string) => {
+    return cart.some(c => c.id === courseId);
+  };
 
-  // Register all courses in cart
-  const registerAll = async () => {
+  // Register courses from cart
+  const registerCourses = async () => {
     if (cart.length === 0) return;
 
     setRegistering(true);
     setMessage(null);
 
     try {
+      // Register each course
       for (const course of cart) {
-        await enrollmentsAPI.enroll(course.id);
+        await enrollmentsAPI.enroll(course.section_id || course.id);
       }
 
       // Refresh enrollments
-      const newEnrollments = await enrollmentsAPI.getMyEnrollments();
-      setEnrollments(newEnrollments?.data || newEnrollments || [...enrollments, ...cart]);
+      const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
+      const enrollmentsList = enrollmentsData?.data || enrollmentsData || [];
+      setEnrollments(enrollmentsList);
+
+      // Remove registered courses from available list
+      const registeredIds = cart.map(c => c.id);
+      setAvailableCourses(availableCourses.filter(c => !registeredIds.includes(c.id)));
+
+      // Clear cart
       setCart([]);
-      setMessage({ type: 'success', text: t.registrationSuccess[lang] });
+      setMessage({ type: 'success', text: t.registered[lang] });
+      setActiveTab('enrolled');
     } catch (error: any) {
       console.error('Registration error:', error);
-      setMessage({ type: 'error', text: error.message || t.registrationError[lang] });
+      setMessage({ type: 'error', text: error.response?.data?.message || t.error[lang] });
     } finally {
       setRegistering(false);
     }
   };
 
-  // Clear filters
-  const clearFilters = () => {
-    setFilters({ department: '', instructor: '', time: '', credits: '' });
-    setSearchQuery('');
+  // Drop a course
+  const dropCourse = async (enrollmentId: string) => {
+    if (!confirm(t.confirmDrop[lang])) return;
+
+    setDropping(enrollmentId);
+    setMessage(null);
+
+    try {
+      await enrollmentsAPI.dropMyCourse(enrollmentId);
+
+      // Remove from enrollments list
+      const droppedEnrollment = enrollments.find(e => e.id === enrollmentId);
+      setEnrollments(enrollments.filter(e => e.id !== enrollmentId));
+
+      // Add back to available courses if we have the course data
+      if (droppedEnrollment?.course) {
+        setAvailableCourses([...availableCourses, droppedEnrollment.course]);
+      }
+
+      setMessage({ type: 'success', text: t.dropped[lang] });
+    } catch (error: any) {
+      console.error('Drop error:', error);
+      setMessage({ type: 'error', text: error.response?.data?.message || t.error[lang] });
+    } finally {
+      setDropping(null);
+    }
   };
+
+  // Filter available courses by search
+  const filteredCourses = availableCourses.filter(course => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const code = (course.code || '').toLowerCase();
+    const nameEn = (course.name_en || '').toLowerCase();
+    const nameAr = (course.name_ar || '').toLowerCase();
+    return code.includes(query) || nameEn.includes(query) || nameAr.includes(query);
+  });
 
   // Loading state
   if (loading) {
@@ -216,7 +306,7 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
       <div className="flex items-center justify-center min-h-[400px]" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-slate-600">{t.loading[lang]}</p>
+          <p className="text-slate-600 dark:text-slate-400">{t.loading[lang]}</p>
         </div>
       </div>
     );
@@ -238,380 +328,486 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
             <p className="text-blue-100 mt-1">{t.subtitle[lang]}</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
-              <p className="text-xs text-blue-100">{t.currentSemester[lang]}</p>
-              <p className="font-semibold">{currentSemester}</p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
-              <p className="text-xs text-blue-100">{t.currentCredits[lang]}</p>
-              <p className="font-semibold">{totalCredits} / {maxCredits}</p>
-              <div className="mt-1 h-1 bg-white/30 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${totalCredits > maxCredits ? 'bg-red-400' : 'bg-green-400'}`}
-                  style={{ width: `${Math.min((totalCredits / maxCredits) * 100, 100)}%` }}
-                />
+            {(currentSemester || semesterNameAr) && (
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
+                <p className="text-xs text-blue-100">{t.currentSemester[lang]}</p>
+                <p className="font-semibold">{lang === 'ar' ? semesterNameAr : currentSemester}</p>
               </div>
+            )}
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
+              <p className="text-xs text-blue-100">{t.registeredCredits[lang]}</p>
+              <p className="font-semibold text-xl">
+                {totalCredits + cartCredits}
+                <span className="text-sm font-normal text-blue-200"> / {maxCredits}</span>
+              </p>
+              {totalCredits + cartCredits < minCredits && (
+                <p className="text-xs text-amber-300 mt-1">{t.minCreditsWarning[lang]}</p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
+      {/* Connection Warning */}
+      {isOffline && (
+        <div className="p-4 rounded-xl flex items-center justify-between gap-3 bg-amber-50 text-amber-800 border border-amber-200">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5" />
+            <span>{t.connectionError[lang]}</span>
+          </div>
+          <button
+            onClick={() => fetchData(false)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t.retry[lang]}
+          </button>
+        </div>
+      )}
+
       {/* Message */}
       {message && (
-        <div className={`p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top duration-300 ${
+        <div className={`p-4 rounded-xl flex items-center gap-3 ${
           message.type === 'success'
-            ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+            ? 'bg-green-50 text-green-800 border border-green-200'
+            : message.type === 'warning'
+            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+            : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
-          {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          {message.type === 'success' ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : message.type === 'warning' ? (
+            <AlertTriangle className="w-5 h-5" />
+          ) : (
+            <AlertCircle className="w-5 h-5" />
+          )}
           <span>{message.text}</span>
-          <button onClick={() => setMessage(null)} className={`${isRTL ? 'mr-auto' : 'ml-auto'} hover:opacity-70 transition-opacity`}>
+          <button onClick={() => setMessage(null)} className={isRTL ? 'mr-auto' : 'ml-auto'}>
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Course List */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Search and Filters */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative">
-                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400`} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t.searchPlaceholder[lang]}
-                  className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all`}
-                />
+      {/* Prerequisites Modal */}
+      {showPrerequisiteModal && selectedCoursePrerequisites && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <Lock className="w-6 h-6 text-red-600" />
               </div>
+              <div>
+                <h3 className="font-semibold text-slate-800 dark:text-slate-100">{t.prerequisitesRequired[lang]}</h3>
+                <p className="text-sm text-slate-500">{selectedCoursePrerequisites.course.code}</p>
+              </div>
+            </div>
+
+            <p className="text-slate-600 dark:text-slate-400 mb-4">{t.prerequisitesNotMet[lang]}:</p>
+
+            <ul className="space-y-2 mb-6">
+              {selectedCoursePrerequisites.prerequisites.map((prereq, idx) => (
+                <li key={idx} className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-red-700 dark:text-red-300 font-medium">{prereq}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => {
+                setShowPrerequisiteModal(false);
+                setSelectedCoursePrerequisites(null);
+              }}
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors"
+            >
+              {lang === 'ar' ? 'حسناً' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+        <button
+          onClick={() => setActiveTab('enrolled')}
+          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'enrolled'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4" />
+            {t.myEnrollments[lang]}
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+              {enrollments.length}
+            </span>
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('available')}
+          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'available'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            {t.availableCourses[lang]}
+            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+              {availableCourses.length}
+            </span>
+          </span>
+        </button>
+      </div>
+
+      {/* Cart (if has items) */}
+      {cart.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5" />
+              {t.cart[lang]}
+              <span className="text-sm font-normal">({cart.length} {lang === 'ar' ? 'مقرر' : 'course(s)'} - {cartCredits} {t.credits[lang]})</span>
+            </h3>
+            <button
+              onClick={registerCourses}
+              disabled={registering}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+            >
+              {registering ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t.registering[lang]}
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  {t.confirmRegistration[lang]}
+                </>
+              )}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {cart.map(course => (
+              <div key={course.id} className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-lg border border-amber-200 dark:border-amber-700">
+                <span className="font-mono text-sm font-semibold text-amber-800 dark:text-amber-300">{course.code}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {lang === 'ar' ? course.name_ar : course.name_en}
+                </span>
+                <button
+                  onClick={() => removeFromCart(course.id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      {activeTab === 'enrolled' ? (
+        /* Enrolled Courses */
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+              {t.myEnrollments[lang]}
+            </h2>
+            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <CreditCard className="w-4 h-4" />
+              {totalCredits} {t.credits[lang]}
+            </div>
+          </div>
+
+          {enrollments.length === 0 ? (
+            <div className="p-12 text-center">
+              <Calendar className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+              <p className="text-lg font-medium text-slate-600 dark:text-slate-400">{t.noEnrollments[lang]}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">{t.startRegistering[lang]}</p>
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all ${
-                  showFilters
-                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400'
-                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                }`}
+                onClick={() => setActiveTab('available')}
+                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
               >
-                <Filter className="w-4 h-4" />
-                {t.filters[lang]}
+                <Plus className="w-4 h-4" />
+                {t.addCourse[lang]}
               </button>
             </div>
-
-            {showFilters && (
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in slide-in-from-top duration-200">
-                <select
-                  value={filters.department}
-                  onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.allDepartments[lang]}</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-                <select
-                  value={filters.instructor}
-                  onChange={(e) => setFilters({ ...filters, instructor: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.allInstructors[lang]}</option>
-                  {instructors.map(inst => (
-                    <option key={inst} value={inst}>{inst}</option>
-                  ))}
-                </select>
-                <select
-                  value={filters.credits}
-                  onChange={(e) => setFilters({ ...filters, credits: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{t.credits[lang]}: All</option>
-                  <option value="2">2 {t.credits[lang]}</option>
-                  <option value="3">3 {t.credits[lang]}</option>
-                  <option value="4">4 {t.credits[lang]}</option>
-                </select>
-                {(filters.department || filters.instructor || filters.credits || searchQuery) && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                    {t.clearFilters[lang]}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Courses */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-blue-600" />
-                {t.availableCourses[lang]}
-                <span className="text-sm text-slate-500 dark:text-slate-400">({filteredCourses.length})</span>
-              </h2>
-            </div>
-
+          ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
-              {filteredCourses.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 dark:text-slate-400">
-                  <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>{t.noCourses[lang]}</p>
-                </div>
-              ) : (
-                filteredCourses.map((course) => {
-                  const enrolled = isEnrolled(course.code);
-                  const inCart = isInCart(course.id);
-                  const full = isFull(course);
-                  const expanded = expandedCourse === course.id;
+              {enrollments.map((enrollment, index) => {
+                const course = enrollment.course || enrollment;
+                const courseCode = course.code || enrollment.course_code || enrollment.code;
+                const courseName = lang === 'ar'
+                  ? (course.name_ar || enrollment.name_ar || course.name_en || enrollment.name_en)
+                  : (course.name_en || enrollment.name_en || course.name_ar || enrollment.name_ar);
+                const credits = course.credits || enrollment.credits || 3;
+                const instructor = course.instructor || enrollment.instructor || course.instructor_name || '';
+                const schedule = course.schedule || enrollment.schedule || '';
+                const location = course.location || enrollment.location || course.room || '';
+                const section = course.section || enrollment.section || 'A';
+                const grade = enrollment.grade || enrollment.final_grade;
 
-                  return (
-                    <div key={course.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-mono rounded">
-                              {course.code}
+                return (
+                  <div
+                    key={enrollment.id || index}
+                    className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
+                          {courseCode?.slice(0, 2) || 'CS'}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-mono rounded font-semibold">
+                              {courseCode}
                             </span>
                             <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded">
-                              {t.section[lang]} {course.section}
+                              {t.section[lang]} {section}
                             </span>
                             <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs rounded">
-                              {course.credits} {t.credits[lang]}
+                              {credits} {t.credits[lang]}
                             </span>
-                            {full && (
-                              <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 text-xs rounded">
-                                {t.courseFull[lang]}
-                              </span>
-                            )}
-                            {enrolled && (
-                              <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-xs rounded flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                {t.alreadyEnrolled[lang]}
-                              </span>
-                            )}
                           </div>
 
-                          <h3 className="font-semibold text-slate-800 dark:text-slate-100 mt-2">
-                            {lang === 'ar' ? course.name_ar : course.name_en}
+                          <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-lg">
+                            {courseName}
                           </h3>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1">
-                              <Users className="w-4 h-4" />
-                              {course.instructor}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {course.schedule}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {course.location}
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+                            {instructor && (
+                              <span className="flex items-center gap-1.5">
+                                <Users className="w-4 h-4 text-slate-400" />
+                                {instructor}
+                              </span>
+                            )}
+                            {schedule && (
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-slate-400" />
+                                {schedule}
+                              </span>
+                            )}
+                            {location && (
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4 text-slate-400" />
+                                {location}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {grade ? (
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t.grade[lang]}</p>
+                            <span className="px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-sm font-bold rounded-lg">
+                              {grade}
                             </span>
                           </div>
-
-                          {/* Capacity bar */}
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                              <span>{course.enrolled || 0} / {course.capacity}</span>
-                              <span>{(course.capacity || 30) - (course.enrolled || 0)} {t.seats[lang]}</span>
-                            </div>
-                            <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${full ? 'bg-red-500' : 'bg-blue-500'}`}
-                                style={{ width: `${Math.min(((course.enrolled || 0) / (course.capacity || 30)) * 100, 100)}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Expandable details */}
-                          {expanded && (
-                            <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg animate-in slide-in-from-top duration-200">
-                              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{t.prerequisites[lang]}</h4>
-                              {course.prerequisites?.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                  {course.prerequisites.map((prereq: string) => (
-                                    <span key={prereq} className="px-2 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-xs rounded">
-                                      {prereq}
-                                    </span>
-                                  ))}
-                                </div>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm rounded-lg">
+                              <CheckCircle className="w-4 h-4" />
+                              {t.pending[lang]}
+                            </span>
+                            <button
+                              onClick={() => dropCourse(enrollment.id)}
+                              disabled={dropping === enrollment.id}
+                              className="px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              {dropping === enrollment.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                <p className="text-sm text-slate-500 dark:text-slate-400">{t.noPrerequisites[lang]}</p>
+                                <Trash2 className="w-4 h-4" />
                               )}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col items-end gap-2">
-                          <button
-                            onClick={() => setExpandedCourse(expanded ? null : course.id)}
-                            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                          >
-                            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-
-                          {!enrolled && !inCart && !full && (
-                            <button
-                              onClick={() => addToCart(course)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-all hover:scale-105"
-                            >
-                              <Plus className="w-4 h-4" />
-                              {t.addToCart[lang]}
+                              {t.drop[lang]}
                             </button>
-                          )}
-
-                          {inCart && (
-                            <button
-                              onClick={() => removeFromCart(course.id)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-all"
-                            >
-                              <Minus className="w-4 h-4" />
-                              {t.removeFromCart[lang]}
-                            </button>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </div>
                     </div>
-                  );
-                })
-              )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {enrollments.length > 0 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400">
+                  {lang === 'ar' ? `إجمالي المقررات: ${enrollments.length} مقرر` : `Total Courses: ${enrollments.length} courses`}
+                </span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {t.totalCredits[lang]}: {totalCredits} {t.credits[lang]}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Available Courses */
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-green-600" />
+                {t.availableCourses[lang]}
+              </h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={t.searchCourses[lang]}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full md:w-64 pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Cart */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 sticky top-4">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-blue-600" />
-                {t.myCart[lang]}
-                {cart.length > 0 && (
-                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs rounded-full animate-in zoom-in duration-200">
-                    {cart.length}
-                  </span>
-                )}
-              </h2>
-              {cart.length > 0 && (
-                <button
-                  onClick={clearCart}
-                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                >
-                  {t.clearCart[lang]}
-                </button>
-              )}
+          {filteredCourses.length === 0 ? (
+            <div className="p-12 text-center">
+              <BookOpen className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+              <p className="text-lg font-medium text-slate-600 dark:text-slate-400">{t.noAvailableCourses[lang]}</p>
             </div>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+              {filteredCourses.map((course, index) => {
+                const courseCode = course.code;
+                const courseName = lang === 'ar' ? (course.name_ar || course.name_en) : (course.name_en || course.name_ar);
+                const credits = course.credits || 3;
+                const instructor = course.instructor || course.instructor_name || '';
+                const schedule = course.schedule || '';
+                const location = course.location || course.room || '';
+                const capacity = course.capacity || 30;
+                const enrolled = course.enrolled || course.students_count || 0;
+                const availableSeats = capacity - enrolled;
+                const isFull = availableSeats <= 0;
+                const inCart = isInCart(course.id);
 
-            {cart.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 dark:text-slate-400">
-                <ClipboardList className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">{t.emptyCart[lang]}</p>
-                <p className="text-xs mt-1">{t.addCourses[lang]}</p>
-              </div>
-            ) : (
-              <>
-                <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-[300px] overflow-y-auto">
-                  {cart.map((course) => (
-                    <div key={course.id} className="p-3 flex items-center justify-between gap-2 animate-in slide-in-from-right duration-200">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-                          {course.code} - {lang === 'ar' ? course.name_ar : course.name_en}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{course.credits} {t.credits[lang]}</p>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(course.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">{t.totalCredits[lang]}</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">{cartCredits}</span>
-                  </div>
-
-                  {totalCredits > maxCredits && (
-                    <div className="p-2 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs rounded-lg flex items-center gap-2 animate-in shake duration-300">
-                      <AlertTriangle className="w-4 h-4" />
-                      {lang === 'ar' ? 'تجاوزت الحد الأقصى للساعات' : 'Exceeded maximum credits'}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={registerAll}
-                    disabled={registering || totalCredits > maxCredits}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                return (
+                  <div
+                    key={course.id || index}
+                    className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${isFull ? 'opacity-60' : ''}`}
                   >
-                    {registering ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {t.confirming[lang]}
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4" />
-                        {t.registerAll[lang]}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                          isFull
+                            ? 'bg-gradient-to-br from-slate-400 to-slate-500'
+                            : 'bg-gradient-to-br from-green-500 to-emerald-600'
+                        }`}>
+                          {courseCode?.slice(0, 2) || 'CS'}
+                        </div>
 
-          {/* Current Enrollments */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-600" />
-                {t.myEnrollments[lang]}
-                <span className="text-xs text-slate-500 dark:text-slate-400">({currentEnrolledCredits} {t.credits[lang]})</span>
-              </h2>
-            </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-xs font-mono rounded font-semibold">
+                              {courseCode}
+                            </span>
+                            <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs rounded">
+                              {credits} {t.credits[lang]}
+                            </span>
+                            {isFull ? (
+                              <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 text-xs rounded">
+                                {t.full[lang]}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs rounded">
+                                {availableSeats} {t.available[lang]}
+                              </span>
+                            )}
+                          </div>
 
-            {enrollments.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 dark:text-slate-400">
-                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">{lang === 'ar' ? 'لا توجد تسجيلات' : 'No enrollments yet'}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-[250px] overflow-y-auto">
-                {enrollments.map((enrollment) => (
-                  <div key={enrollment.id} className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                          {enrollment.code}
-                        </p>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
-                          {lang === 'ar' ? enrollment.name_ar : enrollment.name_en}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          {enrollment.schedule}
-                        </p>
+                          <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-lg">
+                            {courseName}
+                          </h3>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+                            {instructor && (
+                              <span className="flex items-center gap-1.5">
+                                <Users className="w-4 h-4 text-slate-400" />
+                                {instructor}
+                              </span>
+                            )}
+                            {schedule && (
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-slate-400" />
+                                {schedule}
+                              </span>
+                            )}
+                            {location && (
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4 text-slate-400" />
+                                {location}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1.5">
+                              <Users className="w-4 h-4 text-slate-400" />
+                              {enrolled}/{capacity} {t.seats[lang]}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <span className="px-2 py-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded">
-                        {lang === 'ar' ? 'مسجل' : 'Enrolled'}
-                      </span>
+
+                      <div className="flex items-center gap-3">
+                        {inCart ? (
+                          <button
+                            onClick={() => removeFromCart(course.id)}
+                            className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg font-medium flex items-center gap-2"
+                          >
+                            <X className="w-4 h-4" />
+                            {t.removeFromCart[lang]}
+                          </button>
+                        ) : checkingEligibility === course.id ? (
+                          <button
+                            disabled
+                            className="px-4 py-2 bg-slate-200 text-slate-500 rounded-lg font-medium flex items-center gap-2 cursor-wait"
+                          >
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            {t.checkingEligibility[lang]}
+                          </button>
+                        ) : eligibilityCache[course.id]?.eligible === false ? (
+                          <button
+                            onClick={() => {
+                              setSelectedCoursePrerequisites({
+                                course,
+                                prerequisites: eligibilityCache[course.id].missingPrerequisites || [],
+                              });
+                              setShowPrerequisiteModal(true);
+                            }}
+                            className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium flex items-center gap-2"
+                          >
+                            <Lock className="w-4 h-4" />
+                            {t.prerequisitesRequired[lang]}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => addToCart(course)}
+                            disabled={isFull}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white rounded-lg font-medium flex items-center gap-2 disabled:cursor-not-allowed"
+                          >
+                            <Plus className="w-4 h-4" />
+                            {t.addToCart[lang]}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

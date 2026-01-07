@@ -18,6 +18,9 @@ class StudentIdCardService
         $semester = Semester::getCurrentSemester();
         $program = $student->program;
 
+        // Calculate valid expiry date - must be in the future
+        $expiryDate = $this->calculateValidExpiryDate($semester);
+
         return [
             'student' => [
                 'id' => $student->id,
@@ -46,13 +49,41 @@ class StudentIdCardService
                     'end_date' => $semester->end_date?->format('Y-m-d'),
                 ] : null,
                 'issue_date' => now()->format('Y-m-d'),
-                'expiry_date' => $semester?->end_date?->format('Y-m-d') ?? now()->addMonths(6)->format('Y-m-d'),
+                'expiry_date' => $expiryDate,
             ],
             'verification' => [
                 'qr_data' => $this->generateQRData($student),
                 'barcode' => $this->generateBarcode($student->student_id),
             ],
+            'needs_renewal' => false,
         ];
+    }
+
+    /**
+     * Calculate a valid expiry date that is always in the future
+     */
+    protected function calculateValidExpiryDate(?Semester $semester): string
+    {
+        // If semester has a valid future end_date, use it
+        if ($semester?->end_date && $semester->end_date->isFuture()) {
+            return $semester->end_date->format('Y-m-d');
+        }
+
+        // Otherwise, calculate based on current academic year
+        $now = now();
+        $currentYear = $now->year;
+        $currentMonth = $now->month;
+
+        // Academic year ends in August
+        // If we're between September and December, expiry is next year August
+        // If we're between January and August, expiry is this year August
+        if ($currentMonth >= 9) {
+            // Fall semester - expires end of next August
+            return ($currentYear + 1) . '-08-31';
+        } else {
+            // Spring/Summer - expires end of this August
+            return $currentYear . '-08-31';
+        }
     }
 
     /**
@@ -60,12 +91,15 @@ class StudentIdCardService
      */
     public function generateQRData(Student $student): string
     {
+        $semester = Semester::getCurrentSemester();
+        $expiryDate = $this->calculateValidExpiryDate($semester);
+
         $data = [
             'student_id' => $student->student_id,
             'name' => $student->name_en,
             'program' => $student->program?->name_en,
             'status' => $student->status,
-            'valid_until' => Semester::getCurrentSemester()?->end_date?->format('Y-m-d') ?? now()->addMonths(6)->format('Y-m-d'),
+            'valid_until' => $expiryDate,
             'timestamp' => now()->timestamp,
         ];
 
@@ -197,6 +231,8 @@ class StudentIdCardService
     {
         $students = Student::whereIn('id', $studentIds)->with('program')->get();
         $cardsData = [];
+        $semester = Semester::getCurrentSemester();
+        $expiryDate = $this->calculateValidExpiryDate($semester);
 
         foreach ($students as $student) {
             $qrCode = $this->generateQRCodeImage($this->generateQRData($student));
@@ -207,7 +243,7 @@ class StudentIdCardService
                 'barcode' => $this->generateBarcode($student->student_id),
                 'validity' => [
                     'issue_date' => now()->format('Y-m-d'),
-                    'expiry_date' => Semester::getCurrentSemester()?->end_date?->format('Y-m-d') ?? now()->addMonths(6)->format('Y-m-d'),
+                    'expiry_date' => $expiryDate,
                 ],
             ];
         }

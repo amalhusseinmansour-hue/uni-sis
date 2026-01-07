@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { examsAPI } from '../api/exams';
+import { lmsAPI } from '../api/lms';
 import { studentsAPI } from '../api/students';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
@@ -38,24 +39,127 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
     setReminders(getReminders());
   }, []);
 
-  // Fetch exam data from API
+  // Fetch exam data from LMS and API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Fetch exam calendar and grades
-        const [examsRes, gradesRes] = await Promise.all([
+        // Try to fetch from LMS first, then fallback to regular API
+        let lmsEvents: any[] = [];
+        let lmsAssignments: any[] = [];
+        let lmsGrades: any[] = [];
+
+        try {
+          // Fetch from LMS
+          const [calendarRes, assignmentsRes, gradesRes] = await Promise.all([
+            lmsAPI.getCalendarEvents().catch(() => ({ events: [] })),
+            lmsAPI.getMyAssignments().catch(() => []),
+            lmsAPI.getMyGrades().catch(() => []),
+          ]);
+
+          lmsEvents = calendarRes.events || [];
+          lmsAssignments = assignmentsRes || [];
+          lmsGrades = gradesRes || [];
+
+          console.log('[ExamsPage] LMS data loaded:', {
+            events: lmsEvents.length,
+            assignments: lmsAssignments.length,
+            grades: lmsGrades.length,
+          });
+        } catch (lmsError) {
+          console.warn('[ExamsPage] LMS fetch failed, using regular API:', lmsError);
+        }
+
+        // Also fetch from regular exams API as fallback
+        const [examsRes, apiGradesRes] = await Promise.all([
           examsAPI.getExamCalendar().catch(() => []),
           examsAPI.getMyGrades().catch(() => []),
         ]);
 
-        // Process exams
-        const exams = examsAPI.transformExams(examsRes.data || examsRes || [], lang);
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
 
-        const upcoming = exams.filter(e => e.date >= today);
-        const past = exams.filter(e => e.date < today);
+        // Transform LMS calendar events to exam format
+        const lmsExams = lmsEvents
+          .filter((event: any) =>
+            event.eventtype === 'exam' ||
+            event.eventtype === 'quiz' ||
+            event.modulename === 'quiz' ||
+            event.name?.toLowerCase().includes('exam') ||
+            event.name?.toLowerCase().includes('اختبار') ||
+            event.name?.toLowerCase().includes('امتحان')
+          )
+          .map((event: any) => {
+            const startDate = new Date(event.timestart * 1000);
+            const durationMins = Math.floor(event.timeduration / 60) || 120;
+            const endDate = new Date(startDate.getTime() + durationMins * 60 * 1000);
+
+            return {
+              id: `lms-${event.id}`,
+              course: event.courseid ? `Course ${event.courseid}` : 'LMS',
+              title: event.name,
+              type: event.modulename === 'quiz' ? 'quiz' : 'final',
+              date: startDate.toISOString().split('T')[0],
+              time: `${startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - ${endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`,
+              duration: durationMins,
+              location: lang === 'ar' ? 'منصة التعلم الإلكتروني' : 'Online LMS',
+              seat: '-',
+              instructor: '',
+              topics: [],
+              materials: event.description || '',
+              notes: lang === 'ar' ? 'اختبار إلكتروني عبر منصة LMS' : 'Online exam via LMS platform',
+              source: 'lms',
+            };
+          });
+
+        // Transform LMS assignments (quizzes/exams) to exam format
+        const assignmentExams = lmsAssignments
+          .filter((assign: any) =>
+            assign.name?.toLowerCase().includes('exam') ||
+            assign.name?.toLowerCase().includes('quiz') ||
+            assign.name?.toLowerCase().includes('اختبار') ||
+            assign.name?.toLowerCase().includes('امتحان')
+          )
+          .map((assign: any) => {
+            const dueDate = new Date(assign.duedate * 1000);
+
+            return {
+              id: `lms-assign-${assign.id}`,
+              course: assign.coursename || `Course ${assign.course}`,
+              title: assign.name,
+              type: assign.name?.toLowerCase().includes('quiz') ? 'quiz' : 'midterm',
+              date: dueDate.toISOString().split('T')[0],
+              time: dueDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+              duration: 60,
+              location: lang === 'ar' ? 'منصة التعلم الإلكتروني' : 'Online LMS',
+              seat: '-',
+              instructor: '',
+              topics: [],
+              materials: assign.intro || '',
+              notes: lang === 'ar' ? 'تسليم عبر منصة LMS' : 'Submit via LMS platform',
+              grade: assign.usergrade,
+              maxGrade: assign.grade || 100,
+              status: assign.graded ? 'graded' : (assign.submitted ? 'submitted' : 'pending'),
+              source: 'lms',
+            };
+          });
+
+        // Process regular API exams
+        const apiExams = examsAPI.transformExams(examsRes.data || examsRes || [], lang);
+
+        // Combine all exams (remove duplicates by title similarity)
+        const allExams = [...lmsExams, ...assignmentExams, ...apiExams];
+        const uniqueExams = allExams.filter((exam, index, self) =>
+          index === self.findIndex(e =>
+            e.title === exam.title ||
+            (e.course === exam.course && e.date === exam.date)
+          )
+        );
+
+        // Split into upcoming and past
+        const upcoming = uniqueExams.filter(e => e.date >= todayStr);
+        const past = uniqueExams.filter(e => e.date < todayStr);
 
         if (upcoming.length > 0) {
           setUpcomingExams(upcoming);
@@ -64,16 +168,16 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
           setPastExams(past);
         }
 
-        // Process grades for results
-        const grades = gradesRes.data || gradesRes || [];
-        if (grades.length > 0) {
-          // Group by course
+        // Process LMS grades for results
+        const allGrades = [...lmsGrades, ...(apiGradesRes.data || apiGradesRes || [])];
+
+        if (allGrades.length > 0) {
           const courseResults = new Map<string, any>();
           let totalGrade = 0;
           let gradeCount = 0;
 
-          grades.forEach((grade: any) => {
-            const courseCode = grade.course?.code || grade.courseCode || 'Unknown';
+          allGrades.forEach((grade: any) => {
+            const courseCode = grade.coursename || grade.course?.code || grade.courseCode || 'Unknown';
             if (!courseResults.has(courseCode)) {
               courseResults.set(courseCode, {
                 course: courseCode,
@@ -86,16 +190,22 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
             }
 
             const result = courseResults.get(courseCode)!;
-            const gradeType = grade.type || grade.gradeType;
-            const value = grade.value || grade.grade || grade.score;
+            const gradeValue = grade.grade || grade.value || grade.score;
 
-            if (gradeType === 'midterm') result.midterm = value;
-            else if (gradeType === 'quiz') result.quizzes = value;
-            else if (gradeType === 'assignment') result.assignments = value;
-            else if (gradeType === 'final') result.final = value;
+            // For LMS grades, use total as final grade percentage
+            if (grade.grademax && gradeValue !== null) {
+              const percentage = Math.round((gradeValue / grade.grademax) * 100);
+              result.total = percentage;
+              totalGrade += percentage;
+              gradeCount++;
+            } else if (gradeValue) {
+              const gradeType = grade.type || grade.gradeType;
+              if (gradeType === 'midterm') result.midterm = gradeValue;
+              else if (gradeType === 'quiz') result.quizzes = gradeValue;
+              else if (gradeType === 'assignment') result.assignments = gradeValue;
+              else if (gradeType === 'final') result.final = gradeValue;
 
-            if (value) {
-              totalGrade += value;
+              totalGrade += gradeValue;
               gradeCount++;
             }
           });
@@ -498,39 +608,6 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
               <option value="current" className="text-slate-800">{lang === 'ar' ? 'الفصل الحالي' : 'Current Semester'}</option>
               <option value="previous" className="text-slate-800">{lang === 'ar' ? 'الفصل السابق' : 'Previous Semester'}</option>
             </select>
-            <button
-              onClick={() => {
-                const headers = [
-                  lang === 'ar' ? 'المقرر' : 'Course',
-                  lang === 'ar' ? 'العنوان' : 'Title',
-                  lang === 'ar' ? 'النوع' : 'Type',
-                  lang === 'ar' ? 'التاريخ' : 'Date',
-                  lang === 'ar' ? 'الوقت' : 'Time',
-                  lang === 'ar' ? 'المكان' : 'Location',
-                ];
-                const rows = displayUpcomingExams.map(e => [
-                  e.course, e.title, getExamTypeLabel(e.type), e.date, e.time, e.location
-                ]);
-                const tableHTML = formatTableHTML(headers, rows, lang);
-                exportToPDF(
-                  lang === 'ar' ? 'جدول الاختبارات' : 'Exam Schedule',
-                  tableHTML,
-                  'exam-schedule',
-                  lang
-                );
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 rounded-lg text-white text-sm transition-all"
-            >
-              <Download className="w-4 h-4" />
-              {lang === 'ar' ? 'تحميل' : 'Download'}
-            </button>
-            <button
-              onClick={() => printPage(undefined, 'Exam Schedule', 'جدول الاختبارات', lang)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 rounded-lg text-white text-sm transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              {lang === 'ar' ? 'طباعة' : 'Print'}
-            </button>
           </div>
         </div>
       </div>
@@ -748,35 +825,6 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
                   ? (lang === 'ar' ? 'تم تعيين التذكير ✓' : 'Reminder Set ✓')
                   : (lang === 'ar' ? 'تعيين تذكير' : 'Set Reminder')
                 }
-              </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                icon={Download}
-                onClick={() => {
-                  const content = `
-                    <h2>${selectedExam.title}</h2>
-                    <p><strong>${lang === 'ar' ? 'المقرر' : 'Course'}:</strong> ${selectedExam.course}</p>
-                    <p><strong>${lang === 'ar' ? 'التاريخ' : 'Date'}:</strong> ${selectedExam.date}</p>
-                    <p><strong>${lang === 'ar' ? 'الوقت' : 'Time'}:</strong> ${selectedExam.time}</p>
-                    <p><strong>${lang === 'ar' ? 'المدة' : 'Duration'}:</strong> ${selectedExam.duration} ${lang === 'ar' ? 'دقيقة' : 'minutes'}</p>
-                    <p><strong>${lang === 'ar' ? 'المكان' : 'Location'}:</strong> ${selectedExam.location}</p>
-                    <p><strong>${lang === 'ar' ? 'المقعد' : 'Seat'}:</strong> ${selectedExam.seat}</p>
-                    <p><strong>${lang === 'ar' ? 'المحاضر' : 'Instructor'}:</strong> ${selectedExam.instructor}</p>
-                    <h3>${lang === 'ar' ? 'المواضيع' : 'Topics'}</h3>
-                    <ul>${selectedExam.topics.map((t: string) => `<li>${t}</li>`).join('')}</ul>
-                    <p><strong>${lang === 'ar' ? 'المواد' : 'Materials'}:</strong> ${selectedExam.materials}</p>
-                    ${selectedExam.notes ? `<p><strong>${lang === 'ar' ? 'ملاحظات' : 'Notes'}:</strong> ${selectedExam.notes}</p>` : ''}
-                  `;
-                  exportToPDF(
-                    `${selectedExam.course} - ${lang === 'ar' ? 'تفاصيل الاختبار' : 'Exam Details'}`,
-                    content,
-                    `exam-${selectedExam.course}`,
-                    lang
-                  );
-                }}
-              >
-                {lang === 'ar' ? 'تحميل التفاصيل' : 'Download Details'}
               </Button>
             </div>
           </div>

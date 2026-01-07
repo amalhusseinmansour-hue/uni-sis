@@ -944,54 +944,6 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                 </div>
               </div>
 
-              {/* Download Data */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <Download className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">{t.downloadData[lang]}</h4>
-                      <p className="text-sm text-slate-500">{t.downloadDataDesc[lang]}</p>
-                    </div>
-                  </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2" onClick={() => {
-                    // Export user settings and profile data
-                    const userData = {
-                      settings: {
-                        notifications: settings.notifications,
-                        privacy: settings.privacy,
-                        accessibility: settings.accessibility,
-                        language: settings.language
-                      }
-                    };
-                    exportToCSV([userData], 'my-data');
-                  }}>
-                    <Download className="w-4 h-4" />
-                    {lang === 'en' ? 'Download' : 'تحميل'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Delete Account */}
-              <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-red-100 rounded-lg">
-                      <Trash2 className="w-6 h-6 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-red-800">{t.deleteAccount[lang]}</h4>
-                      <p className="text-sm text-red-600">{t.deleteAccountDesc[lang]}</p>
-                    </div>
-                  </div>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    {lang === 'en' ? 'Delete' : 'حذف'}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 

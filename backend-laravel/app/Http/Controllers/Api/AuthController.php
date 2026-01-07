@@ -19,11 +19,25 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'username' => 'required_without:email|string',
+            'email' => 'required_without:username|email',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        // Support login with email, username, or student_id
+        $loginField = $request->username ?? $request->email;
+
+        // First try to find user by email
+        $user = User::where('email', $loginField)->first();
+
+        // If not found and input doesn't look like email, search by student_id
+        if (!$user && !filter_var($loginField, FILTER_VALIDATE_EMAIL)) {
+            // Search by student_id in students table
+            $student = \App\Models\Student::where('student_id', $loginField)->first();
+            if ($student && $student->user_id) {
+                $user = User::find($student->user_id);
+            }
+        }
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -33,13 +47,47 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        // Load student data if user is a student
+        // Build clean user data without circular references
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'avatar' => $user->avatar,
+            'phone' => $user->phone,
+            'email_verified_at' => $user->email_verified_at,
+            'created_at' => $user->created_at,
+        ];
+
+        // Load student data if user is a student (without circular refs)
         if ($user->role === 'STUDENT') {
-            $user->load('student.program');
+            $student = $user->student;
+            if ($student) {
+                $userData['student'] = [
+                    'id' => $student->id,
+                    'student_id' => $student->student_id,
+                    'name_en' => $student->name_en,
+                    'name_ar' => $student->name_ar,
+                    'gpa' => $student->gpa,
+                    'level' => $student->level,
+                    'status' => $student->status,
+                    'program_id' => $student->program_id,
+                ];
+
+                // Add program data
+                if ($student->program) {
+                    $userData['student']['program'] = [
+                        'id' => $student->program->id,
+                        'name_en' => $student->program->name_en,
+                        'name_ar' => $student->program->name_ar,
+                        'code' => $student->program->code,
+                    ];
+                }
+            }
         }
 
         return response()->json([
-            'user' => $user,
+            'user' => $userData,
             'token' => $token,
         ]);
     }
@@ -150,7 +198,17 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',      // at least one lowercase
+                'regex:/[A-Z]/',      // at least one uppercase
+                'regex:/[0-9]/',      // at least one number
+            ],
+        ], [
+            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
         ]);
 
         $user = $request->user();

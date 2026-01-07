@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { preferencesAPI } from '../api/preferences';
 import {
   Search,
   X,
@@ -217,12 +218,19 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ lang, isOpen, onClose }) =>
     }
   }, [selectedIndex]);
 
-  const handleSelect = (result: SearchResult) => {
-    // Save to recent searches
+  const handleSelect = async (result: SearchResult) => {
+    // Save to recent searches (localStorage + database)
     if (query.trim()) {
       const updated = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 5);
       setRecentSearches(updated);
       localStorage.setItem('recentSearches', JSON.stringify(updated));
+
+      // Save to database
+      try {
+        await preferencesAPI.addRecentSearch(query);
+      } catch (error) {
+        console.error('Failed to save recent search:', error);
+      }
     }
 
     if (result.action) {

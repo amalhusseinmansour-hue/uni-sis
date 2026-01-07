@@ -30,17 +30,48 @@ class StudentDocumentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
             'type' => 'required|in:PASSPORT,NATIONAL_ID,CERTIFICATE,TRANSCRIPT,PHOTO,OTHER',
             'name' => 'required|string|max:255',
             'file' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240', // 10MB max
-            'notes' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
-        // Handle file upload
+        // Security: Students can only upload documents for themselves
+        if ($user->role === 'STUDENT') {
+            $student = $user->student;
+            if (!$student || $student->id != $validated['student_id']) {
+                return response()->json([
+                    'message' => 'Unauthorized. You can only upload documents for yourself.'
+                ], 403);
+            }
+        }
+
+        // Handle file upload with secure filename
         $file = $request->file('file');
-        $path = $file->store('student-documents/' . $validated['student_id'], 'public');
+
+        // Verify file content matches extension (prevent MIME spoofing)
+        $allowedMimes = [
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+        ];
+
+        $fileMime = $file->getMimeType();
+        if (!isset($allowedMimes[$fileMime])) {
+            return response()->json([
+                'message' => 'Invalid file type. Only PDF, JPG, PNG, DOC, DOCX are allowed.'
+            ], 422);
+        }
+
+        // Generate secure random filename
+        $secureFilename = \Illuminate\Support\Str::uuid() . '.' . $allowedMimes[$fileMime];
+        $path = $file->storeAs('student-documents/' . $validated['student_id'], $secureFilename, 'public');
 
         $document = StudentDocument::create([
             'student_id' => $validated['student_id'],

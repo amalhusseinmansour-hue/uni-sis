@@ -55,6 +55,21 @@ interface LecturerProps {
   lang: 'en' | 'ar';
 }
 
+interface AttendanceSession {
+  id: string;
+  date: string;
+  time: string;
+  topic?: string;
+  status: 'draft' | 'saved';
+}
+
+interface StudentAttendance {
+  studentId: string;
+  enrollmentId: string;
+  name: string;
+  status: 'present' | 'absent' | 'late' | 'excused' | null;
+}
+
 const t = {
   ...TRANSLATIONS,
   overview: { en: 'Overview', ar: 'نظرة عامة' },
@@ -120,6 +135,25 @@ const t = {
   statusCompleted: { en: 'Completed', ar: 'مكتمل' },
   statusInProgress: { en: 'In Progress', ar: 'قيد التنفيذ' },
   viewDetails: { en: 'View Details', ar: 'عرض التفاصيل' },
+  selectDate: { en: 'Select Date', ar: 'اختر التاريخ' },
+  sessionTopic: { en: 'Session Topic', ar: 'موضوع المحاضرة' },
+  lectureNumber: { en: 'Lecture', ar: 'المحاضرة' },
+  late: { en: 'Late', ar: 'متأخر' },
+  excused: { en: 'Excused', ar: 'معذور' },
+  saveAttendance: { en: 'Save Attendance', ar: 'حفظ الحضور' },
+  attendanceSaved: { en: 'Attendance Saved Successfully', ar: 'تم حفظ الحضور بنجاح' },
+  selectAll: { en: 'Select All', ar: 'تحديد الكل' },
+  markAllPresent: { en: 'Mark All Present', ar: 'تسجيل الكل حاضر' },
+  markAllAbsent: { en: 'Mark All Absent', ar: 'تسجيل الكل غائب' },
+  noSessionSelected: { en: 'Select a date to mark attendance', ar: 'اختر تاريخاً لتسجيل الحضور' },
+  attendanceHistory: { en: 'Attendance History', ar: 'سجل الحضور' },
+  newSession: { en: 'New Session', ar: 'جلسة جديدة' },
+  loadingStudents: { en: 'Loading students...', ar: 'جاري تحميل الطلاب...' },
+  noStudentsEnrolled: { en: 'No students enrolled in this course', ar: 'لا يوجد طلاب مسجلين في هذا المقرر' },
+  previousSessions: { en: 'Previous Sessions', ar: 'الجلسات السابقة' },
+  todaySession: { en: "Today's Session", ar: 'جلسة اليوم' },
+  viewSession: { en: 'View Session', ar: 'عرض الجلسة' },
+  editSession: { en: 'Edit Session', ar: 'تعديل الجلسة' },
 };
 
 const COLORS = ['#22c55e', '#3b82f6', '#f97316', '#ef4444'];
@@ -134,6 +168,15 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
   const [sortBy, setSortBy] = useState<'name' | 'grade' | 'attendance'>('name');
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+
+  // Attendance management state
+  const [attendanceDate, setAttendanceDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [sessionTopic, setSessionTopic] = useState('');
+  const [enrolledStudents, setEnrolledStudents] = useState<StudentAttendance[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [savingAttendance, setSavingAttendance] = useState(false);
+  const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>([]);
+  const [showAttendanceSaved, setShowAttendanceSaved] = useState(false);
 
   const isRTL = lang === 'ar';
 
@@ -157,6 +200,102 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
 
   // Filter courses for this lecturer (could be filtered by API later)
   const myCourses = courses;
+
+  // Fetch enrolled students when a course is selected and attendance tab is active
+  useEffect(() => {
+    const fetchEnrolledStudents = async () => {
+      if (!selectedCourse || activeTab !== 'attendance') return;
+
+      try {
+        setLoadingAttendance(true);
+        const { coursesAPI } = await import('../api/courses');
+        const response = await coursesAPI.getEnrollments(selectedCourse.id);
+        const enrollments = response.data || response || [];
+
+        // Transform enrollments to StudentAttendance format
+        const studentList: StudentAttendance[] = enrollments.map((enrollment: any) => ({
+          studentId: enrollment.student?.student_id || enrollment.student_id || '',
+          enrollmentId: enrollment.id?.toString() || '',
+          name: enrollment.student?.name_ar || enrollment.student?.name_en || enrollment.student?.name || enrollment.studentName || '',
+          status: null,
+        }));
+
+        setEnrolledStudents(studentList);
+      } catch (error) {
+        console.error('Error fetching enrolled students:', error);
+        setEnrolledStudents([]);
+      } finally {
+        setLoadingAttendance(false);
+      }
+    };
+
+    fetchEnrolledStudents();
+  }, [selectedCourse, activeTab]);
+
+  // Function to update individual student attendance
+  const updateStudentAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
+    setEnrolledStudents(prev =>
+      prev.map(s => s.studentId === studentId ? { ...s, status } : s)
+    );
+  };
+
+  // Function to mark all students with same status
+  const markAllStudents = (status: 'present' | 'absent' | 'late' | 'excused') => {
+    setEnrolledStudents(prev =>
+      prev.map(s => ({ ...s, status }))
+    );
+  };
+
+  // Function to save attendance to backend
+  const saveAttendance = async () => {
+    if (!selectedCourse || enrolledStudents.length === 0) return;
+
+    // Check if all students have a status
+    const unmarkedStudents = enrolledStudents.filter(s => s.status === null);
+    if (unmarkedStudents.length > 0) {
+      alert(lang === 'ar' ? 'يرجى تسجيل حضور جميع الطلاب' : 'Please mark attendance for all students');
+      return;
+    }
+
+    try {
+      setSavingAttendance(true);
+      const { attendanceAPI } = await import('../api/attendance');
+
+      const attendanceData = {
+        date: attendanceDate,
+        attendance: enrolledStudents.map(s => ({
+          student_id: s.studentId,
+          enrollment_id: s.enrollmentId,
+          status: s.status as 'present' | 'absent' | 'late' | 'excused',
+        })),
+      };
+
+      await attendanceAPI.bulkUpdateAttendance(selectedCourse.id, attendanceData);
+
+      setShowAttendanceSaved(true);
+      setTimeout(() => setShowAttendanceSaved(false), 3000);
+
+      // Add to sessions list
+      setAttendanceSessions(prev => [
+        {
+          id: Date.now().toString(),
+          date: attendanceDate,
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          topic: sessionTopic || undefined,
+          status: 'saved',
+        },
+        ...prev,
+      ]);
+
+      // Reset for next session
+      setSessionTopic('');
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      alert(lang === 'ar' ? 'حدث خطأ أثناء حفظ الحضور' : 'Error saving attendance');
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
 
   // Calculate statistics
   const calculateStats = () => {
@@ -531,9 +670,48 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Grades Tab */}
+      {/* Grades Tab - Read-only from LMS */}
       {activeTab === 'grades' && (
         <div className="space-y-4">
+          {/* LMS Info Banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-blue-800">
+                  {lang === 'ar' ? 'الدرجات من نظام إدارة التعلم (LMS)' : 'Grades from Learning Management System (LMS)'}
+                </p>
+                <p className="text-sm text-blue-600">
+                  {lang === 'ar' ? 'يتم جلب الدرجات تلقائياً من Moodle' : 'Grades are automatically fetched from Moodle'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const { lmsSyncAPI } = await import('../api/lms');
+                  if (selectedCourse) {
+                    await lmsSyncAPI.importGrades(parseInt(selectedCourse.id));
+                  }
+                  setShowSaveNotification(true);
+                  setTimeout(() => setShowSaveNotification(false), 3000);
+                } catch (error) {
+                  console.error('Error syncing grades:', error);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              {lang === 'ar' ? 'مزامنة من LMS' : 'Sync from LMS'}
+            </button>
+          </div>
+
           {/* Filters */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex flex-wrap items-center gap-4">
@@ -585,29 +763,24 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
                 }}>
                   <Download className="w-4 h-4 text-slate-600" />
                 </button>
-                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.importGrades[lang]}>
-                  <Upload className="w-4 h-4 text-slate-600" />
-                </button>
-                <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50" title={t.printReport[lang]} onClick={() => window.print()}>
-                  <Printer className="w-4 h-4 text-slate-600" />
-                </button>
               </div>
             </div>
           </div>
 
-          {/* Grades Table */}
+          {/* Grades Table - Read Only */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                   <tr>
+                    <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} w-12`}>#</th>
                     <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentName[lang]}</th>
                     <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentId[lang]}</th>
                     <th className={`p-4 text-center`}>{t.attendancePct[lang]}</th>
-                    <th className={`p-4 text-center`}>{t.participation[lang]} (10)</th>
-                    <th className={`p-4 text-center`}>{t.quizzes[lang]} (10)</th>
-                    <th className={`p-4 text-center`}>{t.midterm[lang]} (30)</th>
-                    <th className={`p-4 text-center`}>{t.final[lang]} (50)</th>
+                    <th className={`p-4 text-center`}>{t.participation[lang]}</th>
+                    <th className={`p-4 text-center`}>{t.quizzes[lang]}</th>
+                    <th className={`p-4 text-center`}>{t.midterm[lang]}</th>
+                    <th className={`p-4 text-center`}>{t.final[lang]}</th>
                     <th className={`p-4 text-center`}>{t.total[lang]}</th>
                     <th className={`p-4 text-center`}>{t.letterGrade[lang]}</th>
                     <th className={`p-4 text-center`}>{t.status[lang]}</th>
@@ -616,17 +789,18 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
                 <tbody className="divide-y divide-slate-50">
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="p-8 text-center text-slate-500">
+                      <td colSpan={11} className="p-8 text-center text-slate-500">
                         {t.noStudentsFound[lang]}
                       </td>
                     </tr>
                   ) : (
-                    filteredStudents.map((student) => {
-                      const total = (student.midterm || 0) + (student.final || 0);
+                    filteredStudents.map((student, index) => {
+                      const total = (student.participation || 0) + (student.quizzes || 0) + (student.midterm || 0) + (student.final || 0);
                       const status = getStudentStatus(student);
                       const letterGrade = getLetterGrade(total);
                       return (
                         <tr key={student.id} className="hover:bg-slate-50">
+                          <td className="p-4 text-slate-500">{index + 1}</td>
                           <td className="p-4 font-medium text-slate-800">{student.name}</td>
                           <td className="p-4 text-slate-500 font-mono">{student.studentId}</td>
                           <td className="p-4">
@@ -642,43 +816,17 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
                               <span className="text-xs text-slate-600">{student.attendance}%</span>
                             </div>
                           </td>
-                          <td className="p-4">
-                            <input
-                              type="number"
-                              className="w-16 p-1.5 border border-slate-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                              placeholder="-"
-                              max={10}
-                              onChange={(e) => handleGradeChange(student.id, 'participation', e.target.value)}
-                            />
+                          <td className="p-4 text-center font-medium text-slate-700">
+                            {student.participation !== undefined ? student.participation : '-'}
                           </td>
-                          <td className="p-4">
-                            <input
-                              type="number"
-                              className="w-16 p-1.5 border border-slate-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                              placeholder="-"
-                              max={10}
-                              onChange={(e) => handleGradeChange(student.id, 'quizzes', e.target.value)}
-                            />
+                          <td className="p-4 text-center font-medium text-slate-700">
+                            {student.quizzes !== undefined ? student.quizzes : '-'}
                           </td>
-                          <td className="p-4">
-                            <input
-                              type="number"
-                              className="w-16 p-1.5 border border-slate-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                              placeholder="-"
-                              max={30}
-                              value={student.midterm || ''}
-                              onChange={(e) => handleGradeChange(student.id, 'midterm', e.target.value)}
-                            />
+                          <td className="p-4 text-center font-medium text-slate-700">
+                            {student.midterm !== undefined ? student.midterm : '-'}
                           </td>
-                          <td className="p-4">
-                            <input
-                              type="number"
-                              className="w-16 p-1.5 border border-slate-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                              placeholder="-"
-                              max={50}
-                              value={student.final || ''}
-                              onChange={(e) => handleGradeChange(student.id, 'final', e.target.value)}
-                            />
+                          <td className="p-4 text-center font-medium text-slate-700">
+                            {student.final !== undefined ? student.final : '-'}
                           </td>
                           <td className="p-4 font-bold text-slate-800 text-center">{total || '-'}</td>
                           <td className="p-4 text-center">
@@ -721,71 +869,240 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
               </table>
             </div>
           </div>
-
-          {/* Publish Button */}
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={handleSave}
-              className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {t.draftSaved[lang]}
-            </button>
-            <button className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              {t.publishGrades[lang]}
-            </button>
-          </div>
         </div>
       )}
 
       {/* Attendance Tab */}
       {activeTab === 'attendance' && (
         <div className="space-y-4">
+          {/* Attendance Saved Notification */}
+          {showAttendanceSaved && (
+            <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+              <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                <span>{t.attendanceSaved[lang]}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Session Header */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <h3 className="text-lg font-bold text-slate-800">{t.markAttendance[lang]}</h3>
-              <div className="flex gap-2">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  {lang === 'en' ? 'New Session' : 'جلسة جديدة'}
-                </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Date Picker */}
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-slate-500" />
+                  <input
+                    type="date"
+                    value={attendanceDate}
+                    onChange={(e) => setAttendanceDate(e.target.value)}
+                    className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                {/* Session Topic */}
+                <input
+                  type="text"
+                  value={sessionTopic}
+                  onChange={(e) => setSessionTopic(e.target.value)}
+                  placeholder={t.sessionTopic[lang]}
+                  className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-48"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {students.map((student) => (
-                <div
-                  key={student.id}
-                  className="p-4 border border-slate-200 rounded-xl hover:border-blue-300 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="font-medium text-slate-800">{student.name}</p>
-                      <p className="text-xs text-slate-500">{student.studentId}</p>
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-slate-100">
+              <button
+                onClick={() => markAllStudents('present')}
+                className="px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 text-sm font-medium flex items-center gap-1"
+              >
+                <Check className="w-3 h-3" />
+                {t.markAllPresent[lang]}
+              </button>
+              <button
+                onClick={() => markAllStudents('absent')}
+                className="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 text-sm font-medium flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                {t.markAllAbsent[lang]}
+              </button>
+            </div>
+
+            {/* Students List */}
+            {loadingAttendance ? (
+              <div className="text-center py-12 text-slate-500">
+                <RefreshCw className="w-8 h-8 mx-auto animate-spin mb-2" />
+                <p>{t.loadingStudents[lang]}</p>
+              </div>
+            ) : enrolledStudents.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>{t.noStudentsEnrolled[lang]}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                    <tr>
+                      <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} w-12`}>#</th>
+                      <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentId[lang]}</th>
+                      <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentName[lang]}</th>
+                      <th className="p-4 text-center">{t.status[lang]}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {enrolledStudents.map((student, index) => (
+                      <tr key={student.studentId} className="hover:bg-slate-50">
+                        <td className="p-4 text-slate-500">{index + 1}</td>
+                        <td className="p-4 font-mono text-slate-600">{student.studentId}</td>
+                        <td className="p-4 font-medium text-slate-800">{student.name}</td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            {/* Present */}
+                            <button
+                              onClick={() => updateStudentAttendance(student.studentId, 'present')}
+                              className={`p-2 rounded-lg transition-colors ${
+                                student.status === 'present'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
+                              }`}
+                              title={t.present[lang]}
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            {/* Absent */}
+                            <button
+                              onClick={() => updateStudentAttendance(student.studentId, 'absent')}
+                              className={`p-2 rounded-lg transition-colors ${
+                                student.status === 'absent'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                              }`}
+                              title={t.absent[lang]}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            {/* Late */}
+                            <button
+                              onClick={() => updateStudentAttendance(student.studentId, 'late')}
+                              className={`p-2 rounded-lg transition-colors ${
+                                student.status === 'late'
+                                  ? 'bg-yellow-500 text-white'
+                                  : 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-200'
+                              }`}
+                              title={t.late[lang]}
+                            >
+                              <Clock className="w-4 h-4" />
+                            </button>
+                            {/* Excused */}
+                            <button
+                              onClick={() => updateStudentAttendance(student.studentId, 'excused')}
+                              className={`p-2 rounded-lg transition-colors ${
+                                student.status === 'excused'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                              }`}
+                              title={t.excused[lang]}
+                            >
+                              <AlertCircle className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Summary & Save */}
+            {enrolledStudents.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                {/* Attendance Summary */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      <span className="text-slate-600">{t.present[lang]}:</span>
+                      <span className="font-bold">{enrolledStudents.filter(s => s.status === 'present').length}</span>
                     </div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        student.attendance >= 75 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {student.attendance}%
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium flex items-center justify-center gap-1">
-                      <Check className="w-3 h-3" />
-                      {t.present[lang]}
-                    </button>
-                    <button className="flex-1 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium flex items-center justify-center gap-1">
-                      <X className="w-3 h-3" />
-                      {t.absent[lang]}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span className="text-slate-600">{t.absent[lang]}:</span>
+                      <span className="font-bold">{enrolledStudents.filter(s => s.status === 'absent').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <span className="text-slate-600">{t.late[lang]}:</span>
+                      <span className="font-bold">{enrolledStudents.filter(s => s.status === 'late').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      <span className="text-slate-600">{t.excused[lang]}:</span>
+                      <span className="font-bold">{enrolledStudents.filter(s => s.status === 'excused').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-slate-300"></div>
+                      <span className="text-slate-600">{lang === 'ar' ? 'غير محدد' : 'Unmarked'}:</span>
+                      <span className="font-bold">{enrolledStudents.filter(s => s.status === null).length}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={saveAttendance}
+                    disabled={savingAttendance || enrolledStudents.every(s => s.status === null)}
+                    className={`px-6 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-colors ${
+                      savingAttendance || enrolledStudents.every(s => s.status === null)
+                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    }`}
+                  >
+                    {savingAttendance ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        {lang === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        {t.saveAttendance[lang]}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Previous Sessions */}
+          {attendanceSessions.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4">{t.previousSessions[lang]}</h3>
+              <div className="space-y-2">
+                {attendanceSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-800">{session.date}</p>
+                        {session.topic && <p className="text-xs text-slate-500">{session.topic}</p>}
+                      </div>
+                    </div>
+                    <span className="text-xs text-slate-500">{session.time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

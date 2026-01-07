@@ -13,6 +13,16 @@ class Student extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that should be hidden for serialization.
+     * This prevents circular reference: User -> student -> user -> student...
+     *
+     * @var array<string>
+     */
+    protected $hidden = [
+        'user', // Prevent circular reference when loaded via User relationship
+    ];
+
     protected $fillable = [
         // User & Program Relations
         'user_id',
@@ -727,5 +737,56 @@ class Student extends Model
         // Store and return the path
         // Implementation depends on QR code library choice
         return $qrData;
+    }
+
+    // ==========================================
+    // Static Methods
+    // ==========================================
+
+    /**
+     * Generate a unique student ID
+     * Format: YYYY + Program Code (2 digits) + Sequential Number (4 digits)
+     * Example: 202601-0001
+     */
+    public static function generateStudentId(?int $programId = null): string
+    {
+        $year = date('Y');
+        $programCode = $programId ? str_pad($programId, 2, '0', STR_PAD_LEFT) : '00';
+
+        // Get the last student ID for this year and program
+        $lastStudent = self::where('student_id', 'like', "{$year}{$programCode}%")
+            ->orderBy('student_id', 'desc')
+            ->first();
+
+        if ($lastStudent && $lastStudent->student_id) {
+            $lastNumber = (int) substr($lastStudent->student_id, -4);
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return $year . $programCode . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get the next available student ID (for preview)
+     */
+    public static function getNextStudentId(?int $programId = null): string
+    {
+        return self::generateStudentId($programId);
+    }
+
+    /**
+     * Boot method to auto-generate student_id if not provided
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($student) {
+            if (empty($student->student_id)) {
+                $student->student_id = self::generateStudentId($student->program_id);
+            }
+        });
     }
 }

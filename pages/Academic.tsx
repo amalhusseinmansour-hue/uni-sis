@@ -32,7 +32,7 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
   const location = useLocation();
 
   const initialTab = (location.state as any)?.tab === 'register' ? 'register' : 'record';
-  const [activeTab, setActiveTab] = useState<'record' | 'register' | 'grades' | 'plan' | 'requests'>(initialTab as any);
+  const [activeTab, setActiveTab] = useState<'record' | 'register' | 'grades' | 'plan'>(initialTab as any);
 
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
@@ -232,7 +232,6 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
     { id: 'grades', label: t.myGrades[lang], icon: Award },
     { id: 'plan', label: t.studyPlan[lang], icon: Target },
     { id: 'register', label: t.registration[lang], icon: PlusCircle },
-    { id: 'requests', label: t.requests[lang], icon: FileText },
   ];
 
   if (loading) {
@@ -471,7 +470,7 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
                       <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{lang === 'ar' ? 'النصفي' : 'Midterm'} (40)</th>
                       <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{lang === 'ar' ? 'النهائي' : 'Final'} (40)</th>
                       <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{lang === 'ar' ? 'المجموع' : 'Total'}</th>
-                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.grade[lang]}</th>
+                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{lang === 'ar' ? 'التقدير' : 'Grade'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -907,67 +906,6 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Requests Tab */}
-      {activeTab === 'requests' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-slate-800">{t.requests[lang]}</h2>
-              <p className="text-slate-500">{lang === 'ar' ? 'إدارة طلباتك الأكاديمية' : 'Manage your academic requests'}</p>
-            </div>
-            <Button icon={Plus} onClick={() => setShowRequestModal(true)}>
-              {t.createRequest[lang]}
-            </Button>
-          </div>
-
-          <Card>
-            <CardBody noPadding>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.requestType[lang]}</th>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.date[lang]}</th>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.comments[lang]}</th>
-                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.actions[lang]}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {requests.map((req) => (
-                      <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium text-slate-800">{req.requestType}</span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-slate-500">{req.date}</td>
-                        <td className="p-4">
-                          <StatusBadge
-                            status={req.status === 'COMPLETED' ? 'completed' : req.status === 'REJECTED' ? 'rejected' : 'pending'}
-                          />
-                        </td>
-                        <td className="p-4 text-slate-500">{req.comments || '-'}</td>
-                        <td className="p-4 text-center">
-                          <IconButton
-                            icon={Eye}
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRequest(req);
-                              setShowRequestDetailsModal(true);
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
 
       {/* Course Details Modal */}
       <Modal

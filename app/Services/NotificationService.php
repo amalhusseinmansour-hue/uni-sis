@@ -459,8 +459,8 @@ class NotificationService
             $user,
             "Welcome to VERTIX University",
             "مرحباً بك في جامعة فيرتكس",
-            "Welcome to the Student Information System. Explore your dashboard to get started.",
-            "مرحباً بك في نظام معلومات الطلاب. استكشف لوحة التحكم للبدء.",
+            "Welcome to VERTIX University. Learn from anywhere, lead everywhere! Explore your dashboard to get started.",
+            "مرحباً بك في جامعة فيرتكس. تعلم من أي مكان وكن قائداً في كل مكان! استكشف لوحة التحكم للبدء.",
             'SUCCESS',
             'sparkles',
             '/'

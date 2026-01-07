@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +26,7 @@ import DynamicDashboard from '../components/DynamicDashboard';
 import { useConfig } from '../context/ConfigContext';
 import { LMSSummaryCard } from '../components/LMSWidgets';
 import useLMSData from '../hooks/useLMSData';
+import { useBranding } from '../context/BrandingContext';
 
 interface DashboardProps {
   lang: 'en' | 'ar';
@@ -41,6 +42,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   const t = TRANSLATIONS;
   const navigate = useNavigate();
   const { state: configState } = useConfig();
+  const { branding } = useBranding();
+
+  // Currency formatting helper
+  const formatCurrency = (amount: number) => {
+    const symbol = branding?.currencySymbol || '$';
+    const position = branding?.currencyPosition || 'before';
+    const formattedAmount = Math.abs(amount).toLocaleString();
+    return position === 'before'
+      ? `${symbol}${formattedAmount}`
+      : `${formattedAmount} ${symbol}`;
+  };
 
   const [student, setStudent] = useState<any>(currentUser);
   const [enrollments, setEnrollments] = useState<any[]>([]);
@@ -96,7 +108,14 @@ const Dashboard: React.FC<DashboardProps> = ({
             } catch (profileError) {
               console.warn('Could not fetch profile, using current user data:', profileError);
             }
-            setStudent({ ...currentUser, ...studentData });
+            // Merge data and ensure name comes from student record (name_en) if available
+            const mergedStudent = {
+              ...currentUser,
+              ...studentData,
+              // Use student's name_en if available, otherwise fall back to user's name
+              name: studentData.name_en || studentData.name || currentUser.student?.name_en || currentUser.name,
+            };
+            setStudent(mergedStudent);
 
             // Fetch student-specific data in parallel with individual error handling
             const [enrollmentsData, financialData, timetableData, gradesData] = await Promise.all([
@@ -214,64 +233,25 @@ const Dashboard: React.FC<DashboardProps> = ({
     });
   };
 
-  // Default schedule events (fallback)
-  const defaultScheduleEvents = [
-    { id: '1', title: 'CS101', titleAr: 'علوم حاسب 101', instructor: 'Dr. Smith', location: 'Room 201', startTime: '09:00', endTime: '10:30', day: 1, color: 'bg-blue-500 text-white', type: 'lecture' as const },
-    { id: '2', title: 'MATH201', titleAr: 'رياضيات 201', instructor: 'Dr. Ahmed', location: 'Room 305', startTime: '11:00', endTime: '12:30', day: 1, color: 'bg-green-500 text-white', type: 'lecture' as const },
-    { id: '3', title: 'CS101 Lab', titleAr: 'معمل علوم حاسب', instructor: 'Dr. Smith', location: 'Lab 102', startTime: '14:00', endTime: '16:00', day: 2, color: 'bg-purple-500 text-white', type: 'lab' as const },
-    { id: '4', title: 'PHYS101', titleAr: 'فيزياء 101', instructor: 'Dr. Hassan', location: 'Room 401', startTime: '09:00', endTime: '10:30', day: 3, color: 'bg-orange-500 text-white', type: 'lecture' as const },
-    { id: '5', title: 'ENG102', titleAr: 'انجليزي 102', instructor: 'Ms. White', location: 'Room 105', startTime: '13:00', endTime: '14:30', day: 4, color: 'bg-cyan-500 text-white', type: 'lecture' as const },
-  ];
+  // Use API data only (no demo fallback)
+  const displayScheduleEvents = scheduleEvents;
+  const displayAttendanceData = attendanceData;
+  const gpaProgressData = gpaHistory;
 
-  // Use API data or fallback to defaults
-  const displayScheduleEvents = scheduleEvents.length > 0 ? scheduleEvents : defaultScheduleEvents;
-
-  // Default attendance data (fallback)
-  const defaultAttendanceData = [
-    { name: 'CS101', present: 92, absent: 8 },
-    { name: 'MATH201', present: 88, absent: 12 },
-    { name: 'PHYS101', present: 95, absent: 5 },
-    { name: 'ENG102', present: 85, absent: 15 },
-  ];
-
-  // Use API data or fallback
-  const displayAttendanceData = attendanceData.length > 0 ? attendanceData : defaultAttendanceData;
-
-  // Default GPA progress data (fallback)
-  const defaultGpaProgressData = [
-    { semester: 'Fall 22', gpa: 3.2 },
-    { semester: 'Spring 23', gpa: 3.4 },
-    { semester: 'Fall 23', gpa: 3.55 },
-    { semester: 'Spring 24', gpa: 3.7 },
-  ];
-
-  // Use API data or fallback
-  const gpaProgressData = gpaHistory.length > 0 ? gpaHistory : defaultGpaProgressData;
+  // Credit distribution - using real data from student profile
+  const completedCredits = student.completedCredits || 0;
+  const currentCredits = enrollments.reduce((sum: number, e: any) => sum + (e.credits || e.course?.credits || 0), 0);
+  const totalRequired = student.totalRequiredCredits || 130;
+  const remainingCredits = Math.max(0, totalRequired - completedCredits - currentCredits);
 
   const creditDistribution = [
-    { name: lang === 'ar' ? 'مكتمل' : 'Completed', value: student.completedCredits || 45, color: '#3b82f6' },
-    { name: lang === 'ar' ? 'مسجل حالياً' : 'Current', value: 15, color: '#8b5cf6' },
-    { name: lang === 'ar' ? 'متبقي' : 'Remaining', value: (student.totalRequiredCredits || 130) - (student.completedCredits || 45) - 15, color: '#e2e8f0' },
+    { name: lang === 'ar' ? 'مكتمل' : 'Completed', value: completedCredits, color: '#3b82f6' },
+    { name: lang === 'ar' ? 'مسجل حالياً' : 'Current', value: currentCredits, color: '#8b5cf6' },
+    { name: lang === 'ar' ? 'متبقي' : 'Remaining', value: remainingCredits, color: '#e2e8f0' },
   ];
 
-  const weeklyActivityData = [
-    { day: lang === 'ar' ? 'أحد' : 'Sun', hours: 4 },
-    { day: lang === 'ar' ? 'إثنين' : 'Mon', hours: 6 },
-    { day: lang === 'ar' ? 'ثلاثاء' : 'Tue', hours: 5 },
-    { day: lang === 'ar' ? 'أربعاء' : 'Wed', hours: 7 },
-    { day: lang === 'ar' ? 'خميس' : 'Thu', hours: 3 },
-    { day: lang === 'ar' ? 'جمعة' : 'Fri', hours: 2 },
-    { day: lang === 'ar' ? 'سبت' : 'Sat', hours: 4 },
-  ];
-
-  const admissionTrendData = [
-    { month: 'Jan', applications: 120, approved: 95 },
-    { month: 'Feb', applications: 150, approved: 120 },
-    { month: 'Mar', applications: 180, approved: 145 },
-    { month: 'Apr', applications: 200, approved: 165 },
-    { month: 'May', applications: 170, approved: 140 },
-    { month: 'Jun', applications: 220, approved: 185 },
-  ];
+  // Admin trend data from API stats or empty
+  const admissionTrendData = dashboardStats?.admissionTrend || [];
 
   // Quick Actions
   const studentQuickActions = [
@@ -289,15 +269,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     { icon: Activity, label: lang === 'ar' ? 'الطلبات الأكاديمية' : 'Requests', color: 'bg-indigo-500', path: '/requests' },
   ];
 
-  // Default upcoming events (fallback)
-  const defaultUpcomingEvents = [
-    { id: '1', title: lang === 'ar' ? 'اختبار نصفي - CS101' : 'Midterm Exam - CS101', date: '2024-03-15', type: 'exam' },
-    { id: '2', title: lang === 'ar' ? 'تسليم مشروع' : 'Project Submission', date: '2024-03-18', type: 'assignment' },
-    { id: '3', title: lang === 'ar' ? 'نهاية التسجيل' : 'Registration Deadline', date: '2024-03-20', type: 'deadline' },
-  ];
-
-  // Use API data or fallback
-  const displayUpcomingEvents = upcomingEvents.length > 0 ? upcomingEvents : defaultUpcomingEvents;
+  // Use API data only (no demo fallback)
+  const displayUpcomingEvents = upcomingEvents;
 
   // Loading State
   if (loading) {
@@ -330,9 +303,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <GraduationCap className="w-4 h-4" />
                 {student.major}
               </span>
-              <span>•</span>
+              <span>â€¢</span>
               <span>{t.level[lang]} {student.level}</span>
-              <span>•</span>
+              <span>â€¢</span>
               <span>{student.currentSemester || 'Spring 2024'}</span>
             </div>
           </div>
@@ -356,11 +329,17 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">{t.gpa[lang]}</p>
-                <p className="text-3xl font-bold text-slate-800">{student.gpa?.toFixed(2) || '3.55'}</p>
-                <div className="flex items-center gap-1 mt-2 text-sm text-green-600">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>+0.15</span>
-                </div>
+                <p className="text-3xl font-bold text-slate-800">{student.gpa?.toFixed(2) || '--'}</p>
+                {gpaHistory.length >= 2 && (
+                  <div className={`flex items-center gap-1 mt-2 text-sm ${
+                    gpaHistory[gpaHistory.length - 1]?.gpa > gpaHistory[gpaHistory.length - 2]?.gpa
+                      ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {gpaHistory[gpaHistory.length - 1]?.gpa > gpaHistory[gpaHistory.length - 2]?.gpa
+                      ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    <span>{((gpaHistory[gpaHistory.length - 1]?.gpa || 0) - (gpaHistory[gpaHistory.length - 2]?.gpa || 0)).toFixed(2)}</span>
+                  </div>
+                )}
               </div>
               <div className="p-3 bg-gradient-to-br from-green-400 to-green-600 rounded-xl text-white">
                 <Award className="w-6 h-6" />
@@ -375,14 +354,14 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">{t.credits[lang]}</p>
-                <p className="text-3xl font-bold text-slate-800">{student.completedCredits || 45}</p>
-                <p className="text-sm text-slate-400 mt-2">/ {student.totalRequiredCredits || 130} {lang === 'ar' ? 'ساعة' : 'credits'}</p>
+                <p className="text-3xl font-bold text-slate-800">{completedCredits || '--'}</p>
+                <p className="text-sm text-slate-400 mt-2">/ {totalRequired} {lang === 'ar' ? 'ساعة' : 'credits'}</p>
               </div>
               <div className="p-3 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl text-white">
                 <BookOpen className="w-6 h-6" />
               </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600" style={{ width: `${((student.completedCredits || 45) / (student.totalRequiredCredits || 130)) * 100}%` }}></div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600" style={{ width: `${completedCredits > 0 ? (completedCredits / totalRequired) * 100 : 0}%` }}></div>
           </CardBody>
         </Card>
 
@@ -391,14 +370,20 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">{t.balance[lang]}</p>
-                <p className={`text-3xl font-bold ${(student.currentBalance || -450) < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {Math.abs(student.currentBalance || 450)} SAR
-                </p>
-                <p className="text-sm text-slate-400 mt-2">
-                  {(student.currentBalance || -450) < 0 ? (lang === 'ar' ? 'مستحق' : 'Due') : (lang === 'ar' ? 'رصيد' : 'Credit')}
-                </p>
+                {financials ? (
+                  <>
+                    <p className={`text-3xl font-bold ${(financials.balance || 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {formatCurrency(financials.balance || 0)}
+                    </p>
+                    <p className="text-sm text-slate-400 mt-2">
+                      {(financials.balance || 0) < 0 ? (lang === 'ar' ? 'مستحق' : 'Due') : (lang === 'ar' ? 'رصيد' : 'Credit')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-3xl font-bold text-slate-400">--</p>
+                )}
               </div>
-              <div className={`p-3 rounded-xl text-white ${(student.currentBalance || -450) < 0 ? 'bg-gradient-to-br from-red-400 to-red-600' : 'bg-gradient-to-br from-green-400 to-green-600'}`}>
+              <div className={`p-3 rounded-xl text-white ${!financials || (financials.balance || 0) < 0 ? 'bg-gradient-to-br from-red-400 to-red-600' : 'bg-gradient-to-br from-green-400 to-green-600'}`}>
                 <CreditCard className="w-6 h-6" />
               </div>
             </div>
@@ -410,11 +395,19 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">{t.attendance[lang]}</p>
-                <p className="text-3xl font-bold text-slate-800">92%</p>
-                <div className="flex items-center gap-1 mt-2 text-sm text-green-600">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>{lang === 'ar' ? 'ممتاز' : 'Excellent'}</span>
-                </div>
+                {displayAttendanceData.length > 0 ? (
+                  <>
+                    <p className="text-3xl font-bold text-slate-800">
+                      {Math.round(displayAttendanceData.reduce((sum, a) => sum + a.present, 0) / displayAttendanceData.length)}%
+                    </p>
+                    <div className="flex items-center gap-1 mt-2 text-sm text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>{lang === 'ar' ? 'جيد' : 'Good'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-3xl font-bold text-slate-400">--</p>
+                )}
               </div>
               <div className="p-3 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl text-white">
                 <UserCheck className="w-6 h-6" />
@@ -456,25 +449,31 @@ const Dashboard: React.FC<DashboardProps> = ({
               iconColor="text-green-600 bg-green-50"
             />
             <CardBody>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <AreaChart data={gpaProgressData}>
-                    <defs>
-                      <linearGradient id="gpaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="semester" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                    <YAxis domain={[0, 4]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
-                    />
-                    <Area type="monotone" dataKey="gpa" stroke="#3b82f6" strokeWidth={3} fill="url(#gpaGradient)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {gpaProgressData.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                    <AreaChart data={gpaProgressData}>
+                      <defs>
+                        <linearGradient id="gpaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="semester" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <YAxis domain={[0, 4]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                      />
+                      <Area type="monotone" dataKey="gpa" stroke="#3b82f6" strokeWidth={3} fill="url(#gpaGradient)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                  {lang === 'ar' ? 'لا توجد بيانات للمعدل' : 'No GPA data available'}
+                </div>
+              )}
             </CardBody>
           </Card>
 
@@ -486,17 +485,23 @@ const Dashboard: React.FC<DashboardProps> = ({
               iconColor="text-blue-600 bg-blue-50"
             />
             <CardBody>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <BarChart data={displayAttendanceData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="#94a3b8" width={60} />
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-                    <Bar dataKey="present" fill="#22c55e" radius={[0, 4, 4, 0]} name={lang === 'ar' ? 'حضور' : 'Present'} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {displayAttendanceData.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                    <BarChart data={displayAttendanceData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="#94a3b8" width={60} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                      <Bar dataKey="present" fill="#22c55e" radius={[0, 4, 4, 0]} name={lang === 'ar' ? 'حضور' : 'Present'} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                  {lang === 'ar' ? 'لا توجد بيانات للحضور' : 'No attendance data available'}
+                </div>
+              )}
             </CardBody>
           </Card>
 
@@ -569,7 +574,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             />
             <CardBody className="p-0">
               <div className="divide-y divide-slate-100">
-                {displayUpcomingEvents.map((event, index) => (
+                {displayUpcomingEvents.length > 0 ? displayUpcomingEvents.map((event, index) => (
                   <div key={event.id || index} className="p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
                     <div className={`w-2 h-2 rounded-full ${
                       event.type === 'exam' ? 'bg-red-500' :
@@ -580,7 +585,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                       <p className="text-xs text-slate-500">{event.date}</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-6 text-center text-slate-400 text-sm">
+                    {lang === 'ar' ? 'لا توجد أحداث قادمة' : 'No upcoming events'}
+                  </div>
+                )}
               </div>
             </CardBody>
           </Card>
@@ -612,7 +621,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-800">{lang === 'en' ? course.name_en : course.name_ar}</h4>
-                    <p className="text-sm text-slate-500">{course.code} • {course.instructor || course.instructor_name}</p>
+                    <p className="text-sm text-slate-500">{course.code} â€¢ {course.instructor || course.instructor_name}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -653,7 +662,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </Badge>
                     </div>
                     <p className="text-sm text-slate-600 mb-2">{ann.content}</p>
-                    <p className="text-xs text-slate-400">{ann.date} • {ann.sender}</p>
+                    <p className="text-xs text-slate-400">{ann.date} â€¢ {ann.sender}</p>
                   </div>
                 </div>
               </div>
@@ -686,31 +695,31 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title={t.totalStudents[lang]}
-          value="5,420"
-          subtitle="+125 this month"
+          value={dashboardStats?.totalStudents?.toString() || '--'}
+          subtitle={dashboardStats?.newStudentsThisMonth ? `+${dashboardStats.newStudentsThisMonth} ${lang === 'ar' ? 'هذا الشهر' : 'this month'}` : ''}
           icon={Users}
           iconColor="text-blue-600 bg-blue-50"
-          trend={{ value: 12, isPositive: true }}
+          trend={dashboardStats?.studentGrowth ? { value: dashboardStats.studentGrowth, isPositive: dashboardStats.studentGrowth > 0 } : undefined}
         />
         <StatCard
           title={t.pendingApps[lang]}
           value={applications.filter(a => a.status === 'PENDING').length.toString()}
-          subtitle="Needs review"
+          subtitle={lang === 'ar' ? 'بحاجة للمراجعة' : 'Needs review'}
           icon={FileText}
           iconColor="text-orange-600 bg-orange-50"
         />
         <StatCard
           title={t.monthlyRevenue[lang]}
-          value="$125,000"
-          subtitle="This month"
+          value={dashboardStats?.monthlyRevenue ? formatCurrency(dashboardStats.monthlyRevenue) : '--'}
+          subtitle={lang === 'ar' ? 'هذا الشهر' : 'This month'}
           icon={DollarSign}
           iconColor="text-green-600 bg-green-50"
-          trend={{ value: 8, isPositive: true }}
+          trend={dashboardStats?.revenueGrowth ? { value: dashboardStats.revenueGrowth, isPositive: dashboardStats.revenueGrowth > 0 } : undefined}
         />
         <StatCard
           title={lang === 'ar' ? 'المساقات النشطة' : 'Active Courses'}
-          value="156"
-          subtitle="Spring 2024"
+          value={dashboardStats?.activeCourses?.toString() || courses.length.toString() || '--'}
+          subtitle={dashboardStats?.currentSemester || ''}
           icon={BookOpen}
           iconColor="text-purple-600 bg-purple-50"
         />
@@ -725,18 +734,24 @@ const Dashboard: React.FC<DashboardProps> = ({
             iconColor="text-blue-600 bg-blue-50"
           />
           <CardBody>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                <BarChart data={admissionTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-                  <Bar dataKey="applications" fill="#3b82f6" radius={[4, 4, 0, 0]} name={lang === 'ar' ? 'الطلبات' : 'Applications'} />
-                  <Bar dataKey="approved" fill="#22c55e" radius={[4, 4, 0, 0]} name={lang === 'ar' ? 'المقبولين' : 'Approved'} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {admissionTrendData.length > 0 ? (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                  <BarChart data={admissionTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                    <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                    <Bar dataKey="applications" fill="#3b82f6" radius={[4, 4, 0, 0]} name={lang === 'ar' ? 'الطلبات' : 'Applications'} />
+                    <Bar dataKey="approved" fill="#22c55e" radius={[4, 4, 0, 0]} name={lang === 'ar' ? 'المقبولين' : 'Approved'} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-72 flex items-center justify-center text-slate-400">
+                {lang === 'ar' ? 'لا توجد بيانات' : 'No data available'}
+              </div>
+            )}
           </CardBody>
         </Card>
 
@@ -754,7 +769,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           />
           <CardBody noPadding>
             <div className="divide-y divide-slate-100">
-              {applications.slice(0, 5).map((app) => (
+              {applications.length > 0 ? applications.slice(0, 5).map((app) => (
                 <div key={app.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                   <div>
                     <p className="font-semibold text-slate-800">{app.fullName}</p>
@@ -767,7 +782,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {app.status}
                   </Badge>
                 </div>
-              ))}
+              )) : (
+                <div className="p-8 text-center text-slate-500">
+                  {lang === 'ar' ? 'لا توجد طلبات' : 'No applications'}
+                </div>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -808,7 +827,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">{t.welcome[lang]}, {student.name}</h1>
-          <p className="text-slate-500">{lang === 'ar' ? 'إليك ملخص مساقاتك' : 'Here\'s your course summary'}</p>
+          <p className="text-slate-500">{lang === 'ar' ? 'Ø¥Ù„ÙŠÙƒ Ù…Ù„Ø®Øµ Ù…Ø³Ø§Ù‚Ø§ØªÙƒ' : 'Here\'s your course summary'}</p>
         </div>
         <Button icon={BookOpen} onClick={() => navigate('/lecturer')}>
           {t.manageGrades[lang]}
@@ -819,21 +838,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title={t.lecturerCourses[lang]}
-          value={courses.filter(c => c.instructor === 'Dr. Sarah Smith').length.toString()}
+          value={courses.length.toString() || '--'}
           icon={BookOpen}
           iconColor="text-blue-600 bg-blue-50"
         />
         <StatCard
           title={t.totalStudents[lang]}
-          value="85"
-          subtitle="Across all courses"
+          value={dashboardStats?.totalStudentsInCourses?.toString() || '--'}
+          subtitle={lang === 'ar' ? 'في جميع المساقات' : 'Across all courses'}
           icon={Users}
           iconColor="text-purple-600 bg-purple-50"
         />
         <StatCard
           title={t.assignmentsToGrade[lang]}
-          value="12"
-          subtitle="Pending review"
+          value={dashboardStats?.pendingAssignments?.toString() || '--'}
+          subtitle={lang === 'ar' ? 'بانتظار التقييم' : 'Pending review'}
           icon={FileText}
           iconColor="text-orange-600 bg-orange-50"
         />
@@ -847,18 +866,24 @@ const Dashboard: React.FC<DashboardProps> = ({
           iconColor="text-green-600 bg-green-50"
         />
         <CardBody>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-              <BarChart data={attendanceData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-                <Bar dataKey="present" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t.present[lang]} />
-                <Bar dataKey="absent" fill="#ef4444" radius={[4, 4, 0, 0]} name={t.absent[lang]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {attendanceData.length > 0 ? (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                <BarChart data={attendanceData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                  <Bar dataKey="present" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t.present[lang]} />
+                  <Bar dataKey="absent" fill="#ef4444" radius={[4, 4, 0, 0]} name={t.absent[lang]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-72 flex items-center justify-center text-slate-400">
+              {lang === 'ar' ? 'لا توجد بيانات' : 'No data available'}
+            </div>
+          )}
         </CardBody>
       </Card>
 
@@ -871,11 +896,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
         <CardBody noPadding>
           <div className="divide-y divide-slate-100">
-            {courses.filter(c => c.instructor === 'Dr. Sarah Smith').map((course) => (
+            {courses.length > 0 ? courses.map((course) => (
               <div key={course.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
-                    {course.code.slice(0, 2)}
+                    {(course.code || '').slice(0, 2)}
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-800">{lang === 'en' ? course.name_en : course.name_ar}</h4>
@@ -883,11 +908,15 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-slate-800">{course.enrolled}/{course.capacity}</p>
+                  <p className="font-semibold text-slate-800">{course.enrolled || 0}/{course.capacity || '--'}</p>
                   <p className="text-xs text-slate-500">{lang === 'ar' ? 'طالب مسجل' : 'Students'}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-slate-500">
+                {lang === 'ar' ? 'لا توجد مساقات' : 'No courses assigned'}
+              </div>
+            )}
           </div>
         </CardBody>
       </Card>
@@ -919,3 +948,10 @@ const Dashboard: React.FC<DashboardProps> = ({
 };
 
 export default Dashboard;
+
+
+
+
+
+
+

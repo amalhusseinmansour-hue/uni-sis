@@ -26,6 +26,7 @@ import Badge, { StatusBadge } from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Input, { Select, SearchInput, Textarea } from '../components/ui/Input';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { useBranding } from '../context/BrandingContext';
 
 interface FinanceProps {
   lang: 'en' | 'ar';
@@ -39,6 +40,19 @@ type StudentTab = 'overview' | 'payments' | 'scholarships';
 const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }) => {
   const t = TRANSLATIONS;
   const isStudent = role === UserRole.STUDENT;
+  const { branding } = useBranding();
+
+  // Currency formatting helper
+  const formatCurrency = (amount: number, withSign = false) => {
+    const symbol = branding?.currencySymbol || '$';
+    const position = branding?.currencyPosition || 'before';
+    const absAmount = Math.abs(amount);
+    const formattedAmount = absAmount.toLocaleString();
+    const sign = withSign && amount > 0 ? '+' : '';
+    return position === 'before'
+      ? `${sign}${symbol}${formattedAmount}`
+      : `${sign}${formattedAmount} ${symbol}`;
+  };
 
   const [student, setStudent] = useState<any>(initialStudent);
   const [financials, setFinancials] = useState<any[]>([]);
@@ -448,7 +462,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
               <div className="md:col-span-2">
                 <p className="text-slate-400 text-sm mb-2">{t.totalOutBalance[lang]}</p>
                 <div className="flex items-baseline gap-3">
-                  <h2 className="text-4xl md:text-5xl font-bold">{totalDue.toLocaleString()} SAR</h2>
+                  <h2 className="text-4xl md:text-5xl font-bold">{formatCurrency(totalDue)}</h2>
                   {totalDue > 0 && (
                     <Badge variant="danger" size="lg">
                       {lang === 'ar' ? 'مستحق' : 'Due'}
@@ -464,15 +478,15 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                 <div className="grid grid-cols-3 gap-4 mt-6">
                   <div className="bg-white/5 rounded-xl p-3">
                     <p className="text-slate-400 text-xs mb-1">{lang === 'ar' ? 'إجمالي الرسوم' : 'Total Fees'}</p>
-                    <p className="text-lg font-bold">{totalFees.toLocaleString()} SAR</p>
+                    <p className="text-lg font-bold">{formatCurrency(totalFees)}</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3">
                     <p className="text-slate-400 text-xs mb-1">{lang === 'ar' ? 'المدفوع' : 'Paid'}</p>
-                    <p className="text-lg font-bold text-green-400">{totalPaid.toLocaleString()} SAR</p>
+                    <p className="text-lg font-bold text-green-400">{formatCurrency(totalPaid)}</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3">
                     <p className="text-slate-400 text-xs mb-1">{lang === 'ar' ? 'المنح' : 'Scholarships'}</p>
-                    <p className="text-lg font-bold text-purple-400">{scholarshipsTotal.toLocaleString()} SAR</p>
+                    <p className="text-lg font-bold text-purple-400">{formatCurrency(scholarshipsTotal)}</p>
                   </div>
                 </div>
               </div>
@@ -491,8 +505,8 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                     ></div>
                   </div>
                   <div className="flex justify-between text-xs text-slate-400 mt-2">
-                    <span>0 SAR</span>
-                    <span>{totalFees.toLocaleString()} SAR</span>
+                    <span>{formatCurrency(0)}</span>
+                    <span>{formatCurrency(totalFees)}</span>
                   </div>
                 </div>
               </div>
@@ -561,7 +575,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
                         <span className="text-sm text-slate-600">{item.name}</span>
                       </div>
-                      <span className="font-semibold text-slate-800">{item.value.toLocaleString()} SAR</span>
+                      <span className="font-semibold text-slate-800">{formatCurrency(item.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -641,7 +655,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                       </td>
                       <td className="p-4">
                         <span className={`font-bold ${record.type === 'CREDIT' ? 'text-green-600' : 'text-slate-800'}`}>
-                          {record.type === 'CREDIT' ? '+' : ''}{record.amount.toLocaleString()} SAR
+                          {record.type === 'CREDIT' ? '+' : ''}{formatCurrency(record.amount)}
                         </span>
                       </td>
                       <td className="p-4">
@@ -686,7 +700,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
               />
               <StatCard
                 title={lang === 'ar' ? 'المبلغ المتبقي' : 'Amount Remaining'}
-                value={`${paymentPlans.reduce((sum, p) => sum + p.installments.filter(i => i.status !== 'PAID').reduce((s, i) => s + (i.amount - i.paid_amount), 0), 0).toLocaleString()} SAR`}
+                value={formatCurrency(paymentPlans.reduce((sum, p) => sum + p.installments.filter(i => i.status !== 'PAID').reduce((s, i) => s + (i.amount - i.paid_amount), 0), 0))}
                 icon={DollarSign}
                 iconColor="text-red-600 bg-red-50 dark:bg-red-900/30"
               />
@@ -713,11 +727,11 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
                       <div>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'إجمالي المبلغ' : 'Total Amount'}</p>
-                        <p className="text-lg font-bold text-slate-800 dark:text-white">{plan.total_amount.toLocaleString()} SAR</p>
+                        <p className="text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(plan.total_amount)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'الدفعة المقدمة' : 'Down Payment'}</p>
-                        <p className="text-lg font-bold text-slate-800 dark:text-white">{plan.down_payment.toLocaleString()} SAR</p>
+                        <p className="text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(plan.down_payment)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'عدد الأقساط' : 'Installments'}</p>
@@ -778,7 +792,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                                 </span>
                               </td>
                               <td className="p-3">
-                                <span className="font-bold text-slate-800 dark:text-white">{installment.amount.toLocaleString()} SAR</span>
+                                <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(installment.amount)}</span>
                                 {installment.paid_amount > 0 && installment.paid_amount < installment.amount && (
                                   <span className="text-xs text-green-600 dark:text-green-400 block">
                                     ({lang === 'ar' ? 'مدفوع' : 'Paid'}: {installment.paid_amount.toLocaleString()})
@@ -856,7 +870,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
               />
               <StatCard
                 title={lang === 'ar' ? 'إجمالي المستلم' : 'Total Received'}
-                value={`${myScholarships.reduce((sum, s) => sum + s.total_disbursed, 0).toLocaleString()} SAR`}
+                value={formatCurrency(myScholarships.reduce((sum, s) => sum + s.total_disbursed, 0))}
                 icon={DollarSign}
                 iconColor="text-green-600 bg-green-50 dark:bg-green-900/30"
               />
@@ -899,11 +913,11 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
                               <div>
                                 <p className="text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'إجمالي المنحة' : 'Total Awarded'}</p>
-                                <p className="font-semibold text-slate-800 dark:text-white">{ss.total_awarded.toLocaleString()} SAR</p>
+                                <p className="font-semibold text-slate-800 dark:text-white">{formatCurrency(ss.total_awarded)}</p>
                               </div>
                               <div>
                                 <p className="text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'المصروف' : 'Disbursed'}</p>
-                                <p className="font-semibold text-green-600 dark:text-green-400">{ss.total_disbursed.toLocaleString()} SAR</p>
+                                <p className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(ss.total_disbursed)}</p>
                               </div>
                               <div>
                                 <p className="text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'فصل البداية' : 'Start Semester'}</p>
@@ -1027,7 +1041,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
           <div className="space-y-4">
             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
               <p className="text-sm text-blue-600 mb-1">{t.amountToPay[lang]}</p>
-              <p className="text-3xl font-bold text-blue-700">{totalDue.toLocaleString()} SAR</p>
+              <p className="text-3xl font-bold text-blue-700">{formatCurrency(totalDue)}</p>
             </div>
 
             <Input label={t.cardNumber[lang]} placeholder="0000 0000 0000 0000" icon={CreditCard} />
@@ -1083,7 +1097,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-blue-600 dark:text-blue-400">{lang === 'ar' ? 'المبلغ المستحق' : 'Amount Due'}</span>
                   <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    {(selectedInstallment.amount - selectedInstallment.paid_amount).toLocaleString()} SAR
+                    {formatCurrency(selectedInstallment.amount - selectedInstallment.paid_amount)}
                   </span>
                 </div>
               </div>
@@ -1307,7 +1321,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                   <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `${v / 1000}k`} />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
-                    formatter={(value: number) => [`${value.toLocaleString()} SAR`, lang === 'ar' ? 'الإيرادات' : 'Revenue']}
+                    formatter={(value: number) => [formatCurrency(value), lang === 'ar' ? 'الإيرادات' : 'Revenue']}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={3} fill="url(#revenueGradient)" />
                 </AreaChart>
@@ -1400,7 +1414,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                     <td className="p-4 text-sm text-slate-600">{record.description}</td>
                     <td className="p-4">
                       <span className={`font-bold ${record.type === 'CREDIT' ? 'text-green-600' : 'text-slate-800'}`}>
-                        {record.amount.toLocaleString()} SAR
+                        {formatCurrency(record.amount)}
                       </span>
                     </td>
                     <td className="p-4">
@@ -1498,7 +1512,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                       <span className="text-sm font-medium text-slate-700">{item.range}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-slate-800">{item.amount.toLocaleString()} SAR</span>
+                      <span className="text-sm font-bold text-slate-800">{formatCurrency(item.amount)}</span>
                       <span className="text-xs text-slate-500 ml-2">({item.count} {lang === 'ar' ? 'طالب' : 'students'})</span>
                     </div>
                   </div>
@@ -1518,7 +1532,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-700">{lang === 'ar' ? 'الإجمالي' : 'Total'}</span>
                 <span className="text-xl font-bold text-slate-800">
-                  {receivablesAgingData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()} SAR
+                  {formatCurrency(receivablesAgingData.reduce((sum, item) => sum + item.amount, 0))}
                 </span>
               </div>
             </div>
@@ -1541,7 +1555,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                   <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `${v / 1000}k`} />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
-                    formatter={(value: number) => [`${value.toLocaleString()} SAR`]}
+                    formatter={(value: number) => [formatCurrency(value)]}
                   />
                   <Bar dataKey="collected" fill="#22c55e" radius={[4, 4, 0, 0]} name={lang === 'ar' ? 'المحصّل' : 'Collected'} />
                   <Bar dataKey="target" fill="#e2e8f0" radius={[4, 4, 0, 0]} name={lang === 'ar' ? 'المستهدف' : 'Target'} />
@@ -1607,7 +1621,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-bold text-slate-800">{program.amount.toLocaleString()} SAR</span>
+                        <span className="font-bold text-slate-800">{formatCurrency(program.amount)}</span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
@@ -1766,7 +1780,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                     </td>
                     <td className="p-4 text-sm text-slate-600">{invoice.description}</td>
                     <td className="p-4">
-                      <span className="font-bold text-slate-800">{invoice.amount.toLocaleString()} SAR</span>
+                      <span className="font-bold text-slate-800">{formatCurrency(invoice.amount)}</span>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -1930,7 +1944,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="font-bold text-red-600">{debtor.totalDue.toLocaleString()} SAR</span>
+                      <span className="font-bold text-red-600">{formatCurrency(debtor.totalDue)}</span>
                     </td>
                     <td className="p-4">
                       <Badge variant={debtor.overdueDays > 60 ? 'danger' : debtor.overdueDays > 30 ? 'warning' : 'info'}>
@@ -2096,7 +2110,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                       <span className="font-medium text-slate-800">{payment.student}</span>
                     </td>
                     <td className="p-4">
-                      <span className="font-bold text-green-600">+{payment.amount.toLocaleString()} SAR</span>
+                      <span className="font-bold text-green-600">+{formatCurrency(payment.amount)}</span>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -2168,7 +2182,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={lang === 'ar' ? 'المبلغ المعلق' : 'Pending Amount'}
-          value={`${adminPaymentPlans.reduce((sum, p) => sum + p.installments.filter(i => i.status !== 'PAID').reduce((s, i) => s + (i.amount - i.paid_amount), 0), 0).toLocaleString()} SAR`}
+          value={formatCurrency(adminPaymentPlans.reduce((sum, p) => sum + p.installments.filter(i => i.status !== 'PAID').reduce((s, i) => s + (i.amount - i.paid_amount), 0), 0))}
           icon={DollarSign}
           iconColor="text-amber-600 bg-amber-50"
         />
@@ -2247,7 +2261,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                           <p className="font-medium text-slate-800">{plan.student_id}</p>
                         </td>
                         <td className="p-4">
-                          <span className="font-bold text-slate-800">{plan.total_amount.toLocaleString()} SAR</span>
+                          <span className="font-bold text-slate-800">{formatCurrency(plan.total_amount)}</span>
                         </td>
                         <td className="p-4">
                           <span className="text-sm text-slate-600">{paidCount} / {plan.installments.length}</span>
@@ -2331,7 +2345,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={lang === 'ar' ? 'إجمالي المصروف' : 'Total Disbursed'}
-          value={`${allStudentScholarships.reduce((sum, s) => sum + s.total_disbursed, 0).toLocaleString()} SAR`}
+          value={formatCurrency(allStudentScholarships.reduce((sum, s) => sum + s.total_disbursed, 0))}
           icon={DollarSign}
           iconColor="text-blue-600 bg-blue-50"
         />
@@ -2411,7 +2425,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                         </div>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
-                        <span>{lang === 'ar' ? 'المبلغ:' : 'Amount:'} {ss.total_awarded.toLocaleString()} SAR</span>
+                        <span>{lang === 'ar' ? 'المبلغ:' : 'Amount:'} {formatCurrency(ss.total_awarded)}</span>
                         <span>{lang === 'ar' ? 'تاريخ التقديم:' : 'Applied:'} {ss.applied_date}</span>
                       </div>
                     </div>

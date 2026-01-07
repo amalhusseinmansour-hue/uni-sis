@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useConfig } from '../context/ConfigContext';
+import { useBranding } from '../context/BrandingContext';
 import { MenuItem as APIMenuItem } from '../api/config';
 
 interface SidebarProps {
@@ -148,7 +149,6 @@ const t = {
   advising: { en: 'Academic Advising', ar: 'الإرشاد الأكاديمي' },
   certificates: { en: 'Certificates', ar: 'الشهادات والوثائق' },
   academicStatus: { en: 'Academic Status', ar: 'الحالة الأكاديمية' },
-  lms: { en: 'Learning System', ar: 'نظام التعلم' },
   userManagement: { en: 'User Management', ar: 'إدارة المستخدمين' },
   branding: { en: 'Branding & Templates', ar: 'العلامة التجارية والقوالب' },
   rolesPermissions: { en: 'Roles & Permissions', ar: 'الأدوار والصلاحيات' },
@@ -172,6 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
   const { state: configState, loadConfig } = useConfig();
+  const { branding } = useBranding();
 
   const isRTL = lang === 'ar';
 
@@ -208,27 +209,27 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
             { to: '/academic?tab=grades', icon: Award, label: t.grades[lang] },
           ],
         },
-        { to: '/registration', icon: ClipboardList, label: t.registration[lang] },
         { to: '/requests', icon: FileText, label: t.academicRequests[lang] },
         { to: '/schedule', icon: Calendar, label: t.schedule[lang] },
         { to: '/exams', icon: FileText, label: t.exams[lang] },
         { to: '/attendance', icon: ClipboardList, label: t.attendance[lang] },
         { to: '/transcript', icon: FileText, label: t.transcript[lang] },
-        {
-          to: '/finance',
-          icon: CreditCard,
-          label: t.finance[lang],
-          children: [
-            { to: '/finance?tab=payments', icon: CreditCard, label: t.payments[lang] },
-            { to: '/finance?tab=invoices', icon: FileText, label: t.invoices[lang] },
-            { to: '/finance?tab=scholarships', icon: Award, label: t.scholarships[lang] },
-          ],
-        },
+        // Finance hidden temporarily
+        // {
+        //   to: '/finance',
+        //   icon: CreditCard,
+        //   label: t.finance[lang],
+        //   children: [
+        //     { to: '/finance?tab=payments', icon: CreditCard, label: t.payments[lang] },
+        //     { to: '/finance?tab=invoices', icon: FileText, label: t.invoices[lang] },
+        //     { to: '/finance?tab=scholarships', icon: Award, label: t.scholarships[lang] },
+        //   ],
+        // },
         { to: '/id-card', icon: CreditCard, label: t.idCard[lang] },
-        { to: '/advising', icon: Lightbulb, label: t.advising[lang] },
+        // Advising hidden temporarily
+        // { to: '/advising', icon: Lightbulb, label: t.advising[lang] },
         { to: '/certificates', icon: FileCheck, label: t.certificates[lang] },
         { to: '/academic-status', icon: AlertTriangle, label: t.academicStatus[lang] },
-        { to: '/lms', icon: BookMarked, label: t.lms[lang] },
         { to: '/profile', icon: User, label: t.profile[lang] },
         { to: '/support', icon: HelpCircle, label: t.support[lang] },
       ];
@@ -435,18 +436,24 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
         <div className="flex items-center justify-between h-20 px-4 border-b border-slate-700">
           {!isCollapsed ? (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
+              <img
+                src="/logo-white.png"
+                alt="Logo"
+                className="w-10 h-10 object-contain"
+              />
               <div>
-                <h1 className="text-lg font-bold text-white tracking-wide">VERTIX</h1>
-                <p className="text-xs text-slate-400">{isRTL ? 'نظام معلومات الطلاب' : 'Student Information System'}</p>
+                <h1 className="text-lg font-bold text-white tracking-wide">
+                  {isRTL ? (branding?.universityNameAr?.split(' ')[0] || 'VERTEX') : (branding?.universityName?.split(' ')[0] || 'VERTEX')}
+                </h1>
+                <p className="text-[10px] text-slate-400 leading-tight">تعلم من أي مكان وكن قائداً في كل مكان</p>
               </div>
             </div>
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30">
-              <GraduationCap className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src="/logo-white.png"
+              alt="Logo"
+              className="w-10 h-10 object-contain mx-auto"
+            />
           )}
 
           {/* Mobile Close Button */}
@@ -524,17 +531,20 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
             {!isCollapsed && <span>{t.settings[lang]}</span>}
           </NavLink>
 
-          <button
-            onClick={() => {
-              onLogout();
-              if (window.innerWidth < 768) onClose();
-            }}
-            className="flex items-center w-full px-4 py-2.5 text-red-400 hover:bg-slate-800 hover:text-red-300 rounded-lg transition-colors"
-            title={isCollapsed ? t.logout[lang] : undefined}
-          >
-            <LogOut className={`w-5 h-5 ${!isCollapsed ? 'me-3' : ''}`} />
-            {!isCollapsed && <span>{t.logout[lang]}</span>}
-          </button>
+          {/* Logout Button */}
+          <div className="border-t border-slate-700 pt-2 mt-2">
+            <button
+              onClick={() => {
+                onLogout();
+                if (window.innerWidth < 768) onClose();
+              }}
+              className="flex items-center w-full px-4 py-2.5 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors"
+              title={isCollapsed ? t.logout[lang] : undefined}
+            >
+              <LogOut className={`w-5 h-5 ${!isCollapsed ? 'me-3' : ''}`} />
+              {!isCollapsed && <span className="font-medium">{t.logout[lang]}</span>}
+            </button>
+          </div>
 
           {/* Collapse Toggle - Desktop Only */}
           <button

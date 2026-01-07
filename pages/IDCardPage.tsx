@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CreditCard, Download, QrCode, Printer, Share2, RefreshCw,
   Check, AlertCircle, User, GraduationCap, Calendar, Shield,
   Loader2, Camera, Building, Clock, CheckCircle, XCircle,
   Mail, Phone, MapPin, Hash, Award, BookOpen
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { idCardAPI, DigitalIdCard, downloadBlobAsFile } from '../api/idCard';
 import { brandingAPI, BrandingSettings } from '../api/branding';
 
@@ -26,7 +27,7 @@ const t: Record<string, { en: string; ar: string }> = {
   status: { en: 'Status', ar: 'الحالة' },
   validUntil: { en: 'Valid Until', ar: 'صالحة حتى' },
   issuedOn: { en: 'Issued On', ar: 'تاريخ الإصدار' },
-  downloadPdf: { en: 'Download PDF', ar: 'تحميل PDF' },
+  downloadPdf: { en: 'Download Card', ar: 'تحميل البطاقة' },
   printCard: { en: 'Print Card', ar: 'طباعة البطاقة' },
   shareCard: { en: 'Share', ar: 'مشاركة' },
   renewCard: { en: 'Request Renewal', ar: 'طلب تجديد' },
@@ -54,43 +55,114 @@ const t: Record<string, { en: string; ar: string }> = {
   verificationCode: { en: 'Verification Code', ar: 'رمز التحقق' },
 };
 
-// Default mock data for testing
-const defaultIdCard: DigitalIdCard = {
-  student: {
-    id: 1,
-    student_id: 'STU-2024-001',
-    name_en: 'Ahmed Mohammed Al-Mansour',
-    name_ar: 'أحمد محمد المنصور',
-    profile_picture_url: undefined,
-    status: 'ACTIVE',
-  },
-  program: {
-    name_en: 'Computer Science',
-    name_ar: 'علوم الحاسب',
-    degree: 'Bachelor',
-  },
-  academic: {
-    level: 3,
-    semester: 1,
-    gpa: 3.75,
-    academic_status: 'Good Standing',
-  },
-  validity: {
-    current_semester: {
-      name: 'Fall 2024',
-      name_ar: 'الفصل الأول 2024',
-      start_date: '2024-09-01',
-      end_date: '2025-01-15',
+// Helper function to generate dynamic dates for fallback data
+const generateDynamicDates = () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+
+  // Determine current semester based on month
+  // Fall: Sep-Jan (months 8-0), Spring: Feb-Jun (months 1-5), Summer: Jul-Aug (months 6-7)
+  let semesterName: string;
+  let semesterNameAr: string;
+  let semesterStart: string;
+  let semesterEnd: string;
+  let semesterNumber: number;
+  let academicYear: number;
+
+  if (currentMonth >= 8) {
+    // Fall semester (Sep-Jan)
+    semesterName = `Fall ${currentYear}`;
+    semesterNameAr = `الفصل الأول ${currentYear}`;
+    semesterStart = `${currentYear}-09-01`;
+    semesterEnd = `${currentYear + 1}-01-31`;
+    semesterNumber = 1;
+    academicYear = currentYear;
+  } else if (currentMonth >= 1 && currentMonth <= 5) {
+    // Spring semester (Feb-Jun)
+    semesterName = `Spring ${currentYear}`;
+    semesterNameAr = `الفصل الثاني ${currentYear}`;
+    semesterStart = `${currentYear}-02-01`;
+    semesterEnd = `${currentYear}-06-30`;
+    semesterNumber = 2;
+    academicYear = currentYear - 1;
+  } else if (currentMonth === 0) {
+    // January - still Fall semester from previous year
+    semesterName = `Fall ${currentYear - 1}`;
+    semesterNameAr = `الفصل الأول ${currentYear - 1}`;
+    semesterStart = `${currentYear - 1}-09-01`;
+    semesterEnd = `${currentYear}-01-31`;
+    semesterNumber = 1;
+    academicYear = currentYear - 1;
+  } else {
+    // Summer semester (Jul-Aug)
+    semesterName = `Summer ${currentYear}`;
+    semesterNameAr = `الفصل الصيفي ${currentYear}`;
+    semesterStart = `${currentYear}-07-01`;
+    semesterEnd = `${currentYear}-08-31`;
+    semesterNumber = 3;
+    academicYear = currentYear - 1;
+  }
+
+  // Issue date: start of current academic year (Sep 1)
+  const issueDate = `${academicYear}-09-01`;
+
+  // Expiry date: end of current academic year (Aug 31 next year) + buffer
+  const expiryDate = `${academicYear + 1}-08-31`;
+
+  return {
+    currentSemester: {
+      name: semesterName,
+      name_ar: semesterNameAr,
+      start_date: semesterStart,
+      end_date: semesterEnd,
     },
-    issue_date: '2024-09-01',
-    expiry_date: '2025-01-31',
-  },
-  verification: {
-    qr_data: 'STU-2024-001-VERIFY-2024',
-    barcode: 'UNI2024STU001',
-  },
-  needs_renewal: false,
+    issue_date: issueDate,
+    expiry_date: expiryDate,
+    semesterNumber,
+    academicYear,
+  };
 };
+
+// Default mock data for testing
+const getDefaultIdCard = (): DigitalIdCard => {
+  const dates = generateDynamicDates();
+
+  return {
+    student: {
+      id: 1,
+      student_id: `STU-${dates.academicYear}-001`,
+      name_en: 'Ahmed Mohammed Al-Mansour',
+      name_ar: 'أحمد محمد المنصور',
+      profile_picture_url: undefined,
+      status: 'ACTIVE',
+    },
+    program: {
+      name_en: 'Computer Science',
+      name_ar: 'علوم الحاسب',
+      degree: 'Bachelor',
+    },
+    academic: {
+      level: 3,
+      semester: dates.semesterNumber,
+      gpa: 3.75,
+      academic_status: 'Good Standing',
+    },
+    validity: {
+      current_semester: dates.currentSemester,
+      issue_date: dates.issue_date,
+      expiry_date: dates.expiry_date,
+    },
+    verification: {
+      qr_data: `STU-${dates.academicYear}-001-VERIFY-${dates.academicYear}`,
+      barcode: `UNI${dates.academicYear}STU001`,
+    },
+    needs_renewal: false,
+  };
+};
+
+// Get the default ID card with dynamic dates
+const defaultIdCard = getDefaultIdCard();
 
 const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
   const isRTL = lang === 'ar';
@@ -101,6 +173,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
   const [showBack, setShowBack] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [branding, setBranding] = useState<BrandingSettings | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Fetch branding settings and ID card data
   useEffect(() => {
@@ -144,25 +217,135 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
     }
   };
 
-  // Download PDF
+  // Download Card - Client-side generation
   const handleDownload = async () => {
     setDownloading(true);
     setNotification(null);
+
+    // Make sure we're showing the front of the card
+    const wasShowingBack = showBack;
+    if (wasShowingBack) {
+      setShowBack(false);
+    }
+
+    // Wait for React to re-render
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
-      const blob = await idCardAPI.downloadMyIdCard();
-      downloadBlobAsFile(blob, `university-id-card-${idCard?.student.student_id || 'card'}.pdf`);
+      // Find the card element using ref
+      const cardElement = cardRef.current;
+      if (!cardElement) {
+        console.error('Card element not found - cardRef is null');
+        throw new Error('Card element not found');
+      }
+
+      console.log('Card element found:', cardElement.className);
+
+      // Dynamically import html2canvas
+      const html2canvas = (await import('html2canvas')).default;
+
+      // Clone the element to avoid issues with transforms
+      const clone = cardElement.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.width = cardElement.offsetWidth + 'px';
+      clone.style.height = cardElement.offsetHeight + 'px';
+      clone.style.transform = 'none';
+      clone.style.borderRadius = '0';
+      document.body.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: true,
+        removeContainer: true,
+      });
+
+      document.body.removeChild(clone);
+
+      // Create download link for PNG image
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.download = `university-id-card-${idCard?.student.student_id || 'card'}.png`;
+      link.href = dataUrl;
+      link.click();
+
       setNotification({ type: 'success', message: t.downloadSuccess[lang] });
     } catch (err) {
       console.error('Error downloading ID card:', err);
       setNotification({ type: 'error', message: t.downloadError[lang] });
     } finally {
       setDownloading(false);
+      // Restore the previous view if needed
+      if (wasShowingBack) {
+        setShowBack(true);
+      }
     }
   };
 
-  // Print card
+  // Print card - open print dialog with card only
   const handlePrint = () => {
-    window.print();
+    const cardElement = cardRef.current;
+    if (!cardElement) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const cardHTML = cardElement.outerHTML;
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(el => el.outerHTML)
+      .join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="${lang === 'ar' ? 'rtl' : 'ltr'}">
+      <head>
+        <title>${t.pageTitle[lang]}</title>
+        ${styles}
+        <style>
+          body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f1f5f9;
+          }
+          .id-card-front, .id-card-print {
+            width: 340px !important;
+            height: auto !important;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          }
+          @media print {
+            body { background: white; padding: 0; }
+            .id-card-front, .id-card-print {
+              box-shadow: none;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${cardHTML}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              window.close();
+            }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // Share card
@@ -382,7 +565,8 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
               {/* Front Side */}
               {!showBack && (
                 <div
-                  className="id-card-print rounded-2xl shadow-2xl overflow-hidden"
+                  ref={cardRef}
+                  className="id-card-front id-card-print rounded-2xl shadow-2xl overflow-hidden"
                   style={{
                     aspectRatio: '1.586',
                     background: branding?.idCardTemplate === 'minimal'
@@ -504,13 +688,17 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
               {showBack && (
                 <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl shadow-2xl overflow-hidden"
                      style={{ aspectRatio: '1.586' }}>
-                  <div className="h-full flex flex-col items-center justify-center p-6">
+                  <div className="h-full flex flex-col items-center justify-center p-6 relative">
                     {/* QR Code */}
                     {branding?.showQRCode !== false && (
                       <div className="bg-white p-4 rounded-xl shadow-lg mb-4">
-                        <div className="w-32 h-32 bg-slate-100 rounded-lg flex items-center justify-center">
-                          <QrCode className="w-24 h-24" style={{ color: branding?.idCardPrimaryColor || '#1e293b' }} />
-                        </div>
+                        <QRCodeSVG
+                          value={card.verification?.qr_data || `https://sistest.vertexuniversity.edu.eu/#/id-card`}
+                          size={128}
+                          level="H"
+                          fgColor={branding?.idCardPrimaryColor || '#1e293b'}
+                          bgColor="#ffffff"
+                        />
                       </div>
                     )}
                     <p className="text-slate-600 text-sm text-center mb-4">{t.scanQr[lang]}</p>
@@ -519,11 +707,11 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                     {branding?.showBarcode !== false && (
                       <div className="bg-white px-6 py-3 rounded-lg shadow">
                         <div className="flex gap-0.5 mb-1 justify-center">
-                          {Array.from({ length: 30 }).map((_, i) => (
+                          {card.verification.barcode.split('').map((char, i) => (
                             <div
                               key={i}
                               style={{
-                                width: Math.random() > 0.5 ? '2px' : '1px',
+                                width: parseInt(char, 36) % 2 === 0 ? '2px' : '1px',
                                 height: '30px',
                                 backgroundColor: branding?.idCardPrimaryColor || '#1e293b'
                               }}

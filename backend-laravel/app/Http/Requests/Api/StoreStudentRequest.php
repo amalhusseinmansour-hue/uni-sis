@@ -17,7 +17,7 @@ class StoreStudentRequest extends FormRequest
             'user_id' => 'nullable|exists:users,id',
             'program_id' => 'required|exists:programs,id',
             'advisor_id' => 'nullable|exists:advisors,id',
-            'student_id' => 'required|string|unique:students,student_id',
+            'student_id' => 'nullable|string|unique:students,student_id',
             'name_ar' => 'required|string|max:255',
             'name_en' => 'required|string|max:255',
             'status' => 'required|in:ACTIVE,INACTIVE,GRADUATED,SUSPENDED,WITHDRAWN',
