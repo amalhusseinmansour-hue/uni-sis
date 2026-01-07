@@ -443,7 +443,7 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
               />
               <div>
                 <h1 className="text-lg font-bold text-white tracking-wide">
-                  {isRTL ? (branding?.universityNameAr?.split(' ')[0] || 'VERTEX') : (branding?.universityName?.split(' ')[0] || 'VERTEX')}
+                  {isRTL ? (branding?.universityNameAr || 'جامعة فيرتكس') : (branding?.universityName || 'VERTEX UNIVERSITY')}
                 </h1>
                 <p className="text-[10px] text-slate-400 leading-tight">تعلم من أي مكان وكن قائداً في كل مكان</p>
               </div>
