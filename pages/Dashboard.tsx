@@ -303,9 +303,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <GraduationCap className="w-4 h-4" />
                 {student.major}
               </span>
-              <span>â€¢</span>
               <span>{t.level[lang]} {student.level}</span>
-              <span>â€¢</span>
               <span>{student.currentSemester || 'Spring 2024'}</span>
             </div>
           </div>
@@ -621,7 +619,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-800">{lang === 'en' ? course.name_en : course.name_ar}</h4>
-                    <p className="text-sm text-slate-500">{course.code} â€¢ {course.instructor || course.instructor_name}</p>
+                    <p className="text-sm text-slate-500">{course.code} - {course.instructor || course.instructor_name}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -662,7 +660,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </Badge>
                     </div>
                     <p className="text-sm text-slate-600 mb-2">{ann.content}</p>
-                    <p className="text-xs text-slate-400">{ann.date} â€¢ {ann.sender}</p>
+                    <p className="text-xs text-slate-400">{ann.date} - {ann.sender}</p>
                   </div>
                 </div>
               </div>
