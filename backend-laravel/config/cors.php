@@ -29,9 +29,16 @@ return [
     | Example: CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
     |
     */
-    'allowed_origins' => env('APP_ENV') === 'production'
-        ? explode(',', env('CORS_ALLOWED_ORIGINS', 'https://localhost'))
-        : ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:3003', 'http://127.0.0.1:5173'],
+    'allowed_origins' => [
+        'https://sis.vertexuniversity.edu.eu',
+        'https://sistest.vertexuniversity.edu.eu',
+        'http://localhost:3000',
+        'http://localhost:3003',
+        'http://localhost:5173',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3003',
+        'http://127.0.0.1:5173',
+    ],
 
     'allowed_origins_patterns' => [],
 
