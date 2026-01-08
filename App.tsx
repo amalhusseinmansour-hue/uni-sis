@@ -464,7 +464,6 @@ const App: React.FC = () => {
                 lang={lang}
                 setLang={handleSetLang}
                 user={currentUser}
-                setUserRole={setUserRole}
                 onLogout={handleLogout}
               />
             }
@@ -624,6 +623,8 @@ const App: React.FC = () => {
                : <Navigate to="/" />
              }
           />
+          {/* Login redirect - in case user lands on /login while authenticated */}
+          <Route path="login" element={<Navigate to="/" replace />} />
           {/* Admin Routes */}
           <Route
              path="admin/tables"

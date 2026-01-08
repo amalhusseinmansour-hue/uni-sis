@@ -11,11 +11,10 @@ interface LayoutProps {
   lang: 'en' | 'ar';
   setLang: (l: 'en' | 'ar') => void;
   user: User;
-  setUserRole: (role: UserRole) => void;
   onLogout: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, setUserRole, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -224,37 +223,6 @@ const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, setUserRole, onLog
           </div>
 
           <div className="flex items-center gap-3">
-             {/* Role Switcher for Demo */}
-             <select
-              value={user.role}
-              onChange={(e) => {
-                const newRole = e.target.value as UserRole;
-                console.log('[Layout] Role switch requested:', newRole);
-
-                // SIMPLE APPROACH: Update localStorage directly and reload
-                try {
-                  const userStr = localStorage.getItem('user');
-                  if (userStr) {
-                    const userData = JSON.parse(userStr);
-                    userData.role = newRole;
-                    localStorage.setItem('user', JSON.stringify(userData));
-                    console.log('[Layout] Updated localStorage, reloading...');
-                    // Force reload to apply new role
-                    window.location.hash = '#/';
-                    window.location.reload();
-                  }
-                } catch (err) {
-                  console.error('[Layout] Role switch error:', err);
-                }
-              }}
-              className="hidden md:block text-xs bg-slate-100 border border-slate-300 rounded px-2 py-1"
-             >
-               <option value={UserRole.STUDENT}>{t.viewStudent[lang]}</option>
-               <option value={UserRole.LECTURER}>{t.viewLecturer[lang]}</option>
-               <option value={UserRole.ADMIN}>{t.viewAdmin[lang]}</option>
-               <option value={UserRole.FINANCE}>{t.viewFinance[lang]}</option>
-             </select>
-
             {/* Language Switcher with Dropdown */}
             <div className="relative" ref={langMenuRef}>
               <button
