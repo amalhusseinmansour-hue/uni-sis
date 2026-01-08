@@ -56,11 +56,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[Login] ========== BUTTON CLICKED ==========');
+    console.log('[Login] Username:', username);
+    console.log('[Login] Password:', password ? '***' : 'EMPTY');
+
     setIsLoading(true);
     setError('');
 
     try {
+      console.log('[Login] Calling authAPI.login...');
       const response = await authAPI.login({ username, password });
+      console.log('[Login] Login response received:', response);
+      console.log('[Login] User from response:', response?.user);
       onLogin(response.user);
     } catch (err: any) {
       // Better error handling
@@ -88,9 +95,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
   };
 
   return (
-    <div className={`min-h-screen flex bg-slate-50 ${isRTL ? 'flex-row-reverse' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Left Panel (Visual) - Hidden on Mobile */}
-      <div className={`hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden flex-col justify-between p-12 text-white ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className="min-h-screen flex bg-slate-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Visual Panel - Right side for RTL, Left for LTR */}
+      <div className={`hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden flex-col justify-between p-12 text-white text-center ${isRTL ? 'order-2' : 'order-1'}`}>
          {/* Abstract Background */}
          <div className="absolute inset-0">
              <div className="absolute top-0 -left-10 w-96 h-96 bg-blue-500/30 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
@@ -104,11 +111,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
            backgroundSize: '30px 30px'
          }}></div>
 
-         <div className="relative z-10">
+         <div className="relative z-10 flex flex-col items-center justify-center text-center w-full">
              <img
               src="/logo-white.png"
               alt="Logo"
-              className="w-14 h-14 object-contain mb-8"
+              className="w-40 h-40 object-contain mb-6 mx-auto"
             />
              <h1 className="text-5xl font-bold mb-4 leading-tight">
                {isRTL ? (branding?.universityNameAr || t.universityName[lang]) : (branding?.universityName || t.universityName[lang])}
@@ -127,9 +134,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
              </p>
 
              {/* Animated Feature Showcase */}
-             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-               <div className="flex items-center gap-4 mb-4">
-                 <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
+             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 w-full max-w-md">
+               <div className={`flex items-center gap-4 mb-4 ${isRTL ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                 <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
                    {React.createElement(features[currentFeature].icon, { className: 'w-6 h-6' })}
                  </div>
                  <div>
@@ -156,8 +163,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
          </div>
       </div>
 
-      {/* Right Panel (Form) */}
-      <div className={`w-full lg:w-1/2 flex flex-col items-center justify-center p-6 md:p-12 relative ${isRTL ? 'text-right' : 'text-left'}`}>
+      {/* Form Panel - Left side for RTL, Right for LTR */}
+      <div className={`w-full lg:w-1/2 flex flex-col items-center justify-center p-6 md:p-12 relative ${isRTL ? 'order-1 text-right' : 'order-2 text-left'}`}>
          {/* Language Switcher */}
          <div className={`absolute top-6 ${isRTL ? 'left-6' : 'right-6'}`}>
            <button
@@ -184,7 +191,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                    <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${lang === 'en' ? 'bg-blue-100' : 'bg-slate-100'}`}>
                      <span className="text-sm font-bold">EN</span>
                    </div>
-                   <div className="text-left flex-1">
+                   <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                      <p className="text-sm font-medium">English</p>
                      <p className="text-xs text-slate-500">Left to Right</p>
                    </div>
@@ -198,7 +205,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                    <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${lang === 'ar' ? 'bg-green-100' : 'bg-slate-100'}`}>
                      <span className="text-sm font-bold">ع</span>
                    </div>
-                   <div className="text-left flex-1">
+                   <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                      <p className="text-sm font-medium">العربية</p>
                      <p className="text-xs text-slate-500">من اليمين لليسار</p>
                    </div>
@@ -220,16 +227,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                <p className="text-slate-500 mt-2">{t.loginSubtitle[lang]}</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
                {error && (
-                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                 <div className={`bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                   <div>
-                     <p className="text-sm font-medium text-red-800">{error}</p>
-                     <p className="text-xs text-red-600 mt-1">
-                       Test credentials: admin@university.edu / admin123
-                     </p>
-                   </div>
+                   <p className="text-sm font-medium text-red-800">{error}</p>
                  </div>
                )}
 
@@ -247,8 +249,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                </div>
 
                <div className="space-y-4">
-                  <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <div className="w-full">
+                     <label className={`block w-full text-sm font-medium text-slate-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`} style={isRTL ? {textAlign: 'right'} : {}}>
                        {lang === 'ar' ? 'الرقم الجامعي أو البريد الإلكتروني' : 'Student ID or Email'}
                      </label>
                      <div className="relative">
@@ -259,16 +261,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                           type="text"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-slate-50 focus:bg-white ${lang === 'ar' ? 'pr-10' : 'pl-10'}`}
+                          className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-slate-50 focus:bg-white ${lang === 'ar' ? 'pr-10 text-right' : 'pl-10 text-left'}`}
                           placeholder={lang === 'ar' ? '202312345 أو name@university.edu' : '202312345 or name@university.edu'}
+                          style={isRTL ? {textAlign: 'right'} : {}}
                         />
                      </div>
                   </div>
-                  
+
                   <div>
-                     <div className="flex justify-between mb-1">
-                        <label className="block text-sm font-medium text-slate-700">{t.password[lang]}</label>
-                        <a href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium">{t.forgotPassword[lang]}</a>
+                     <div className="mb-1">
+                        <label className={`block text-sm font-medium text-slate-700 ${isRTL ? 'text-right' : 'text-left'}`} style={isRTL ? {textAlign: 'right'} : {}}>{t.password[lang]}</label>
                      </div>
                      <div className="relative">
                         <div className={`absolute top-3 ${lang === 'ar' ? 'right-3' : 'left-3'} text-slate-400`}>
@@ -278,8 +280,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-slate-50 focus:bg-white ${lang === 'ar' ? 'pr-10 pl-10' : 'pl-10 pr-10'}`}
+                          className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-slate-50 focus:bg-white ${lang === 'ar' ? 'pr-10 pl-10 text-right' : 'pl-10 pr-10 text-left'}`}
                           placeholder="••••••••"
+                          style={isRTL ? {textAlign: 'right'} : {}}
                         />
                         <button
                           type="button"
@@ -292,9 +295,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                   </div>
                </div>
 
-               <div className="flex items-center">
+               <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : 'justify-start'}`}>
                   <input type="checkbox" id="remember" className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" />
-                  <label htmlFor="remember" className={`text-sm text-slate-600 cursor-pointer ${lang === 'ar' ? 'mr-2' : 'ml-2'}`}>{t.rememberMe[lang]}</label>
+                  <label htmlFor="remember" className="text-sm text-slate-600 cursor-pointer">{t.rememberMe[lang]}</label>
                </div>
 
                <button
@@ -312,17 +315,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                  )}
                </button>
             </form>
-            
-            <div className="pt-6 border-t border-slate-100 text-center">
-               <p className="text-xs text-slate-400 mb-2">
-                  Test Accounts:
-               </p>
-               <div className="text-xs text-slate-500 space-y-1">
-                 <p><strong>Admin:</strong> admin@university.edu / admin123</p>
-                 <p><strong>Student:</strong> ahmed.mansour@student.university.edu / student123</p>
-                 <p><strong>Lecturer:</strong> sarah.smith@university.edu / lecturer123</p>
-               </div>
-            </div>
          </div>
       </div>
     </div>

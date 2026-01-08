@@ -194,18 +194,6 @@ Frontend يعمل على: `http://localhost:3000`
 
 ---
 
-## 🔑 بيانات الدخول التجريبية | Test Credentials
-
-بعد تشغيل `npm run db:seed`:
-
-| النوع | البريد الإلكتروني | كلمة المرور |
-|-------|-------------------|--------------|
-| **مدير** (Admin) | admin@university.edu | Admin123! |
-| **محاضر** (Lecturer) | sarah.smith@university.edu | Lecturer123! |
-| **طالب** (Student) | ahmed.mansour@student.university.edu | Student123! |
-
----
-
 ## 📡 API Endpoints
 
 ### Authentication
