@@ -566,22 +566,36 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
               {!showBack && (
                 <div
                   ref={cardRef}
-                  className="id-card-front id-card-print rounded-2xl shadow-2xl overflow-hidden"
+                  className="id-card-front id-card-print rounded-2xl shadow-2xl overflow-hidden relative"
                   style={{
                     aspectRatio: '1.586',
-                    background: branding?.idCardTemplate === 'minimal'
-                      ? '#f8fafc'
-                      : `linear-gradient(135deg, ${branding?.idCardPrimaryColor || '#1e3a5f'}, ${branding?.idCardSecondaryColor || '#2563eb'})`
+                    background: branding?.idCardTemplate === 'custom' && branding?.idCardCustomTemplateFront
+                      ? 'transparent'
+                      : branding?.idCardTemplate === 'minimal'
+                        ? '#f8fafc'
+                        : `linear-gradient(135deg, ${branding?.idCardPrimaryColor || '#1e3a5f'}, ${branding?.idCardSecondaryColor || '#2563eb'})`
                   }}>
-                  {/* Decorative Elements */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.accentColor || '#f59e0b'}20` }} />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.idCardSecondaryColor || '#2563eb'}20` }} />
-                    <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}80, ${branding?.accentColor || '#f59e0b'})` }} />
-                  </div>
+
+                  {/* Custom Template Background */}
+                  {branding?.idCardTemplate === 'custom' && branding?.idCardCustomTemplateFront && (
+                    <img
+                      src={branding.idCardCustomTemplateFront}
+                      alt="ID Card Template"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+
+                  {/* Decorative Elements - Only show for non-custom templates */}
+                  {branding?.idCardTemplate !== 'custom' && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.accentColor || '#f59e0b'}20` }} />
+                      <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.idCardSecondaryColor || '#2563eb'}20` }} />
+                      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}80, ${branding?.accentColor || '#f59e0b'})` }} />
+                    </div>
+                  )}
 
                   {/* Header */}
-                  <div className="bg-black/30 p-4 flex items-center justify-between relative z-10">
+                  <div className={`${branding?.idCardTemplate === 'custom' ? 'bg-transparent' : 'bg-black/30'} p-4 flex items-center justify-between relative z-10`}>
                     <div className="flex items-center gap-3">
                       {branding?.logoLight || branding?.logo ? (
                         <img
@@ -595,16 +609,16 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                         </div>
                       )}
                       <div>
-                        <h3 className="font-bold text-sm" style={{ color: branding?.accentColor || '#fbbf24' }}>
+                        <h3 className="font-bold text-sm drop-shadow-md" style={{ color: branding?.accentColor || '#fbbf24' }}>
                           {branding?.universityNameAr || t.universityName['ar']}
                         </h3>
-                        <p className="text-xs" style={{ color: `${branding?.idCardTextColor || '#ffffff'}b3` }}>
+                        <p className="text-xs drop-shadow-md" style={{ color: branding?.idCardTextColor || '#ffffff' }}>
                           {branding?.universityName || t.universityName['en']}
                         </p>
                       </div>
                     </div>
                     <div
-                      className="px-3 py-1 rounded-lg text-xs font-bold"
+                      className="px-3 py-1 rounded-lg text-xs font-bold shadow-md"
                       style={{
                         background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}dd)`,
                         color: branding?.idCardTemplate === 'minimal' ? '#ffffff' : '#1e293b'
@@ -638,33 +652,33 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
 
                     {/* Info */}
                     <div className="flex-1" style={{ color: branding?.idCardTextColor || '#ffffff' }}>
-                      <h2 className="font-bold text-lg leading-tight mb-0.5">
+                      <h2 className="font-bold text-lg leading-tight mb-0.5 drop-shadow-md">
                         {lang === 'ar' ? card.student.name_ar : card.student.name_en}
                       </h2>
-                      <p className="text-sm italic mb-2" style={{ color: `${branding?.idCardTextColor || '#ffffff'}b3` }}>
+                      <p className="text-sm italic mb-2 drop-shadow-md" style={{ color: branding?.idCardTextColor || '#ffffff' }}>
                         {lang === 'ar' ? card.student.name_en : card.student.name_ar}
                       </p>
 
                       <div className="mb-2">
-                        <p className="text-xs uppercase tracking-wider" style={{ color: `${branding?.accentColor || '#f59e0b'}cc` }}>{t.studentId[lang]}</p>
-                        <p className="font-bold text-lg font-mono tracking-wide" style={{ color: branding?.accentColor || '#f59e0b' }}>
+                        <p className="text-xs uppercase tracking-wider drop-shadow-md" style={{ color: branding?.accentColor || '#f59e0b' }}>{t.studentId[lang]}</p>
+                        <p className="font-bold text-lg font-mono tracking-wide drop-shadow-md" style={{ color: branding?.accentColor || '#f59e0b' }}>
                           {card.student.student_id}
                         </p>
                       </div>
 
                       <div className="space-y-0.5 text-sm">
-                        <p style={{ color: `${branding?.idCardTextColor || '#ffffff'}cc` }}>
-                          <span style={{ color: `${branding?.idCardTextColor || '#ffffff'}80` }}>{t.program[lang]}:</span> {lang === 'ar' ? card.program?.name_ar : card.program?.name_en}
+                        <p className="drop-shadow-md" style={{ color: branding?.idCardTextColor || '#ffffff' }}>
+                          <span style={{ opacity: 0.8 }}>{t.program[lang]}:</span> {lang === 'ar' ? card.program?.name_ar : card.program?.name_en}
                         </p>
-                        <p style={{ color: `${branding?.idCardTextColor || '#ffffff'}cc` }}>
-                          <span style={{ color: `${branding?.idCardTextColor || '#ffffff'}80` }}>{t.level[lang]}:</span> {card.academic.level} - {t.semester[lang]} {card.academic.semester}
+                        <p className="drop-shadow-md" style={{ color: branding?.idCardTextColor || '#ffffff' }}>
+                          <span style={{ opacity: 0.8 }}>{t.level[lang]}:</span> {card.academic.level} - {t.semester[lang]} {card.academic.semester}
                         </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Status Badge */}
-                  <div className={`absolute top-16 left-4 px-2 py-0.5 rounded text-xs font-bold ${
+                  <div className={`absolute top-16 left-4 px-2 py-0.5 rounded text-xs font-bold shadow-md ${
                     card.student.status === 'ACTIVE' ? 'bg-green-500 text-white' :
                     card.student.status === 'GRADUATED' ? 'bg-blue-500 text-white' :
                     card.student.status === 'SUSPENDED' ? 'bg-yellow-500 text-slate-900' :
@@ -674,7 +688,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                   </div>
 
                   {/* Footer */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 p-2 px-4 flex justify-between items-center text-xs" style={{ color: `${branding?.idCardTextColor || '#ffffff'}b3` }}>
+                  <div className={`absolute bottom-0 left-0 right-0 ${branding?.idCardTemplate === 'custom' ? 'bg-black/60' : 'bg-black/40'} p-2 px-4 flex justify-between items-center text-xs`} style={{ color: branding?.idCardTextColor || '#ffffff' }}>
                     <div className="flex gap-4">
                       <span>{t.issuedOn[lang]}: {formatDate(card.validity.issue_date)}</span>
                       <span>{t.validUntil[lang]}: {formatDate(card.validity.expiry_date)}</span>
@@ -686,9 +700,25 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
 
               {/* Back Side */}
               {showBack && (
-                <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl shadow-2xl overflow-hidden"
-                     style={{ aspectRatio: '1.586' }}>
-                  <div className="h-full flex flex-col items-center justify-center p-6 relative">
+                <div
+                  className="rounded-2xl shadow-2xl overflow-hidden relative"
+                  style={{
+                    aspectRatio: '1.586',
+                    background: branding?.idCardTemplate === 'custom' && branding?.idCardCustomTemplateBack
+                      ? 'transparent'
+                      : 'linear-gradient(to br, #f1f5f9, #e2e8f0)'
+                  }}
+                >
+                  {/* Custom Template Background for Back */}
+                  {branding?.idCardTemplate === 'custom' && branding?.idCardCustomTemplateBack && (
+                    <img
+                      src={branding.idCardCustomTemplateBack}
+                      alt="ID Card Back Template"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+
+                  <div className="h-full flex flex-col items-center justify-center p-6 relative z-10">
                     {/* QR Code */}
                     {branding?.showQRCode !== false && (
                       <div className="bg-white p-4 rounded-xl shadow-lg mb-4">
@@ -701,7 +731,9 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                         />
                       </div>
                     )}
-                    <p className="text-slate-600 text-sm text-center mb-4">{t.scanQr[lang]}</p>
+                    <p className={`text-sm text-center mb-4 ${branding?.idCardTemplate === 'custom' ? 'text-white drop-shadow-md' : 'text-slate-600'}`}>
+                      {t.scanQr[lang]}
+                    </p>
 
                     {/* Barcode */}
                     {branding?.showBarcode !== false && (
@@ -726,11 +758,13 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
 
                     {/* Footer */}
                     <div className="absolute bottom-4 text-center">
-                      <p className="text-xs" style={{ color: branding?.idCardPrimaryColor || '#64748b' }}>
+                      <p className={`text-xs ${branding?.idCardTemplate === 'custom' ? 'text-white drop-shadow-md' : ''}`} style={{ color: branding?.idCardTemplate === 'custom' ? branding?.idCardTextColor : (branding?.idCardPrimaryColor || '#64748b') }}>
                         {lang === 'ar' ? branding?.universityNameAr : branding?.universityName || t.universityName[lang]}
                       </p>
                       {branding?.universityWebsite && (
-                        <p className="text-xs text-slate-400">{branding.universityWebsite}</p>
+                        <p className={`text-xs ${branding?.idCardTemplate === 'custom' ? 'text-white/80 drop-shadow-md' : 'text-slate-400'}`}>
+                          {branding.universityWebsite}
+                        </p>
                       )}
                     </div>
                   </div>
