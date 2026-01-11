@@ -208,8 +208,8 @@ class NotificationService
             $student,
             "New Invoice",
             "فاتورة جديدة",
-            "A new invoice of " . number_format($amount, 2) . " SAR has been created. Due date: {$dueDate}",
-            "تم إنشاء فاتورة جديدة بمبلغ " . number_format($amount, 2) . " ريال. تاريخ الاستحقاق: {$dueDate}",
+            "A new invoice of " . number_format($amount, 2) . " USD has been created. Due date: {$dueDate}",
+            "تم إنشاء فاتورة جديدة بمبلغ " . number_format($amount, 2) . " دولار. تاريخ الاستحقاق: {$dueDate}",
             'FINANCIAL',
             'file-text',
             '/finance?tab=invoices'
@@ -225,8 +225,8 @@ class NotificationService
             $student,
             "Payment Received",
             "تم استلام الدفعة",
-            "Your payment of " . number_format($amount, 2) . " SAR has been received. Reference: {$reference}",
-            "تم استلام دفعتك بمبلغ " . number_format($amount, 2) . " ريال. رقم المرجع: {$reference}",
+            "Your payment of " . number_format($amount, 2) . " USD has been received. Reference: {$reference}",
+            "تم استلام دفعتك بمبلغ " . number_format($amount, 2) . " دولار. رقم المرجع: {$reference}",
             'SUCCESS',
             'check-circle',
             '/finance?tab=payments'
@@ -242,8 +242,8 @@ class NotificationService
             $student,
             "Overdue Payment",
             "دفعة متأخرة",
-            "You have an overdue payment of " . number_format($amount, 2) . " SAR. {$daysPastDue} days past due.",
-            "لديك دفعة متأخرة بمبلغ " . number_format($amount, 2) . " ريال. متأخرة {$daysPastDue} أيام.",
+            "You have an overdue payment of " . number_format($amount, 2) . " USD. {$daysPastDue} days past due.",
+            "لديك دفعة متأخرة بمبلغ " . number_format($amount, 2) . " دولار. متأخرة {$daysPastDue} أيام.",
             'ERROR',
             'alert-circle',
             '/finance?tab=payments'

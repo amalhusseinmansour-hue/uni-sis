@@ -133,7 +133,7 @@ class AdmissionWorkflowService
                 'PAYMENT_REQUESTED',
                 AdmissionApplication::STATUS_PENDING_PAYMENT,
                 $reviewerId,
-                'تم طلب دفع رسوم التسجيل: ' . $registrationFee . ' ريال'
+                'تم طلب دفع رسوم التسجيل: ' . $registrationFee . ' دولار'
             );
 
             // إرسال إيميل للطالب مع تفاصيل الدفع
@@ -187,7 +187,7 @@ class AdmissionWorkflowService
                 'PAYMENT_RECEIVED',
                 AdmissionApplication::STATUS_PAYMENT_RECEIVED,
                 $verifiedBy,
-                'تم استلام رسوم التسجيل: ' . $amount . ' ريال',
+                'تم استلام رسوم التسجيل: ' . $amount . ' دولار',
                 ['payment_id' => $payment->id, 'transaction_id' => $payment->transaction_id]
             );
 

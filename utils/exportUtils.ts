@@ -663,7 +663,7 @@ export const generatePaymentReceipt = (
       </div>
       <div style="text-align: center; padding: 30px; background: #ecfdf5; border-radius: 8px; margin-top: 20px;">
         <p style="font-size: 12px; color: #64748b;">${isRTL ? 'المبلغ المدفوع' : 'Amount Paid'}</p>
-        <p style="font-size: 32px; font-weight: bold; color: #059669;">${payment.amount.toLocaleString()} ${isRTL ? 'ريال' : 'SAR'}</p>
+        <p style="font-size: 32px; font-weight: bold; color: #059669;">${payment.amount.toLocaleString()} ${isRTL ? 'دولار' : 'USD'}</p>
       </div>
     </div>
   `;

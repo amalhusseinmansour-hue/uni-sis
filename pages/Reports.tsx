@@ -909,9 +909,9 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
       {/* Financial Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: t.totalRevenue[lang], value: 'SAR 2.8M', change: '+15.3%', color: 'green' },
-          { label: t.pendingPayments[lang], value: 'SAR 450K', change: '-8.2%', color: 'orange' },
-          { label: t.scholarships[lang], value: 'SAR 620K', change: '+12%', color: 'purple' },
+          { label: t.totalRevenue[lang], value: 'USD 2.8M', change: '+15.3%', color: 'green' },
+          { label: t.pendingPayments[lang], value: 'USD 450K', change: '-8.2%', color: 'orange' },
+          { label: t.scholarships[lang], value: 'USD 620K', change: '+12%', color: 'purple' },
           { label: lang === 'en' ? 'Collection Rate' : 'نسبة التحصيل', value: '87.5%', change: '+3.1%', color: 'blue' },
         ].map((stat, i) => (
           <Card key={i} className="p-4">
@@ -934,7 +934,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
                 <YAxis stroke="#94A3B8" fontSize={12} tickFormatter={(v) => `${v/1000}K`} />
-                <Tooltip formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']} />
+                <Tooltip formatter={(value: number) => [`USD ${value.toLocaleString()}`, '']} />
                 <Area type="monotone" dataKey="tuition" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name={lang === 'en' ? 'Tuition' : 'الرسوم الدراسية'} />
                 <Area type="monotone" dataKey="fees" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name={lang === 'en' ? 'Fees' : 'الرسوم'} />
                 <Area type="monotone" dataKey="other" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name={lang === 'en' ? 'Other' : 'أخرى'} />
@@ -965,7 +965,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
                   <Cell fill="#F59E0B" />
                   <Cell fill="#8B5CF6" />
                 </Pie>
-                <Tooltip formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']} />
+                <Tooltip formatter={(value: number) => [`USD ${value.toLocaleString()}`, '']} />
                 <Legend />
               </RechartsPieChart>
             </ResponsiveContainer>

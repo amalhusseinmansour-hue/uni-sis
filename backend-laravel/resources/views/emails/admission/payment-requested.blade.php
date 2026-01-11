@@ -97,7 +97,7 @@
 
             <div class="payment-box">
                 <h3 style="margin-top: 0; text-align: center; color: #0d6efd;">رسوم التسجيل المطلوبة</h3>
-                <div class="payment-amount">{{ number_format($application->registration_fee, 2) }} ريال</div>
+                <div class="payment-amount">{{ number_format($application->registration_fee, 2) }} دولار</div>
             </div>
 
             <div class="payment-details">

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('admission_application_id')->constrained()->onDelete('cascade');
             $table->string('transaction_id')->unique(); // رقم المعاملة
             $table->decimal('amount', 10, 2); // المبلغ
-            $table->string('currency', 3)->default('SAR'); // العملة
+            $table->string('currency', 3)->default('USD'); // العملة
             $table->enum('payment_method', ['BANK_TRANSFER', 'CREDIT_CARD', 'CASH', 'ONLINE'])->default('ONLINE'); // طريقة الدفع
             $table->enum('status', ['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED'])->default('PENDING'); // حالة الدفع
             $table->string('bank_name')->nullable(); // اسم البنك

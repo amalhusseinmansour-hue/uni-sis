@@ -34,7 +34,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ lang }) => {
       id: '2',
       type: 'payment',
       title: lang === 'ar' ? 'تم استلام الدفعة' : 'Payment Received',
-      description: lang === 'ar' ? 'رسوم الفصل الدراسي - 5,000 ر.س' : 'Semester Fees - SAR 5,000',
+      description: lang === 'ar' ? 'رسوم الفصل الدراسي - 5,000 ر.س' : 'Semester Fees - USD 5,000',
       timestamp: '2024-11-28T14:20:00',
       status: 'success',
     },

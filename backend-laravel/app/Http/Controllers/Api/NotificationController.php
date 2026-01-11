@@ -177,8 +177,8 @@ class NotificationController extends Controller
             [
                 'title' => 'Payment Received',
                 'title_ar' => 'تم استلام الدفعة',
-                'message' => 'Your payment of 5,000 SAR has been received',
-                'message_ar' => 'تم استلام دفعتك بمبلغ 5,000 ريال',
+                'message' => 'Your payment of 5,000 USD has been received',
+                'message_ar' => 'تم استلام دفعتك بمبلغ 5,000 دولار',
                 'type' => 'FINANCIAL',
                 'icon' => 'check-circle',
                 'link' => '/finance',

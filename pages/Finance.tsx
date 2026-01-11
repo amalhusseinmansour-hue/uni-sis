@@ -1253,7 +1253,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title={t.totalRevenue[lang]}
-          value="2.45M SAR"
+          value="2.45M USD"
           subtitle={lang === 'ar' ? 'منذ بداية العام' : 'Year to date'}
           icon={DollarSign}
           iconColor="text-green-600 bg-green-50"
@@ -1261,7 +1261,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={t.outstandingDebts[lang]}
-          value="340.5K SAR"
+          value="340.5K USD"
           subtitle={lang === 'ar' ? 'مستحقات معلقة' : 'Pending collections'}
           icon={AlertCircle}
           iconColor="text-red-600 bg-red-50"
@@ -1276,7 +1276,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={lang === 'ar' ? 'متوسط الدفعة' : 'Avg. Payment'}
-          value="1,250 SAR"
+          value="1,250 USD"
           subtitle={lang === 'ar' ? 'هذا الشهر' : 'This month'}
           icon={TrendingUp}
           iconColor="text-purple-600 bg-purple-50"
@@ -1463,14 +1463,14 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title={lang === 'ar' ? 'إجمالي الذمم' : 'Total Receivables'}
-          value="281.5K SAR"
+          value="281.5K USD"
           subtitle={lang === 'ar' ? '100 طالب' : '100 students'}
           icon={DollarSign}
           iconColor="text-blue-600 bg-blue-50"
         />
         <StatCard
           title={lang === 'ar' ? 'المحصّل هذا الشهر' : 'Collected This Month'}
-          value="89.2K SAR"
+          value="89.2K USD"
           subtitle={lang === 'ar' ? '+15% عن الشهر الماضي' : '+15% vs last month'}
           icon={CheckCircle}
           iconColor="text-green-600 bg-green-50"
@@ -1478,7 +1478,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={lang === 'ar' ? 'متأخر السداد' : 'Overdue Amount'}
-          value="78.0K SAR"
+          value="78.0K USD"
           subtitle={lang === 'ar' ? '27 طالب' : '27 students'}
           icon={AlertTriangle}
           iconColor="text-red-600 bg-red-50"
@@ -1845,7 +1845,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={lang === 'ar' ? 'إجمالي المستحقات' : 'Total Outstanding'}
-          value="281.5K SAR"
+          value="281.5K USD"
           icon={DollarSign}
           iconColor="text-red-600 bg-red-50"
         />
@@ -2006,14 +2006,14 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title={lang === 'ar' ? 'مدفوعات اليوم' : "Today's Payments"}
-          value="45.2K SAR"
+          value="45.2K USD"
           subtitle="24 transactions"
           icon={DollarSign}
           iconColor="text-green-600 bg-green-50"
         />
         <StatCard
           title={lang === 'ar' ? 'مدفوعات الأسبوع' : 'This Week'}
-          value="189.5K SAR"
+          value="189.5K USD"
           subtitle="156 transactions"
           icon={Calendar}
           iconColor="text-blue-600 bg-blue-50"
@@ -2021,7 +2021,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         />
         <StatCard
           title={lang === 'ar' ? 'مدفوعات الشهر' : 'This Month'}
-          value="524.8K SAR"
+          value="524.8K USD"
           subtitle="432 transactions"
           icon={TrendingUp}
           iconColor="text-purple-600 bg-purple-50"

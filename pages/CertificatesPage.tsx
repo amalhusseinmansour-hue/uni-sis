@@ -316,7 +316,7 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                   <p className="text-sm text-slate-500 mt-1">{cert.description}</p>
                   <div className="flex items-center gap-4 mt-3 text-sm">
                     <span className="text-green-600 font-medium">
-                      {cert.fee === 0 ? '-' : `${cert.fee} SAR`}
+                      {cert.fee === 0 ? '-' : `${cert.fee} USD`}
                     </span>
                     <span className="text-slate-400">•</span>
                     <span className="text-slate-500 flex items-center gap-1">
@@ -366,7 +366,7 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                 </div>
                 <div className="text-right">
                   <p className={`font-semibold ${cert.fee === 0 ? 'text-green-600' : 'text-slate-800'}`}>
-                    {cert.fee === 0 ? '-' : `${cert.fee} SAR`}
+                    {cert.fee === 0 ? '-' : `${cert.fee} USD`}
                   </p>
                   <p className="text-xs text-slate-500">{cert.processingTime}</p>
                 </div>
@@ -740,7 +740,7 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
               { value: '', label: lang === 'ar' ? 'اختر نوع الشهادة' : 'Select certificate type' },
               ...availableCertificates.filter(c => c.available).map(c => ({
                 value: c.type,
-                label: `${c.name}${c.fee > 0 ? ` (${c.fee} SAR)` : ''}`
+                label: `${c.name}${c.fee > 0 ? ` (${c.fee} USD)` : ''}`
               }))
             ]}
             value={requestForm.certificateType}
@@ -807,7 +807,7 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                 <span className="font-bold text-slate-800">
                   {availableCertificates.find(c => c.type === requestForm.certificateType)?.fee === 0
                     ? '-'
-                    : `${(availableCertificates.find(c => c.type === requestForm.certificateType)?.fee || 0) * parseInt(requestForm.copies)} SAR`
+                    : `${(availableCertificates.find(c => c.type === requestForm.certificateType)?.fee || 0) * parseInt(requestForm.copies)} USD`
                   }
                 </span>
               </div>
