@@ -835,8 +835,8 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
               <DetailRow
                 icon={Award}
                 label={t.gpa[lang]}
-                value={card.academic.gpa?.toFixed(2) || '-'}
-                highlight={card.academic.gpa && card.academic.gpa >= 3.5}
+                value={card.academic.gpa ? Number(card.academic.gpa).toFixed(2) : '-'}
+                highlight={card.academic.gpa && Number(card.academic.gpa) >= 3.5}
                 highlightColor="text-green-600"
               />
             </div>

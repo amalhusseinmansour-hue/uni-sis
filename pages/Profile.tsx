@@ -782,8 +782,8 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
             <div className="flex items-end gap-4">
               <div className="relative group">
                 <div className="w-28 h-28 rounded-2xl border-4 border-white dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                  {(photoPreview || safeGet(student, 'avatar')) ? (
-                    <img src={photoPreview || student.avatar} alt={displayName} className="w-full h-full object-cover" />
+                  {(photoPreview || safeGet(student, 'avatar') || safeGet(student, 'profile_picture_url') || safeGet(student, 'profilePicture')) ? (
+                    <img src={photoPreview || student.avatar || student.profile_picture_url || student.profilePicture} alt={displayName} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
                       {displayName.charAt(0)}

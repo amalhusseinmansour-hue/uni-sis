@@ -121,10 +121,75 @@ export const MOCK_STUDENT: Student = {
 
 export const MOCK_GRADES: Grade[] = [
   { code: 'ENG101', title: 'English I', grade: 'A', points: 4.0, credits: 3, semester: 'Fall 2022', midterm: 36, coursework: 18, final: 38 },
-  { code: 'MATH101', title: 'Calculus I', grade: 'B+', points: 3.5, credits: 4, semester: 'Fall 2022', midterm: 32, coursework: 17, final: 35 },
-  { code: 'CS100', title: 'Intro to Programming', grade: 'A-', points: 3.7, credits: 3, semester: 'Spring 2023', midterm: 35, coursework: 18, final: 36 },
+  { code: 'MATH101', title: 'Calculus I', grade: 'B+', points: 3.30, credits: 4, semester: 'Fall 2022', midterm: 32, coursework: 17, final: 35 },
+  { code: 'CS100', title: 'Intro to Programming', grade: 'A-', points: 3.70, credits: 3, semester: 'Spring 2023', midterm: 35, coursework: 18, final: 36 },
   { code: 'HIST100', title: 'World History', grade: 'B', points: 3.0, credits: 3, semester: 'Spring 2023', midterm: 30, coursework: 15, final: 32 },
 ];
+
+// Vertex University Grading Scale for Bachelor's Program
+export const VERTEX_GRADE_SCALE = {
+  'A':  { points: 4.00, minPercent: 95, maxPercent: 100, label: { en: 'Excellent', ar: 'ممتاز' } },
+  'A-': { points: 3.70, minPercent: 90, maxPercent: 94.99, label: { en: 'Excellent', ar: 'ممتاز' } },
+  'B+': { points: 3.30, minPercent: 85, maxPercent: 89.99, label: { en: 'Very Good (High)', ar: 'جيد جدًا مرتفع' } },
+  'B':  { points: 3.00, minPercent: 80, maxPercent: 84.99, label: { en: 'Very Good', ar: 'جيد جدًا' } },
+  'C+': { points: 2.30, minPercent: 75, maxPercent: 79.99, label: { en: 'Good (High)', ar: 'جيد مرتفع' } },
+  'C':  { points: 2.00, minPercent: 70, maxPercent: 74.99, label: { en: 'Good', ar: 'جيد' } },
+  'D+': { points: 1.30, minPercent: 65, maxPercent: 69.99, label: { en: 'Acceptable (High)', ar: 'مقبول مرتفع' } },
+  'D':  { points: 1.00, minPercent: 60, maxPercent: 64.99, label: { en: 'Acceptable', ar: 'مقبول' } },
+  'F':  { points: 0.00, minPercent: 0, maxPercent: 59.99, label: { en: 'Fail', ar: 'راسب' } },
+  'FA': { points: 0.00, minPercent: 0, maxPercent: 0, label: { en: 'Fail (Absence)', ar: 'راسب بسبب الغياب' } },
+  'I':  { points: null, minPercent: null, maxPercent: null, label: { en: 'Incomplete', ar: 'غير مكتمل' }, excluded: true },
+  'P':  { points: null, minPercent: 60, maxPercent: 100, label: { en: 'Pass', ar: 'ناجح فقط' }, excluded: true },
+  'NP': { points: null, minPercent: 0, maxPercent: 59.99, label: { en: 'No Pass', ar: 'راسب فقط' }, excluded: true },
+  'CC': { points: null, minPercent: null, maxPercent: null, label: { en: 'Continuing', ar: 'مستمر' }, excluded: true },
+  'CX': { points: null, minPercent: null, maxPercent: null, label: { en: 'Challenge Exam Pass', ar: 'نجاح عبر اختبار تحدي' }, excluded: true },
+  'S':  { points: null, minPercent: null, maxPercent: null, label: { en: 'Satisfactory', ar: 'مرض' }, excluded: true },
+  'AW': { points: null, minPercent: null, maxPercent: null, label: { en: 'Administrative Withdrawal', ar: 'منسحب إداريًا' }, excluded: true },
+  'W':  { points: null, minPercent: null, maxPercent: null, label: { en: 'Withdrawn', ar: 'منسحب' }, excluded: true },
+};
+
+// Helper function to convert letter grade to GPA points
+export const gradeToPoints = (grade: string): number => {
+  const gradeInfo = VERTEX_GRADE_SCALE[grade as keyof typeof VERTEX_GRADE_SCALE];
+  return gradeInfo?.points ?? 0;
+};
+
+// Helper function to check if grade is excluded from GPA calculation
+export const isGradeExcluded = (grade: string): boolean => {
+  const gradeInfo = VERTEX_GRADE_SCALE[grade as keyof typeof VERTEX_GRADE_SCALE];
+  return gradeInfo?.excluded === true || gradeInfo?.points === null;
+};
+
+// Helper function to convert percentage to letter grade
+export const percentToGrade = (percent: number): string => {
+  if (percent >= 95) return 'A';
+  if (percent >= 90) return 'A-';
+  if (percent >= 85) return 'B+';
+  if (percent >= 80) return 'B';
+  if (percent >= 75) return 'C+';
+  if (percent >= 70) return 'C';
+  if (percent >= 65) return 'D+';
+  if (percent >= 60) return 'D';
+  return 'F';
+};
+
+// Helper function to get grade label
+export const getGradeLabel = (grade: string, lang: 'en' | 'ar'): string => {
+  const gradeInfo = VERTEX_GRADE_SCALE[grade as keyof typeof VERTEX_GRADE_SCALE];
+  return gradeInfo?.label?.[lang] || grade;
+};
+
+// Helper function to get grade color
+export const getGradeColor = (grade: string): string => {
+  if (grade === 'A' || grade === 'A-') return 'text-green-600 bg-green-100';
+  if (grade === 'B+' || grade === 'B') return 'text-blue-600 bg-blue-100';
+  if (grade === 'C+' || grade === 'C') return 'text-yellow-600 bg-yellow-100';
+  if (grade === 'D+' || grade === 'D') return 'text-orange-600 bg-orange-100';
+  if (grade === 'F' || grade === 'FA') return 'text-red-600 bg-red-100';
+  if (grade === 'P' || grade === 'S' || grade === 'CX') return 'text-green-600 bg-green-100';
+  if (grade === 'NP') return 'text-red-600 bg-red-100';
+  return 'text-slate-600 bg-slate-100';
+};
 
 export const MOCK_COURSES: Course[] = [
   { id: 'c1', code: 'CS101', name_en: 'Intro to Computer Science', name_ar: 'مقدمة في علم الحاسوب', credits: 3, schedule: 'Mon/Wed 10:00', instructor: 'Dr. Sarah Smith', enrolled: 45, capacity: 50, description: 'Fundamentals of programming and algorithms.' },
@@ -215,7 +280,7 @@ export const TRANSLATIONS: Translation = {
   forgotPassword: { en: 'Forgot Password?', ar: 'نسيت كلمة المرور؟' },
   rememberMe: { en: 'Remember me', ar: 'تذكرني' },
   loginButton: { en: 'Sign In', ar: 'دخول' },
-  universityName: { en: 'VERTIX UNIVERSITY', ar: 'جامعة فيرتكس' },
+  universityName: { en: 'VERTEX UNIVERSITY', ar: 'جامعة فيرتكس' },
   welcomeBack: { en: 'Welcome Back!', ar: 'أهلاً بعودتك!' },
 
   // Search

@@ -226,6 +226,24 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Listen for user data updates from other components (e.g., Dashboard)
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const updatedUser = JSON.parse(userStr);
+          setCurrentUser((prev: any) => ({ ...prev, ...updatedUser }));
+        } catch (e) {
+          console.warn('Could not parse updated user:', e);
+        }
+      }
+    };
+
+    window.addEventListener('user-updated', handleUserUpdate);
+    return () => window.removeEventListener('user-updated', handleUserUpdate);
+  }, []);
+
   const handleLogin = async (user: any) => {
     console.log('[App] ✅ handleLogin called for:', user?.email);
     setCurrentUser(user);

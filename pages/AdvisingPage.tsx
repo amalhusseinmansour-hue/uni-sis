@@ -274,7 +274,7 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title={lang === 'ar' ? 'المعدل التراكمي' : 'GPA'}
-          value={academicStatus.gpa.toFixed(2)}
+          value={Number(academicStatus.gpa || 0).toFixed(2)}
           subtitle={lang === 'ar' ? 'من 4.0' : 'out of 4.0'}
           icon={TrendingUp}
           iconColor="text-green-600 bg-green-50"

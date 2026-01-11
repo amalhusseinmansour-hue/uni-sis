@@ -110,34 +110,33 @@ const SupportPage: React.FC<SupportPageProps> = ({ lang }) => {
   // Contact info
   const contactInfo = [
     {
-      title: lang === 'ar' ? 'خدمة العملاء' : 'Customer Service',
-      description: lang === 'ar' ? 'للاستفسارات العامة' : 'For general inquiries',
+      title: lang === 'ar' ? 'عمادة شؤون الطلبة' : 'Student Affairs',
+      description: lang === 'ar' ? 'للخدمات الطلابية والدعم الأكاديمي' : 'For student services and academic support',
       phone: '+966 11 123 4567',
-      email: 'support@university.edu',
-      hours: lang === 'ar' ? 'الأحد - الخميس: 8:00 ص - 4:00 م' : 'Sun - Thu: 8:00 AM - 4:00 PM',
+      email: 'students@vertexuniversity.edu.eu',
+      hours: lang === 'ar' ? 'السبت - الخميس بتوقيت مكة المكرمة' : 'Sat - Thu (Makkah Time)',
       icon: Headphones,
     },
     {
-      title: lang === 'ar' ? 'القبول والتسجيل' : 'Admissions',
-      description: lang === 'ar' ? 'للتسجيل والقبول' : 'For registration and admission',
+      title: lang === 'ar' ? 'عمادة القبول والتسجيل' : 'Admissions & Registration',
+      description: lang === 'ar' ? 'التسجيل وإدارة السجلات الأكاديمية' : 'Registration and academic records management',
       phone: '+966 11 123 4568',
-      email: 'admissions@university.edu',
-      hours: lang === 'ar' ? 'الأحد - الخميس: 9:00 ص - 3:00 م' : 'Sun - Thu: 9:00 AM - 3:00 PM',
+      email: 'admissions@vertexuniversity.edu.eu',
+      hours: lang === 'ar' ? 'السبت - الخميس بتوقيت مكة المكرمة' : 'Sat - Thu (Makkah Time)',
       icon: Users,
     },
     {
-      title: lang === 'ar' ? 'الشؤون المالية' : 'Financial Affairs',
-      description: lang === 'ar' ? 'للمدفوعات والرسوم' : 'For payments and fees',
+      title: lang === 'ar' ? 'إدارة الشؤون المالية' : 'Financial Affairs',
+      description: lang === 'ar' ? 'للرسوم الدراسية والمعاملات المالية' : 'For tuition fees and financial transactions',
       phone: '+966 11 123 4569',
       email: 'finance@university.edu',
-      hours: lang === 'ar' ? 'الأحد - الخميس: 8:00 ص - 2:00 م' : 'Sun - Thu: 8:00 AM - 2:00 PM',
+      hours: lang === 'ar' ? 'السبت - الخميس بتوقيت مكة المكرمة' : 'Sat - Thu (Makkah Time)',
       icon: FileText,
     },
     {
-      title: lang === 'ar' ? 'الدعم التقني' : 'Technical Support',
-      description: lang === 'ar' ? 'لمشاكل النظام' : 'For system issues',
-      phone: '+966 11 123 4570',
-      email: 'it-support@university.edu',
+      title: lang === 'ar' ? 'إدارة تقنية المعلومات' : 'IT Department',
+      description: lang === 'ar' ? 'لدعم الأنظمة والمنصات التعليمية' : 'For systems and educational platforms support',
+      email: 'it@vertexuniversity.edu.eu',
       hours: lang === 'ar' ? 'على مدار الساعة' : '24/7',
       icon: HelpCircle,
     },
@@ -463,38 +462,6 @@ const SupportPage: React.FC<SupportPageProps> = ({ lang }) => {
           </Card>
         ))}
       </div>
-
-      {/* Location */}
-      <Card>
-        <CardHeader
-          title={lang === 'ar' ? 'موقعنا' : 'Our Location'}
-          icon={MapPin}
-          iconColor="text-red-600 bg-red-50"
-        />
-        <CardBody>
-          <div className="aspect-video bg-slate-100 rounded-xl flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-              <p className="text-slate-500">
-                {lang === 'ar' ? 'خريطة الموقع' : 'Location Map'}
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" icon={ExternalLink}>
-                {lang === 'ar' ? 'فتح في خرائط Google' : 'Open in Google Maps'}
-              </Button>
-            </div>
-          </div>
-          <div className="mt-4 p-4 bg-slate-50 rounded-xl">
-            <p className="font-medium text-slate-800">
-              {lang === 'ar' ? 'جامعة فيرتكس' : 'VERTIX UNIVERSITY'}
-            </p>
-            <p className="text-sm text-slate-600 mt-1">
-              {lang === 'ar'
-                ? 'شارع الملك فهد، الرياض، المملكة العربية السعودية'
-                : 'King Fahd Road, Riyadh, Saudi Arabia'}
-            </p>
-          </div>
-        </CardBody>
-      </Card>
 
       {/* Quick Links */}
       <Card>

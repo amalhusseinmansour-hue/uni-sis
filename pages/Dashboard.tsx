@@ -12,7 +12,7 @@ import {
   Activity, Zap, BookMarked, UserCheck, CalendarDays
 } from 'lucide-react';
 import { Student, Course, Announcement, UserRole, AdmissionApplication } from '../types';
-import { TRANSLATIONS } from '../constants';
+import { TRANSLATIONS, gradeToPoints } from '../constants';
 import { studentsAPI } from '../api/students';
 import { financeAPI } from '../api/finance';
 import { dashboardAPI } from '../api/dashboard';
@@ -57,6 +57,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [courses, setCourses] = useState<any[]>([]);
   const [financials, setFinancials] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const hasNameSynced = React.useRef(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleEvents, setScheduleEvents] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
@@ -111,6 +112,32 @@ const Dashboard: React.FC<DashboardProps> = ({
               name: studentData.name_en || studentData.name || currentUser.student?.name_en || currentUser.name,
             };
             setStudent(mergedStudent);
+
+            // Update localStorage to sync navbar with fresh data (only once per session)
+            if (!hasNameSynced.current) {
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                try {
+                  const parsedUser = JSON.parse(storedUser);
+                  const newName = mergedStudent.name;
+                  // Only update if name actually changed
+                  if (parsedUser.name !== newName) {
+                    const updatedUser = {
+                      ...parsedUser,
+                      name: newName,
+                      name_en: studentData.name_en || parsedUser.name_en,
+                      name_ar: studentData.name_ar || parsedUser.name_ar,
+                    };
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                    // Dispatch event to notify App.tsx to update navbar
+                    window.dispatchEvent(new Event('user-updated'));
+                  }
+                  hasNameSynced.current = true;
+                } catch (e) {
+                  console.warn('Could not update localStorage user:', e);
+                }
+              }
+            }
 
             // Fetch student-specific data in parallel with individual error handling
             const [enrollmentsData, financialData, timetableData, gradesData] = await Promise.all([
@@ -199,17 +226,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     }));
   };
 
-  // Helper function to convert letter grade to points
-  const gradeToPoints = (grade: string): number => {
-    const gradeMap: Record<string, number> = {
-      'A+': 4.0, 'A': 4.0, 'A-': 3.7,
-      'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-      'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-      'D+': 1.3, 'D': 1.0, 'D-': 0.7,
-      'F': 0.0,
-    };
-    return gradeMap[grade] || 0;
-  };
+  // gradeToPoints is now imported from constants.ts (Vertex University grading scale)
 
   // Helper function to process attendance data
   const processAttendanceData = (enrollments: any[], lang: string) => {
@@ -322,7 +339,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">{t.gpa[lang]}</p>
-                <p className="text-3xl font-bold text-slate-800">{student.gpa?.toFixed(2) || '--'}</p>
+                <p className="text-3xl font-bold text-slate-800">{typeof student.gpa === 'number' ? student.gpa.toFixed(2) : '--'}</p>
                 {gpaHistory.length >= 2 && (
                   <div className={`flex items-center gap-1 mt-2 text-sm ${
                     gpaHistory[gpaHistory.length - 1]?.gpa > gpaHistory[gpaHistory.length - 2]?.gpa
@@ -330,7 +347,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   }`}>
                     {gpaHistory[gpaHistory.length - 1]?.gpa > gpaHistory[gpaHistory.length - 2]?.gpa
                       ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    <span>{((gpaHistory[gpaHistory.length - 1]?.gpa || 0) - (gpaHistory[gpaHistory.length - 2]?.gpa || 0)).toFixed(2)}</span>
+                    <span>{(Number(gpaHistory[gpaHistory.length - 1]?.gpa || 0) - Number(gpaHistory[gpaHistory.length - 2]?.gpa || 0)).toFixed(2)}</span>
                   </div>
                 )}
               </div>

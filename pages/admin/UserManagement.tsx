@@ -27,6 +27,8 @@ import {
   ClipboardList,
   UserPlus,
   Phone,
+  Camera,
+  Image,
 } from 'lucide-react';
 import { usersAPI, User, CreateUserData, UserFilters } from '../../api/users';
 import { rolesAPI, Role, DEFAULT_ROLES } from '../../api/roles';
@@ -93,6 +95,10 @@ const translations = {
   loading: { en: 'Loading...', ar: 'جاري التحميل...' },
   error: { en: 'Error loading data', ar: 'خطأ في تحميل البيانات' },
   retry: { en: 'Retry', ar: 'إعادة المحاولة' },
+  profilePicture: { en: 'Profile Picture', ar: 'الصورة الشخصية' },
+  uploadPhoto: { en: 'Upload Photo', ar: 'رفع صورة' },
+  changePhoto: { en: 'Change Photo', ar: 'تغيير الصورة' },
+  photoHint: { en: 'This photo will be used for the student ID card', ar: 'سيتم استخدام هذه الصورة في البطاقة الجامعية' },
 };
 
 const t = (key: keyof typeof translations, lang: 'en' | 'ar') => translations[key][lang];
@@ -127,6 +133,8 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [stats, setStats] = useState({ total: 0, byRole: {} as Record<string, number>, byStatus: {} as Record<string, number> });
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -152,16 +160,14 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
 
   const loadData = async () => {
     setLoading(true);
+
+    // Load users
     try {
-      const [usersData, rolesData] = await Promise.all([
-        usersAPI.getAll(),
-        rolesAPI.getAll(),
-      ]);
-      setUsers(usersData.data || []);
-      setRoles(rolesData || []);
+      const usersData = await usersAPI.getAll();
+      const userList = usersData.data || [];
+      setUsers(userList);
 
       // Calculate stats
-      const userList = usersData.data || [];
       const byRole: Record<string, number> = {};
       const byStatus: Record<string, number> = {};
       userList.forEach((u: User) => {
@@ -171,9 +177,19 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       });
       setStats({ total: userList.length, byRole, byStatus });
     } catch (error) {
+      console.error('Error loading users:', error);
+      setUsers([]);
+    }
+
+    // Load roles separately
+    try {
+      const rolesData = await rolesAPI.getAll();
+      setRoles(rolesData || []);
+    } catch (error) {
       // Use default roles if API fails
       setRoles(DEFAULT_ROLES.map((r, i) => ({ ...r, id: i + 1, permissions: [], createdAt: new Date().toISOString() })) as Role[]);
     }
+
     setLoading(false);
   };
 
@@ -229,37 +245,34 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     if (!validateForm()) return;
 
     try {
+      const userData: any = {
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        firstNameAr: formData.firstNameAr,
+        lastNameAr: formData.lastNameAr,
+        role: formData.role.toUpperCase(),
+        studentId: formData.role === 'student' ? formData.studentId : undefined,
+        department: formData.department,
+        program: formData.program,
+        phone: formData.phone,
+        status: formData.status,
+      };
+
+      // Add profile picture if provided (for students)
+      if (formData.role === 'student' && profilePicturePreview) {
+        userData.profilePicture = profilePicturePreview;
+      }
+
       if (editingUser) {
-        await usersAPI.update(editingUser.id, {
-          email: formData.email,
-          password: formData.password || undefined,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          firstNameAr: formData.firstNameAr,
-          lastNameAr: formData.lastNameAr,
-          role: formData.role.toUpperCase(),
-          studentId: formData.role === 'student' ? formData.studentId : undefined,
-          department: formData.department,
-          program: formData.program,
-          phone: formData.phone,
-          status: formData.status,
-        });
+        if (formData.password) {
+          userData.password = formData.password;
+        }
+        await usersAPI.update(editingUser.id, userData);
         showNotification('success', t('userUpdated', lang));
       } else {
-        await usersAPI.create({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          firstNameAr: formData.firstNameAr,
-          lastNameAr: formData.lastNameAr,
-          role: formData.role.toUpperCase(),
-          studentId: formData.role === 'student' ? formData.studentId : undefined,
-          department: formData.department,
-          program: formData.program,
-          phone: formData.phone,
-          status: formData.status,
-        });
+        userData.password = formData.password;
+        await usersAPI.create(userData);
         showNotification('success', t('userCreated', lang));
       }
       loadData();
@@ -287,6 +300,13 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       phone: user.phone || '',
       status: user.status,
     });
+    // Load existing profile picture if available
+    if (user.avatar) {
+      setProfilePicturePreview(user.avatar);
+    } else {
+      setProfilePicturePreview(null);
+    }
+    setProfilePicture(null);
     setShowModal(true);
   };
 
@@ -319,6 +339,20 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     });
     setEditingUser(null);
     setErrors({});
+    setProfilePicture(null);
+    setProfilePicturePreview(null);
+  };
+
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePicture(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicturePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -856,38 +890,91 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
 
               {/* Role-specific fields */}
               {formData.role === 'student' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('studentId', lang)} *
+                <>
+                  {/* Profile Picture Upload */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-dashed border-blue-200 dark:border-blue-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      {t('profilePicture', lang)}
                     </label>
-                    <input
-                      type="text"
-                      value={formData.studentId}
-                      onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
-                        errors.studentId ? 'border-red-500' : ''
-                      }`}
-                    />
-                    {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
+                    <div className="flex items-center gap-6">
+                      <div className="relative">
+                        {profilePicturePreview ? (
+                          <img
+                            src={profilePicturePreview}
+                            alt="Preview"
+                            className="w-24 h-24 rounded-xl object-cover border-2 border-blue-300"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 rounded-xl bg-gray-200 dark:bg-slate-600 flex items-center justify-center">
+                            <Camera className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                        {profilePicturePreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfilePicture(null);
+                              setProfilePicturePreview(null);
+                            }}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleProfilePictureChange}
+                            className="hidden"
+                          />
+                          <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-fit">
+                            <Image className="w-4 h-4" />
+                            <span>{profilePicturePreview ? t('changePhoto', lang) : t('uploadPhoto', lang)}</span>
+                          </div>
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          {t('photoHint', lang)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('program', lang)}
-                    </label>
-                    <select
-                      value={formData.program}
-                      onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                    >
-                      <option value="">-- {lang === 'ar' ? 'اختر البرنامج' : 'Select Program'} --</option>
-                      <option value="Computer Science">{lang === 'ar' ? 'علوم الحاسوب' : 'Computer Science'}</option>
-                      <option value="Information Technology">{lang === 'ar' ? 'تقنية المعلومات' : 'Information Technology'}</option>
-                      <option value="Business Administration">{lang === 'ar' ? 'إدارة الأعمال' : 'Business Administration'}</option>
-                      <option value="Engineering">{lang === 'ar' ? 'الهندسة' : 'Engineering'}</option>
-                    </select>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('studentId', lang)} *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.studentId}
+                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
+                          errors.studentId ? 'border-red-500' : ''
+                        }`}
+                      />
+                      {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('program', lang)}
+                      </label>
+                      <select
+                        value={formData.program}
+                        onChange={(e) => setFormData({ ...formData, program: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                      >
+                        <option value="">-- {lang === 'ar' ? 'اختر البرنامج' : 'Select Program'} --</option>
+                        <option value="Computer Science">{lang === 'ar' ? 'علوم الحاسوب' : 'Computer Science'}</option>
+                        <option value="Information Technology">{lang === 'ar' ? 'تقنية المعلومات' : 'Information Technology'}</option>
+                        <option value="Business Administration">{lang === 'ar' ? 'إدارة الأعمال' : 'Business Administration'}</option>
+                        <option value="Engineering">{lang === 'ar' ? 'الهندسة' : 'Engineering'}</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {(formData.role === 'lecturer' || formData.role === 'student_affairs' || formData.role === 'registrar') && (

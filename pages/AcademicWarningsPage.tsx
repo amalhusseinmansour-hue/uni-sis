@@ -235,7 +235,7 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white/20 rounded-xl p-4 text-center">
-              <p className="text-3xl font-bold">{academicStatus.gpa.toFixed(2)}</p>
+              <p className="text-3xl font-bold">{Number(academicStatus.gpa || 0).toFixed(2)}</p>
               <p className="text-sm text-white/70">{lang === 'ar' ? 'المعدل الحالي' : 'Current GPA'}</p>
             </div>
             <div className="bg-white/20 rounded-xl p-4 text-center">
@@ -339,14 +339,14 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
         />
         <StatCard
           title={lang === 'ar' ? 'معدلك الحالي' : 'Your Current GPA'}
-          value={academicStatus.gpa.toFixed(2)}
+          value={Number(academicStatus.gpa || 0).toFixed(2)}
           subtitle={academicStatus.gpa >= academicStatus.requiredGPA ? (lang === 'ar' ? 'أعلى من المطلوب' : 'Above minimum') : (lang === 'ar' ? 'أقل من المطلوب' : 'Below minimum')}
           icon={BarChart2}
           iconColor={academicStatus.gpa >= academicStatus.requiredGPA ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}
         />
         <StatCard
           title={lang === 'ar' ? 'الفرق' : 'Difference'}
-          value={(academicStatus.gpa - academicStatus.requiredGPA).toFixed(2)}
+          value={(Number(academicStatus.gpa || 0) - Number(academicStatus.requiredGPA || 0)).toFixed(2)}
           subtitle={academicStatus.gpa >= academicStatus.requiredGPA ? (lang === 'ar' ? 'زيادة' : 'Above') : (lang === 'ar' ? 'نقص' : 'Below')}
           icon={Activity}
           iconColor={academicStatus.gpa >= academicStatus.requiredGPA ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}
@@ -432,7 +432,7 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
             <div className="flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-slate-500">{lang === 'ar' ? 'المعدل الحالي' : 'Current GPA'}</span>
-                <span className="font-bold text-slate-800">{improvementPlan.currentGPA.toFixed(2)}</span>
+                <span className="font-bold text-slate-800">{Number(improvementPlan.currentGPA || 0).toFixed(2)}</span>
               </div>
               <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden">
                 <div
@@ -447,13 +447,13 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-slate-400">0.0</span>
                 <span className="text-xs text-green-600 font-medium">
-                  {lang === 'ar' ? 'الهدف:' : 'Target:'} {improvementPlan.targetGPA.toFixed(1)}
+                  {lang === 'ar' ? 'الهدف:' : 'Target:'} {Number(improvementPlan.targetGPA || 0).toFixed(1)}
                 </span>
                 <span className="text-xs text-slate-400">4.0</span>
               </div>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-bold text-green-600">+{(improvementPlan.targetGPA - improvementPlan.currentGPA).toFixed(2)}</p>
+              <p className="text-4xl font-bold text-green-600">+{(Number(improvementPlan.targetGPA || 0) - Number(improvementPlan.currentGPA || 0)).toFixed(2)}</p>
               <p className="text-sm text-slate-500">{lang === 'ar' ? 'المطلوب' : 'Needed'}</p>
             </div>
           </div>
@@ -478,7 +478,7 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
                   style={{ height: `${(item.gpa / 4) * 150}px` }}
                 ></div>
                 <div className="mt-2 text-center">
-                  <p className="font-bold text-slate-800">{item.gpa.toFixed(2)}</p>
+                  <p className="font-bold text-slate-800">{Number(item.gpa || 0).toFixed(2)}</p>
                   <p className="text-xs text-slate-500">{item.semester}</p>
                   {item.projected && (
                     <Badge variant="info" size="sm" className="mt-1">{lang === 'ar' ? 'متوقع' : 'Projected'}</Badge>
@@ -651,7 +651,7 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
                 <p className="text-xs text-slate-500">{lang === 'ar' ? 'المعدل عند الإنذار' : 'GPA at Warning'}</p>
-                <p className="font-medium text-slate-800">{selectedWarning.gpaAtWarning?.toFixed(2) || 'N/A'}</p>
+                <p className="font-medium text-slate-800">{selectedWarning.gpaAtWarning ? Number(selectedWarning.gpaAtWarning).toFixed(2) : 'N/A'}</p>
               </div>
             </div>
 

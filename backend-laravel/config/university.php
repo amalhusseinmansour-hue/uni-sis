@@ -33,8 +33,8 @@ return [
 
     'admission' => [
         'registration_fee' => env('ADMISSION_REGISTRATION_FEE', 500),
-        'currency' => env('ADMISSION_CURRENCY', 'EUR'),
-        'currency_symbol' => env('ADMISSION_CURRENCY_SYMBOL', '€'),
+        'currency' => env('ADMISSION_CURRENCY', 'USD'),
+        'currency_symbol' => env('ADMISSION_CURRENCY_SYMBOL', '$'),
     ],
 
     /*

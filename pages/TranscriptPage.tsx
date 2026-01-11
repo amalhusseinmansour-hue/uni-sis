@@ -25,6 +25,23 @@ interface TranscriptPageProps {
   lang: 'en' | 'ar';
 }
 
+// Helper to safely format GPA values (standalone for use in template literals)
+const safeFormatGPA = (gpa: number | string | undefined | null): string => {
+  if (gpa === undefined || gpa === null) return '0.00';
+  const numGpa = Number(gpa);
+  return isNaN(numGpa) ? '0.00' : numGpa.toFixed(2);
+};
+
+// Helper to get GPA color class (standalone for use in template literals)
+const safeGetGPAColor = (gpa: number | string | undefined | null): string => {
+  const numGpa = Number(gpa) || 0;
+  if (numGpa >= 3.5) return '#059669'; // green
+  if (numGpa >= 3.0) return '#2563eb'; // blue
+  if (numGpa >= 2.5) return '#d97706'; // yellow
+  if (numGpa >= 2.0) return '#ea580c'; // orange
+  return '#dc2626'; // red
+};
+
 // Translations
 const t = {
   title: { en: 'Academic Transcript', ar: 'السجل الأكاديمي' },
@@ -308,7 +325,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
         <div class="content-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; border-radius: 12px; padding: 20px; margin-top: 20px;">
           <div style="display: flex; justify-content: space-around; text-align: center;">
             <div>
-              <div style="font-size: 32px; font-weight: bold; color: ${studentData.gpa >= 3.0 ? '#059669' : '#d97706'};">${studentData.gpa.toFixed(2)}</div>
+              <div style="font-size: 32px; font-weight: bold; color: ${safeGetGPAColor(studentData.gpa)};">${safeFormatGPA(studentData.gpa)}</div>
               <div style="font-size: 12px; color: #64748b;">${lang === 'ar' ? 'المعدل التراكمي' : 'Cumulative GPA'}</div>
               <div style="font-size: 10px; color: #94a3b8;">${lang === 'ar' ? 'من 4.00' : 'out of 4.00'}</div>
             </div>
@@ -330,7 +347,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
             <h3 class="section-title" style="background: #1e40af; color: white; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0;">
               ${lang === 'ar' ? semester.name_ar : semester.name} - ${semester.academic_year}
               <span style="float: ${lang === 'ar' ? 'left' : 'right'}; font-size: 14px; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 10px;">
-                GPA: ${semester.gpa.toFixed(2)}
+                GPA: ${safeFormatGPA(semester.gpa)}
               </span>
             </h3>
             <table class="data-table" style="border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
@@ -375,7 +392,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                   <td colspan="2" style="text-align: ${lang === 'ar' ? 'right' : 'left'};">${lang === 'ar' ? 'مجموع الفصل' : 'Semester Total'}</td>
                   <td class="center">${semester.total_credits}</td>
                   <td colspan="4"></td>
-                  <td class="center" style="color: #1e40af; font-size: 14px;">${semester.gpa.toFixed(2)}</td>
+                  <td class="center" style="color: #1e40af; font-size: 14px;">${safeFormatGPA(semester.gpa)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -446,7 +463,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
           </div>
           <div class="info-item">
             <label>${lang === 'ar' ? 'المعدل التراكمي' : 'GPA'}</label>
-            <span style="color: ${studentData.gpa >= 3.0 ? '#059669' : '#d97706'}; font-weight: bold;">${studentData.gpa.toFixed(2)}</span>
+            <span style="color: ${safeGetGPAColor(studentData.gpa)}; font-weight: bold;">${safeFormatGPA(studentData.gpa)}</span>
           </div>
         </div>
       </div>
@@ -483,7 +500,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                 <td colspan="2">${lang === 'ar' ? 'معدل الفصل' : 'Semester GPA'}</td>
                 <td class="center">${semester.total_credits}</td>
                 <td class="center" colspan="4"></td>
-                <td class="center">${semester.gpa.toFixed(2)}</td>
+                <td class="center">${safeFormatGPA(semester.gpa)}</td>
               </tr>
             </tbody>
           </table>
@@ -497,7 +514,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
           </div>
           <div class="info-item">
             <label>${lang === 'ar' ? 'المعدل التراكمي النهائي' : 'Cumulative GPA'}</label>
-            <span style="font-size: 18px; color: ${studentData.gpa >= 3.0 ? '#059669' : '#d97706'}; font-weight: bold;">${studentData.gpa.toFixed(2)}</span>
+            <span style="font-size: 18px; color: ${safeGetGPAColor(studentData.gpa)}; font-weight: bold;">${safeFormatGPA(studentData.gpa)}</span>
           </div>
         </div>
       </div>
@@ -521,12 +538,20 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
     return 'text-red-600 bg-red-50';
   };
 
-  const getGPAColor = (gpa: number) => {
-    if (gpa >= 3.5) return 'text-green-600';
-    if (gpa >= 3.0) return 'text-blue-600';
-    if (gpa >= 2.5) return 'text-yellow-600';
-    if (gpa >= 2.0) return 'text-orange-600';
+  const getGPAColor = (gpa: number | string) => {
+    const numGpa = Number(gpa) || 0;
+    if (numGpa >= 3.5) return 'text-green-600';
+    if (numGpa >= 3.0) return 'text-blue-600';
+    if (numGpa >= 2.5) return 'text-yellow-600';
+    if (numGpa >= 2.0) return 'text-orange-600';
     return 'text-red-600';
+  };
+
+  // Helper to safely format GPA values
+  const formatGPA = (gpa: number | string | undefined | null): string => {
+    if (gpa === undefined || gpa === null) return '0.00';
+    const numGpa = Number(gpa);
+    return isNaN(numGpa) ? '0.00' : numGpa.toFixed(2);
   };
 
   if (loading) {
@@ -660,7 +685,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
             {/* Cumulative GPA */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center">
               <div className={`text-3xl font-bold ${getGPAColor(student.gpa)}`}>
-                {student.gpa.toFixed(2)}
+                {formatGPA(student.gpa)}
               </div>
               <div className="text-sm text-slate-600 mt-1">{t.cumulativeGPA[lang]}</div>
               <div className="text-xs text-slate-500 mt-1">{t.outOf[lang]} 4.00</div>
@@ -746,7 +771,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                     <div className="flex items-center gap-4">
                       <div className={`hidden md:block ${isRTL ? 'text-left' : 'text-right'}`}>
                         <div className={`text-lg font-bold ${getGPAColor(semester.gpa)}`}>
-                          {semester.gpa.toFixed(2)}
+                          {formatGPA(semester.gpa)}
                         </div>
                         <div className="text-xs text-slate-500">{t.semesterGPA[lang]}</div>
                       </div>
@@ -771,7 +796,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                       <div className="md:hidden flex gap-4 mb-4">
                         <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center">
                           <div className={`text-lg font-bold ${getGPAColor(semester.gpa)}`}>
-                            {semester.gpa.toFixed(2)}
+                            {formatGPA(semester.gpa)}
                           </div>
                           <div className="text-xs text-slate-500">{t.semesterGPA[lang]}</div>
                         </div>
@@ -892,7 +917,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
             const heightPercent = (semester.gpa / 4) * 100;
             return (
               <div key={idx} className="flex flex-col items-center gap-2">
-                <div className="text-xs font-medium text-slate-600">{semester.gpa.toFixed(2)}</div>
+                <div className="text-xs font-medium text-slate-600">{formatGPA(semester.gpa)}</div>
                 <div
                   className={`w-12 rounded-t-lg ${getGPAColor(semester.gpa).replace('text-', 'bg-').replace('600', '500')}`}
                   style={{ height: `${heightPercent}%` }}

@@ -122,8 +122,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
              </h1>
              <p className="text-2xl font-semibold text-white mb-4 leading-relaxed">
                {lang === 'ar'
-                 ? 'تَعَلَّمْ مِنْ أَيِّ مَكَانٍ وَكُنْ قَائِدًا فِي كُلِّ مَكَانٍ'
-                 : 'Learn from anywhere and be a leader everywhere'
+                 ? 'تَعَلَّمْ مِنْ أَيِّ مَكَانٍ .. وَكُنْ قَائِدًا فِي كُلِّ مَكَانٍ'
+                 : 'Learn anywhere .. lead everywhere'
                }
              </p>
              <p className="text-blue-200 text-lg max-w-md mb-12">
@@ -159,7 +159,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
 
          {/* Footer */}
          <div className="relative z-10">
-           <p className="text-sm text-slate-400">© 2024 {branding?.universityName || 'VERTIX UNIVERSITY'}. {lang === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved'}.</p>
+           <p className="text-sm text-slate-400">© 2024 {branding?.universityName || 'VERTEX UNIVERSITY'}. {lang === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved'}.</p>
          </div>
       </div>
 
@@ -182,18 +182,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
 
            {/* Language Dropdown */}
            {showLangMenu && (
-             <div className={`absolute top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 ${isRTL ? 'left-0' : 'right-0'}`}>
+             <div className={`absolute top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 ${isRTL ? 'left-0' : 'right-0'}`}>
                <div className="p-2">
                  <button
                    onClick={() => setLanguage('en')}
                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${lang === 'en' ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50 text-slate-700'}`}
                  >
-                   <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${lang === 'en' ? 'bg-blue-100' : 'bg-slate-100'}`}>
-                     <span className="text-sm font-bold">EN</span>
-                   </div>
-                   <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                   <span className="text-xl">🇺🇸</span>
+                   <div className="flex-1 text-left">
                      <p className="text-sm font-medium">English</p>
-                     <p className="text-xs text-slate-500">Left to Right</p>
+                     <p className="text-xs text-slate-500">USA</p>
                    </div>
                    {lang === 'en' && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
                  </button>
@@ -202,12 +200,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                    onClick={() => setLanguage('ar')}
                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mt-1 ${lang === 'ar' ? 'bg-green-50 text-green-700' : 'hover:bg-slate-50 text-slate-700'}`}
                  >
-                   <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${lang === 'ar' ? 'bg-green-100' : 'bg-slate-100'}`}>
-                     <span className="text-sm font-bold">ع</span>
-                   </div>
-                   <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                   <span className="text-xl">🇸🇦</span>
+                   <div className="flex-1 text-left">
                      <p className="text-sm font-medium">العربية</p>
-                     <p className="text-xs text-slate-500">من اليمين لليسار</p>
+                     <p className="text-xs text-slate-500">المملكة العربية السعودية</p>
                    </div>
                    {lang === 'ar' && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
                  </button>
@@ -221,7 +217,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                <img
                  src="/logo-color.png"
                  alt="Logo"
-                 className="lg:hidden w-12 h-12 object-contain mx-auto mb-6"
+                 className="lg:hidden w-28 h-28 object-contain mx-auto mb-6"
                />
                <h2 className="text-3xl font-bold text-slate-900">{t.welcomeBack[lang]}</h2>
                <p className="text-slate-500 mt-2">{t.loginSubtitle[lang]}</p>
@@ -234,19 +230,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                    <p className="text-sm font-medium text-red-800">{error}</p>
                  </div>
                )}
-
-               {/* Support Contact Info */}
-               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                 <p className="text-sm text-blue-800">
-                   {lang === 'ar' ? 'للتواصل مع قسم الدعم الفني' : 'For technical support contact'}
-                 </p>
-                 <a
-                   href="mailto:technical.support@vertexuniversity.edu.eu"
-                   className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-                 >
-                   technical.support@vertexuniversity.edu.eu
-                 </a>
-               </div>
 
                <div className="space-y-4">
                   <div className="w-full">
@@ -314,6 +297,30 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                    </>
                  )}
                </button>
+
+               {/* Contact Info */}
+               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4" dir={isRTL ? 'rtl' : 'ltr'}>
+                 <div className="space-y-2 text-sm">
+                   <div className="flex items-center justify-between gap-2">
+                     <span className="text-blue-800">{lang === 'ar' ? 'عمادة شؤون الطلبة:' : 'Student Affairs:'}</span>
+                     <a href="mailto:students@vertexuniversity.edu.eu" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                       students@vertexuniversity.edu.eu
+                     </a>
+                   </div>
+                   <div className="flex items-center justify-between gap-2">
+                     <span className="text-blue-800">{lang === 'ar' ? 'عمادة القبول والتسجيل:' : 'Admissions & Registration:'}</span>
+                     <a href="mailto:admissions@vertexuniversity.edu.eu" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                       admissions@vertexuniversity.edu.eu
+                     </a>
+                   </div>
+                   <div className="flex items-center justify-between gap-2">
+                     <span className="text-blue-800">{lang === 'ar' ? 'إدارة تقنية المعلومات:' : 'IT Department:'}</span>
+                     <a href="mailto:it@vertexuniversity.edu.eu" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                       it@vertexuniversity.edu.eu
+                     </a>
+                   </div>
+                 </div>
+               </div>
             </form>
          </div>
       </div>

@@ -284,7 +284,7 @@ const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, onLogout }) => {
             </button>
 
             <div className="flex items-center gap-3 ps-2 border-s border-slate-200">
-              <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+              <img src={user.avatar || user.profile_picture_url || user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1e40af&color=fff`} alt="Profile" className="w-8 h-8 rounded-full object-cover border-2 border-blue-200" />
               <div className="hidden md:block text-sm">
                 <p className="font-medium text-slate-800">{user.name}</p>
                 <p className="text-xs text-slate-500">{user.role}</p>
@@ -292,6 +292,26 @@ const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, onLogout }) => {
             </div>
           </div>
         </header>
+
+        {/* Beta Version Banner */}
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2.5 shadow-md">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
+              <span className="font-bold text-sm tracking-wide">
+                {lang === 'ar' ? 'إصدار تجريبي' : 'BETA VERSION'}
+              </span>
+            </div>
+            <span className="text-sm text-white/90">
+              {lang === 'ar'
+                ? 'هذا الإصدار تجريبي وقد تواجه بعض المشكلات. نرحب بملاحظاتكم!'
+                : 'This is a beta version. You may encounter some issues. We welcome your feedback!'}
+            </span>
+          </div>
+        </div>
 
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">

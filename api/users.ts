@@ -34,6 +34,7 @@ export interface CreateUserData {
   program?: string;
   status?: 'active' | 'inactive' | 'suspended';
   phone?: string;
+  profilePicture?: string; // Base64 encoded image for student ID card
 }
 
 export interface UpdateUserData {
@@ -50,6 +51,7 @@ export interface UpdateUserData {
   program?: string;
   status?: 'active' | 'inactive' | 'suspended';
   phone?: string;
+  profilePicture?: string; // Base64 encoded image for student ID card
 }
 
 export interface UsersResponse {
@@ -103,6 +105,7 @@ export const usersAPI = {
       program: data.program,
       status: data.status || 'active',
       phone: data.phone,
+      avatar: data.profilePicture,
     });
     return response.data;
   },
@@ -123,6 +126,7 @@ export const usersAPI = {
     if (data.program !== undefined) payload.program = data.program;
     if (data.status) payload.status = data.status;
     if (data.phone !== undefined) payload.phone = data.phone;
+    if (data.profilePicture) payload.avatar = data.profilePicture;
 
     const response = await apiClient.put(`/users/${id}`, payload);
     return response.data;

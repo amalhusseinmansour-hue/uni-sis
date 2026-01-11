@@ -66,7 +66,7 @@ export interface BrandingSettings {
 
 // Default branding settings
 const DEFAULT_BRANDING: BrandingSettings = {
-  universityName: 'Vertix University',
+  universityName: 'Vertex University',
   universityNameAr: 'جامعة فيرتكس',
   universitySlogan: 'Excellence in Education',
   universitySloganAr: 'التميز في التعليم',

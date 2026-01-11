@@ -25,7 +25,7 @@ const getBrandingSettings = () => {
 export const getUniversityInfo = () => {
   const branding = getBrandingSettings();
   return {
-    name_en: branding?.universityName || 'VERTIX UNIVERSITY',
+    name_en: branding?.universityName || 'VERTEX UNIVERSITY',
     name_ar: branding?.universityNameAr || 'جامعة فيرتكس',
     // For reports, prioritize reportHeaderLogo over the main logo
     logo: branding?.reportHeaderLogo || branding?.logo || '',
@@ -50,7 +50,7 @@ export const getUniversityInfo = () => {
 
 // Keep for backward compatibility
 export const UNIVERSITY_INFO = {
-  name_en: 'VERTIX UNIVERSITY',
+  name_en: 'VERTEX UNIVERSITY',
   name_ar: 'جامعة فيرتكس',
   logo: 'VU',
   slogan_en: 'Excellence in Education',
@@ -518,7 +518,7 @@ export const generateToWhomItMayConcernLetter = (
         <p style="font-size: 14px;">
           ${isRTL
             ? `نفيد بأن الطالب/ة <strong>${student.nameAr || student.name}</strong> والذي يحمل الرقم الجامعي <strong>${student.studentId}</strong> هو طالب منتظم في جامعة فيرتكس، تخصص <strong>${student.majorAr || student.major}</strong>.`
-            : `This is to confirm that <strong>${student.name}</strong>, Student ID: <strong>${student.studentId}</strong>, is a regular student at Vertix University, majoring in <strong>${student.major}</strong>.`
+            : `This is to confirm that <strong>${student.name}</strong>, Student ID: <strong>${student.studentId}</strong>, is a regular student at Vertex University, majoring in <strong>${student.major}</strong>.`
           }
         </p>
         <p style="font-size: 14px; margin-top: 15px;">

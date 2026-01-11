@@ -45,6 +45,19 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if user account is active
+        if ($user->status === 'suspended') {
+            throw ValidationException::withMessages([
+                'email' => ['Your account has been suspended. Please contact administration.'],
+            ]);
+        }
+
+        if ($user->status === 'inactive') {
+            throw ValidationException::withMessages([
+                'email' => ['Your account is inactive. Please contact administration.'],
+            ]);
+        }
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         // Build clean user data without circular references
@@ -111,7 +124,121 @@ class AuthController extends Controller
         $user = $request->user();
 
         if ($user->role === 'STUDENT') {
-            $user->load('student.program.department');
+            $user->load([
+                'student.program.department.college',
+                'student.enrollments.course',
+                'student.grades.course',
+            ]);
+
+            // Return comprehensive student profile data
+            if ($user->student) {
+                $student = $user->student;
+                return response()->json([
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'avatar' => $user->avatar,
+                    'phone' => $user->phone,
+                    'student' => [
+                        'id' => $student->id,
+                        'student_id' => $student->student_id,
+                        'name_ar' => $student->name_ar,
+                        'name_en' => $student->name_en,
+                        'nameAr' => $student->name_ar,
+                        'nameEn' => $student->name_en,
+
+                        // Arabic Name Parts
+                        'firstNameAr' => $student->first_name_ar,
+                        'middleNameAr' => $student->middle_name_ar,
+                        'lastNameAr' => $student->last_name_ar,
+
+                        // English Name Parts
+                        'firstNameEn' => $student->first_name_en,
+                        'middleNameEn' => $student->middle_name_en,
+                        'lastNameEn' => $student->last_name_en,
+
+                        // Personal Data
+                        'nationalId' => $student->national_id,
+                        'idType' => $student->id_type,
+                        'dateOfBirth' => $student->date_of_birth?->format('Y-m-d'),
+                        'birthCity' => $student->birth_city,
+                        'birthCountry' => $student->birth_country,
+                        'gender' => $student->gender,
+                        'nationality' => $student->nationality,
+                        'secondaryNationality' => $student->secondary_nationality,
+                        'maritalStatus' => $student->marital_status,
+                        'religion' => $student->religion,
+                        'primaryLanguage' => $student->primary_language,
+
+                        // Contact Information
+                        'phone' => $student->phone,
+                        'alternativePhone' => $student->alternative_phone,
+                        'personalEmail' => $student->personal_email,
+                        'universityEmail' => $student->university_email,
+
+                        // Address
+                        'country' => $student->address_country,
+                        'region' => $student->address_region,
+                        'city' => $student->address_city,
+                        'street' => $student->address_street,
+                        'postalCode' => $student->postal_code,
+
+                        // Guardian Info
+                        'guardianName' => $student->guardian_name,
+                        'guardianRelationship' => $student->guardian_relationship,
+                        'guardianPhone' => $student->guardian_phone,
+                        'guardianEmail' => $student->guardian_email,
+
+                        // Academic Data
+                        'status' => $student->status,
+                        'level' => $student->level,
+                        'currentSemester' => $student->current_semester,
+                        'gpa' => (float) $student->gpa,
+                        'termGpa' => (float) $student->term_gpa,
+                        'totalRequiredCredits' => $student->total_required_credits,
+                        'completedCredits' => $student->completed_credits,
+                        'registeredCredits' => $student->registered_credits,
+                        'remainingCredits' => $student->remaining_credits,
+                        'academicStatus' => $student->academic_status,
+                        'admissionDate' => $student->admission_date?->format('Y-m-d'),
+
+                        // Financial Summary
+                        'totalFees' => (float) $student->total_fees,
+                        'paidAmount' => (float) $student->paid_amount,
+                        'currentBalance' => (float) $student->current_balance,
+                        'financialStatus' => $student->financial_status,
+
+                        // Program Info
+                        'program' => $student->program ? [
+                            'id' => $student->program->id,
+                            'code' => $student->program->code,
+                            'nameEn' => $student->program->name_en,
+                            'nameAr' => $student->program->name_ar,
+                            'degree' => $student->program->degree,
+                            'department' => $student->program->department ? [
+                                'id' => $student->program->department->id,
+                                'nameEn' => $student->program->department->name_en,
+                                'nameAr' => $student->program->department->name_ar,
+                                'college' => $student->program->department->college ? [
+                                    'id' => $student->program->department->college->id,
+                                    'nameEn' => $student->program->department->college->name_en,
+                                    'nameAr' => $student->program->department->college->name_ar,
+                                ] : null,
+                            ] : null,
+                        ] : null,
+
+                        // Profile Picture
+                        'avatar' => $student->profile_picture ? asset('storage/' . $student->profile_picture) : null,
+                        'profilePicture' => $student->profile_picture ? asset('storage/' . $student->profile_picture) : null,
+
+                        // System accounts
+                        'sisUsername' => $student->sis_username,
+                        'lmsUsername' => $student->lms_username,
+                        'lastLogin' => $student->last_login,
+                    ],
+                ]);
+            }
         }
 
         return response()->json($user);

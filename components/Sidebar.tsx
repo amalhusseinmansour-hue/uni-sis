@@ -433,19 +433,17 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
 
       <aside className={sidebarClasses} dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Header */}
-        <div className="flex items-center justify-between h-20 px-4 border-b border-slate-700">
+        <div className="flex items-center justify-center h-32 px-4 border-b border-slate-700">
           {!isCollapsed ? (
-            <div className="flex flex-col items-center gap-1 w-full pr-2">
-              <div className="flex items-center gap-2">
-                <img
-                  src="/logo-white.png"
-                  alt="Logo"
-                  className="w-8 h-8 object-contain"
-                />
-                <h1 className="text-lg font-bold text-white tracking-wide">
-                  {isRTL ? (branding?.universityNameAr || 'جامعة فيرتكس') : (branding?.universityName || 'VERTEX UNIVERSITY')}
-                </h1>
-              </div>
+            <div className="flex flex-col items-center justify-center gap-2 w-full">
+              <img
+                src="/logo-white.png"
+                alt="Logo"
+                className="w-20 h-20 object-contain"
+              />
+              <h1 className="text-base font-bold text-white tracking-wide text-center">
+                {isRTL ? (branding?.universityNameAr || 'جامعة فيرتكس') : (branding?.universityName || 'VERTEX UNIVERSITY')}
+              </h1>
               <p className="text-[9px] text-slate-400 leading-tight text-center">
                 تَعَلَّمْ مِنْ أَيِّ مَكَانٍ وَكُنْ قَائِدًا فِي كُلِّ مَكَانٍ
               </p>
@@ -454,7 +452,7 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
             <img
               src="/logo-white.png"
               alt="Logo"
-              className="w-10 h-10 object-contain mx-auto"
+              className="w-12 h-12 object-contain mx-auto"
             />
           )}
 

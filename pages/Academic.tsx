@@ -12,7 +12,7 @@ import {
   Users, Star, Info, CheckSquare, Square, Layers, BarChart2
 } from 'lucide-react';
 import { Course, ServiceRequest } from '../types';
-import { TRANSLATIONS } from '../constants';
+import { TRANSLATIONS, VERTEX_GRADE_SCALE, gradeToPoints, getGradeLabel, getGradeColor, isGradeExcluded } from '../constants';
 import { studentsAPI } from '../api/students';
 import { coursesAPI } from '../api/courses';
 import { enrollmentsAPI } from '../api/enrollments';
@@ -151,18 +151,23 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
     setCart([]);
   };
 
-  // GPA calculations
-  const totalCredits = grades.reduce((sum, grade) => sum + grade.credits, 0);
-  const totalPoints = grades.reduce((sum, grade) => sum + (grade.points * grade.credits), 0);
+  // GPA calculations (using Vertex University grading scale)
+  // Filter out excluded grades (I, P, NP, CC, CX, S, AW, W)
+  const gpaGrades = grades.filter(g => !isGradeExcluded(g.grade));
+  const totalCredits = gpaGrades.reduce((sum, grade) => sum + (grade.credits || 0), 0);
+  const totalPoints = gpaGrades.reduce((sum, grade) => {
+    const points = grade.points ?? gradeToPoints(grade.grade);
+    return sum + (points * (grade.credits || 0));
+  }, 0);
   const calculatedGPA = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '0.00';
 
   // Chart data
   const gradeDistribution = [
-    { grade: 'A', count: grades.filter(g => g.grade.startsWith('A')).length, color: '#22c55e' },
-    { grade: 'B', count: grades.filter(g => g.grade.startsWith('B')).length, color: '#3b82f6' },
-    { grade: 'C', count: grades.filter(g => g.grade.startsWith('C')).length, color: '#f59e0b' },
-    { grade: 'D', count: grades.filter(g => g.grade.startsWith('D')).length, color: '#f97316' },
-    { grade: 'F', count: grades.filter(g => g.grade === 'F').length, color: '#ef4444' },
+    { grade: 'A/A-', count: grades.filter(g => g.grade === 'A' || g.grade === 'A-').length, color: '#22c55e' },
+    { grade: 'B+/B', count: grades.filter(g => g.grade === 'B+' || g.grade === 'B').length, color: '#3b82f6' },
+    { grade: 'C+/C', count: grades.filter(g => g.grade === 'C+' || g.grade === 'C').length, color: '#f59e0b' },
+    { grade: 'D+/D', count: grades.filter(g => g.grade === 'D+' || g.grade === 'D').length, color: '#f97316' },
+    { grade: 'F/FA', count: grades.filter(g => g.grade === 'F' || g.grade === 'FA').length, color: '#ef4444' },
   ];
 
   const semesterGPAData = [
@@ -526,15 +531,19 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
                             </span>
                           </td>
                           <td className="p-4 text-center">
-                            <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
-                              g.grade.startsWith('A') ? 'bg-green-100 text-green-700' :
-                              g.grade.startsWith('B') ? 'bg-blue-100 text-blue-700' :
-                              g.grade.startsWith('C') ? 'bg-yellow-100 text-yellow-700' :
-                              g.grade.startsWith('D') ? 'bg-orange-100 text-orange-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {g.grade}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${getGradeColor(g.grade)}`}>
+                                {g.grade}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {getGradeLabel(g.grade, lang)}
+                              </span>
+                              {!isGradeExcluded(g.grade) && (
+                                <span className="text-xs text-slate-400">
+                                  {gradeToPoints(g.grade).toFixed(2)} {lang === 'ar' ? 'نقطة' : 'pts'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
