@@ -56,6 +56,127 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])
 // Public announcements
 Route::get('/announcements/published', [AnnouncementController::class, 'published']);
 
+// Seed colleges and programs (one-time use)
+Route::get('/seed-colleges-programs', function () {
+    $stats = ['colleges' => 0, 'departments' => 0, 'programs' => 0];
+
+    // كلية إدارة الأعمال
+    $businessCollege = \App\Models\College::firstOrCreate(
+        ['code' => 'CBA'],
+        [
+            'name_ar' => 'كلية إدارة الأعمال',
+            'name_en' => 'College of Business Administration',
+            'description' => 'College of Business Administration',
+        ]
+    );
+    if ($businessCollege->wasRecentlyCreated) $stats['colleges']++;
+
+    $businessDepts = [
+        ['code' => 'BA', 'name_ar' => 'قسم إدارة الأعمال', 'name_en' => 'Department of Business Administration', 'programs' => [
+            ['code' => 'BBA', 'name_ar' => 'بكالوريوس إدارة الأعمال', 'name_en' => 'Bachelor of Business Administration', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+        ['code' => 'ACC', 'name_ar' => 'قسم المحاسبة', 'name_en' => 'Department of Accounting', 'programs' => [
+            ['code' => 'BACC', 'name_ar' => 'بكالوريوس المحاسبة', 'name_en' => 'Bachelor of Accounting', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+        ['code' => 'MKT', 'name_ar' => 'قسم التسويق', 'name_en' => 'Department of Marketing', 'programs' => [
+            ['code' => 'BDM', 'name_ar' => 'بكالوريوس التسويق الرقمي', 'name_en' => 'Bachelor of Digital Marketing', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+        ['code' => 'FT', 'name_ar' => 'قسم التكنولوجيا المالية', 'name_en' => 'Department of Financial Technology', 'programs' => [
+            ['code' => 'BFT', 'name_ar' => 'بكالوريوس التكنولوجيا المالية', 'name_en' => 'Bachelor of Financial Technology', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+        ['code' => 'MIS', 'name_ar' => 'قسم نظم المعلومات الإدارية', 'name_en' => 'Department of Management Information Systems', 'programs' => [
+            ['code' => 'BMIS', 'name_ar' => 'بكالوريوس نظم المعلومات الإدارية', 'name_en' => 'Bachelor of Management Information Systems', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+        ['code' => 'MGMT', 'name_ar' => 'قسم الإدارة', 'name_en' => 'Department of Management', 'programs' => [
+            ['code' => 'MPM', 'name_ar' => 'ماجستير إدارة المشاريع', 'name_en' => 'Master of Project Management', 'type' => 'MASTER', 'credits' => 36],
+            ['code' => 'MBA', 'name_ar' => 'ماجستير إدارة الأعمال', 'name_en' => 'Master of Business Administration', 'type' => 'MASTER', 'credits' => 42],
+            ['code' => 'PHDMGMT', 'name_ar' => 'دكتوراه في الإدارة', 'name_en' => 'PhD in Management', 'type' => 'PHD', 'credits' => 54],
+        ]],
+    ];
+
+    foreach ($businessDepts as $d) {
+        $dept = \App\Models\Department::firstOrCreate(['code' => $d['code']], ['college_id' => $businessCollege->id, 'name_ar' => $d['name_ar'], 'name_en' => $d['name_en']]);
+        if ($dept->wasRecentlyCreated) $stats['departments']++;
+        foreach ($d['programs'] as $p) {
+            $prog = \App\Models\Program::firstOrCreate(['code' => $p['code']], ['department_id' => $dept->id, 'name_ar' => $p['name_ar'], 'name_en' => $p['name_en'], 'type' => $p['type'], 'total_credits' => $p['credits']]);
+            if ($prog->wasRecentlyCreated) $stats['programs']++;
+        }
+    }
+
+    // كلية الهندسة وتكنولوجيا المعلومات
+    $engCollege = \App\Models\College::firstOrCreate(
+        ['code' => 'CEIT'],
+        ['name_ar' => 'كلية الهندسة وتكنولوجيا المعلومات', 'name_en' => 'College of Engineering & IT', 'description' => 'College of Engineering and IT']
+    );
+    if ($engCollege->wasRecentlyCreated) $stats['colleges']++;
+
+    $engDepts = [
+        ['code' => 'CE', 'name_ar' => 'قسم هندسة الحاسوب', 'name_en' => 'Department of Computer Engineering', 'programs' => [
+            ['code' => 'BCE', 'name_ar' => 'بكالوريوس هندسة الحاسوب', 'name_en' => 'Bachelor of Computer Engineering', 'type' => 'BACHELOR', 'credits' => 160],
+            ['code' => 'MCE', 'name_ar' => 'ماجستير هندسة الحاسوب', 'name_en' => 'Master of Computer Engineering', 'type' => 'MASTER', 'credits' => 36],
+        ]],
+        ['code' => 'SE', 'name_ar' => 'قسم هندسة البرمجيات', 'name_en' => 'Department of Software Engineering', 'programs' => [
+            ['code' => 'BSE', 'name_ar' => 'بكالوريوس هندسة البرمجيات', 'name_en' => 'Bachelor of Software Engineering', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+        ['code' => 'AI', 'name_ar' => 'قسم الذكاء الاصطناعي', 'name_en' => 'Department of Artificial Intelligence', 'programs' => [
+            ['code' => 'BAI', 'name_ar' => 'بكالوريوس الذكاء الاصطناعي', 'name_en' => 'Bachelor of Artificial Intelligence', 'type' => 'BACHELOR', 'credits' => 132],
+            ['code' => 'MAI', 'name_ar' => 'ماجستير الذكاء الاصطناعي', 'name_en' => 'Master of Artificial Intelligence', 'type' => 'MASTER', 'credits' => 36],
+        ]],
+        ['code' => 'CYBER', 'name_ar' => 'قسم الأمن السيبراني', 'name_en' => 'Department of Cybersecurity', 'programs' => [
+            ['code' => 'BCYBER', 'name_ar' => 'بكالوريوس الأمن السيبراني', 'name_en' => 'Bachelor of Cybersecurity', 'type' => 'BACHELOR', 'credits' => 132],
+        ]],
+    ];
+
+    foreach ($engDepts as $d) {
+        $dept = \App\Models\Department::firstOrCreate(['code' => $d['code']], ['college_id' => $engCollege->id, 'name_ar' => $d['name_ar'], 'name_en' => $d['name_en']]);
+        if ($dept->wasRecentlyCreated) $stats['departments']++;
+        foreach ($d['programs'] as $p) {
+            $prog = \App\Models\Program::firstOrCreate(['code' => $p['code']], ['department_id' => $dept->id, 'name_ar' => $p['name_ar'], 'name_en' => $p['name_en'], 'type' => $p['type'], 'total_credits' => $p['credits']]);
+            if ($prog->wasRecentlyCreated) $stats['programs']++;
+        }
+    }
+
+    // كلية العلوم الصحية والبيئية
+    $healthCollege = \App\Models\College::firstOrCreate(
+        ['code' => 'CHES'],
+        ['name_ar' => 'كلية العلوم الصحية والبيئية', 'name_en' => 'College of Health & Environmental Sciences', 'description' => 'College of Health and Environmental Sciences']
+    );
+    if ($healthCollege->wasRecentlyCreated) $stats['colleges']++;
+
+    $healthDepts = [
+        ['code' => 'HEDM', 'name_ar' => 'قسم إدارة الطوارئ والكوارث الصحية', 'name_en' => 'Department of Health Emergency & Disaster Management', 'programs' => [
+            ['code' => 'BHEDM', 'name_ar' => 'بكالوريوس إدارة الطوارئ والكوارث الصحية', 'name_en' => 'Bachelor of Health Emergency & Disaster Management', 'type' => 'BACHELOR', 'credits' => 132],
+            ['code' => 'MHEDM', 'name_ar' => 'ماجستير إدارة الطوارئ والكوارث الصحية', 'name_en' => 'Master of Health Emergency & Disaster Management', 'type' => 'MASTER', 'credits' => 36],
+            ['code' => 'PHDHEDM', 'name_ar' => 'دكتوراه إدارة الطوارئ والكوارث الصحية', 'name_en' => 'PhD in Health Emergency & Disaster Management', 'type' => 'PHD', 'credits' => 54],
+        ]],
+        ['code' => 'HA', 'name_ar' => 'قسم الإدارة الصحية', 'name_en' => 'Department of Health Administration', 'programs' => [
+            ['code' => 'BHA', 'name_ar' => 'بكالوريوس الإدارة الصحية', 'name_en' => 'Bachelor of Health Administration', 'type' => 'BACHELOR', 'credits' => 132],
+            ['code' => 'MHA', 'name_ar' => 'ماجستير الإدارة الصحية', 'name_en' => 'Master of Health Administration', 'type' => 'MASTER', 'credits' => 36],
+            ['code' => 'PHDHA', 'name_ar' => 'دكتوراه الإدارة الصحية', 'name_en' => 'PhD in Health Administration', 'type' => 'PHD', 'credits' => 54],
+        ]],
+    ];
+
+    foreach ($healthDepts as $d) {
+        $dept = \App\Models\Department::firstOrCreate(['code' => $d['code']], ['college_id' => $healthCollege->id, 'name_ar' => $d['name_ar'], 'name_en' => $d['name_en']]);
+        if ($dept->wasRecentlyCreated) $stats['departments']++;
+        foreach ($d['programs'] as $p) {
+            $prog = \App\Models\Program::firstOrCreate(['code' => $p['code']], ['department_id' => $dept->id, 'name_ar' => $p['name_ar'], 'name_en' => $p['name_en'], 'type' => $p['type'], 'total_credits' => $p['credits']]);
+            if ($prog->wasRecentlyCreated) $stats['programs']++;
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم إضافة البيانات بنجاح',
+        'added' => $stats,
+        'totals' => [
+            'colleges' => \App\Models\College::count(),
+            'departments' => \App\Models\Department::count(),
+            'programs' => \App\Models\Program::count(),
+        ]
+    ]);
+});
+
 // Current semester (public)
 Route::get('/semesters/current', [SemesterController::class, 'current']);
 
@@ -298,6 +419,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // ADMIN ROUTES (Full access to all resources)
     // ==========================================
     Route::middleware('role:ADMIN')->group(function () {
+        // User Management
+        Route::prefix('users')->group(function () {
+            $userController = \App\Http\Controllers\Api\Admin\UserController::class;
+            Route::get('/', [$userController, 'index']);
+            Route::get('/stats', [$userController, 'stats']);
+            Route::post('/', [$userController, 'store']);
+            Route::get('/{id}', [$userController, 'show'])->where('id', '[0-9]+');
+            Route::put('/{id}', [$userController, 'update'])->where('id', '[0-9]+');
+            Route::delete('/{id}', [$userController, 'destroy'])->where('id', '[0-9]+');
+        });
+
         // Students management
         Route::apiResource('students', StudentController::class);
 
