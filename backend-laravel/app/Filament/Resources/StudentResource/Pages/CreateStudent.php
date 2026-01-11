@@ -29,10 +29,14 @@ class CreateStudent extends CreateRecord
 
                 if ($existingUser) {
                     $data['user_id'] = $existingUser->id;
+                    // Update password if provided
+                    if (!empty($data['password'])) {
+                        $existingUser->update(['password' => Hash::make($data['password'])]);
+                    }
                     session()->flash('user_existed', true);
                 } else {
-                    // Generate a secure random password
-                    $password = Str::random(12);
+                    // Use provided password or generate random one
+                    $password = $data['password'] ?? Str::random(12);
 
                     // Create new user
                     $user = User::create([
@@ -40,16 +44,20 @@ class CreateStudent extends CreateRecord
                         'email' => $email,
                         'password' => Hash::make($password),
                         'role' => 'STUDENT',
+                        'status' => 'active',
                     ]);
 
                     $data['user_id'] = $user->id;
 
-                    // Store the generated password in session for display
+                    // Store the password in session for display
                     session()->flash('generated_password', $password);
                     session()->flash('student_email', $email);
                     session()->flash('student_name', $data['name_en'] ?? $data['name_ar']);
                 }
             }
+
+            // Remove password from data as it's not a Student field
+            unset($data['password']);
         }
 
         // Set default values for new students

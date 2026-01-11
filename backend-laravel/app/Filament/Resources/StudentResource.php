@@ -172,6 +172,18 @@ class StudentResource extends Resource
                                             'required' => 'University email is required',
                                             'unique' => 'This email is already in use',
                                         ]),
+                                    Forms\Components\TextInput::make('password')
+                                        ->label('Login Password')
+                                        ->placeholder('Enter password for student login')
+                                        ->password()
+                                        ->required()
+                                        ->minLength(6)
+                                        ->helperText('Student will use this password with Student ID or Email to login')
+                                        ->validationMessages([
+                                            'required' => 'Password is required',
+                                            'min' => 'Password must be at least 6 characters',
+                                        ])
+                                        ->visibleOn('create'),
                                 ]),
                             Forms\Components\Section::make('Address')
                                 ->description('Current residence address')
