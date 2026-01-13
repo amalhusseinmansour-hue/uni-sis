@@ -245,6 +245,69 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Late registration with administrative permission (Student Affairs)
+     */
+    public function lateRegistration(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'course_id' => 'required|exists:courses,id',
+            'semester_id' => 'required|exists:semesters,id',
+            'section' => 'nullable|string|max:10',
+            'reason' => 'required|string',
+            'approved_by' => 'nullable|string',
+        ]);
+
+        // Check if already enrolled
+        $exists = Enrollment::where('student_id', $validated['student_id'])
+            ->where('course_id', $validated['course_id'])
+            ->where('semester_id', $validated['semester_id'])
+            ->whereIn('status', ['ENROLLED', 'COMPLETED'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'الطالب مسجل بالفعل في هذا المساق'], 422);
+        }
+
+        $enrollment = Enrollment::create([
+            'student_id' => $validated['student_id'],
+            'course_id' => $validated['course_id'],
+            'semester_id' => $validated['semester_id'],
+            'section' => $validated['section'] ?? 'A',
+            'status' => 'ENROLLED',
+            'is_late_registration' => true,
+            'late_registration_reason' => $validated['reason'],
+            'late_registration_approved_by' => $validated['approved_by'] ?? auth()->user()->name,
+        ]);
+
+        return response()->json([
+            'message' => 'تم التسجيل المتأخر بنجاح',
+            'enrollment' => $enrollment->load(['student', 'course', 'semester']),
+        ], 201);
+    }
+
+    /**
+     * Change student's section for a course
+     */
+    public function changeSection(Request $request, Enrollment $enrollment): JsonResponse
+    {
+        $validated = $request->validate([
+            'new_section' => 'required|string|max:10',
+            'reason' => 'nullable|string',
+        ]);
+
+        $oldSection = $enrollment->section;
+        $enrollment->update(['section' => $validated['new_section']]);
+
+        return response()->json([
+            'message' => 'تم تغيير الشعبة بنجاح',
+            'enrollment' => $enrollment->fresh(['student', 'course', 'semester']),
+            'old_section' => $oldSection,
+            'new_section' => $validated['new_section'],
+        ]);
+    }
+
+    /**
      * Get available sections for course registration
      */
     public function availableSections(Request $request): JsonResponse

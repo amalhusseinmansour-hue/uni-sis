@@ -82,6 +82,7 @@ const moduleTranslations: Record<string, { en: string; ar: string }> = {
   registration: { en: 'Registration', ar: 'التسجيل' },
   finance: { en: 'Finance', ar: 'المالية' },
   admissions: { en: 'Admissions', ar: 'القبول' },
+  study_plans: { en: 'Study Plans', ar: 'الخطط الدراسية' },
   exams: { en: 'Exams', ar: 'الاختبارات' },
   attendance: { en: 'Attendance', ar: 'الحضور' },
   schedule: { en: 'Schedule', ar: 'الجدول' },
@@ -104,6 +105,23 @@ const permissionTranslations: Record<string, { en: string; ar: string }> = {
   reports: { en: 'Reports', ar: 'التقارير' },
   record: { en: 'Record', ar: 'تسجيل' },
   grades: { en: 'Grades', ar: 'الدرجات' },
+  // Student permissions
+  upload_documents: { en: 'Upload Documents', ar: 'رفع المستندات' },
+  fix_errors: { en: 'Fix Errors', ar: 'تصحيح الأخطاء' },
+  // Registration permissions
+  add_course: { en: 'Add Course', ar: 'إضافة مساق' },
+  drop_course: { en: 'Drop Course', ar: 'حذف مساق' },
+  change_section: { en: 'Change Section', ar: 'تغيير الشعبة' },
+  late_registration: { en: 'Late Registration', ar: 'التسجيل المتأخر' },
+  open_close_registration: { en: 'Open/Close Registration', ar: 'فتح/إغلاق التسجيل' },
+  // Admissions permissions
+  set_admission_year: { en: 'Set Admission Year', ar: 'تحديد سنة القبول' },
+  set_admission_type: { en: 'Set Admission Type', ar: 'تحديد نوع القبول' },
+  // Study plans permissions
+  assign: { en: 'Assign Plan', ar: 'ربط الخطة' },
+  transfer_major: { en: 'Transfer Major', ar: 'تحويل التخصص' },
+  restructure: { en: 'Restructure', ar: 'إعادة الهيكلة' },
+  track_progress: { en: 'Track Progress', ar: 'متابعة الإنجاز' },
 };
 
 const getRoleIcon = (iconName?: string) => {
@@ -368,7 +386,7 @@ const RolesPermissions: React.FC<Props> = ({ lang }) => {
     <div className="p-6 space-y-6">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 ${lang === 'ar' ? 'left-4' : 'right-4'} z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 ${
+        <div className={`fixed top-4 ${lang === 'ar' ? 'start-4' : 'end-4'} z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 ${
           notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {notification.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -399,13 +417,13 @@ const RolesPermissions: React.FC<Props> = ({ lang }) => {
         <div className="lg:col-span-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
           <div className="p-4 border-b border-gray-100 dark:border-slate-700">
             <div className="relative">
-              <Search className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+              <Search className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
               <input
                 type="text"
                 placeholder={t('search', lang)}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
+                className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
               />
             </div>
           </div>
@@ -446,7 +464,7 @@ const RolesPermissions: React.FC<Props> = ({ lang }) => {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            <Users className="w-3 h-3 inline mr-1" />
+                            <Users className="w-3 h-3 inline me-1" />
                             {role.usersCount || 0} {t('usersCount', lang)}
                           </span>
                         </div>
@@ -566,9 +584,9 @@ const RolesPermissions: React.FC<Props> = ({ lang }) => {
                               }`}
                             >
                               {hasPermission ? (
-                                <Check className="w-3 h-3 inline mr-1" />
+                                <Check className="w-3 h-3 inline me-1" />
                               ) : (
-                                <X className="w-3 h-3 inline mr-1" />
+                                <X className="w-3 h-3 inline me-1" />
                               )}
                               {permissionTranslations[perm]?.[lang] || perm}
                             </span>
@@ -745,7 +763,7 @@ const RolesPermissions: React.FC<Props> = ({ lang }) => {
                                       : 'bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-500 hover:border-purple-400'
                                   }`}
                                 >
-                                  {isSelected && <Check className="w-3 h-3 inline mr-1" />}
+                                  {isSelected && <Check className="w-3 h-3 inline me-1" />}
                                   {permissionTranslations[perm]?.[lang] || perm}
                                 </button>
                               );

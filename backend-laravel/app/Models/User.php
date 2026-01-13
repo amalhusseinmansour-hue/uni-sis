@@ -40,7 +40,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array($this->role, ['ADMIN', 'FINANCE', 'LECTURER']);
+        return in_array($this->role, ['ADMIN', 'FINANCE', 'LECTURER', 'STUDENT_AFFAIRS']);
     }
 
     public function student(): HasOne
@@ -86,6 +86,11 @@ class User extends Authenticatable implements FilamentUser
     public function isStudent(): bool
     {
         return $this->role === 'STUDENT';
+    }
+
+    public function isStudentAffairs(): bool
+    {
+        return $this->role === 'STUDENT_AFFAIRS';
     }
 
     public function hasRole(string $role): bool

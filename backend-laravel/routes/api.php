@@ -416,6 +416,78 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ==========================================
+    // STUDENT AFFAIRS ROUTES (شؤون الطلاب)
+    // ==========================================
+    Route::middleware('role:STUDENT_AFFAIRS,ADMIN')->group(function () {
+        // Students management - إدارة ملفات الطلاب
+        Route::apiResource('students', StudentController::class)->only(['index', 'show', 'store', 'update']);
+
+        // Student Documents - رفع وإدارة المستندات
+        Route::get('/student-documents', [StudentDocumentController::class, 'index']);
+        Route::get('/student-documents/{studentDocument}', [StudentDocumentController::class, 'show']);
+        Route::post('/student-documents', [StudentDocumentController::class, 'store']);
+        Route::put('/student-documents/{studentDocument}', [StudentDocumentController::class, 'update']);
+        Route::post('/student-documents/{studentDocument}/verify', [StudentDocumentController::class, 'verify']);
+        Route::post('/student-documents/{studentDocument}/reject', [StudentDocumentController::class, 'reject']);
+        Route::get('/student-documents/{studentDocument}/download', [StudentDocumentController::class, 'download']);
+
+        // Admission Applications - إدارة طلبات القبول
+        Route::get('/admission-applications', [AdmissionApplicationController::class, 'index']);
+        Route::get('/admission-applications/{admissionApplication}', [AdmissionApplicationController::class, 'show']);
+        Route::post('/admission-applications', [AdmissionApplicationController::class, 'store']);
+        Route::put('/admission-applications/{admissionApplication}', [AdmissionApplicationController::class, 'update']);
+        Route::post('/admission-applications/{admissionApplication}/start-review', [AdmissionApplicationController::class, 'startReview']);
+        Route::post('/admission-applications/{admissionApplication}/verify-documents', [AdmissionApplicationController::class, 'verifyDocuments']);
+        Route::post('/admission-applications/{admissionApplication}/request-payment', [AdmissionApplicationController::class, 'requestPayment']);
+        Route::post('/admission-applications/{admissionApplication}/approve', [AdmissionApplicationController::class, 'approve']);
+        Route::post('/admission-applications/{admissionApplication}/reject', [AdmissionApplicationController::class, 'reject']);
+        Route::post('/admission-applications/{admissionApplication}/waitlist', [AdmissionApplicationController::class, 'waitlist']);
+        Route::get('/admission-applications/{admissionApplication}/workflow-logs', [AdmissionApplicationController::class, 'workflowLogs']);
+        Route::get('/admission-applications-statistics', [AdmissionApplicationController::class, 'statistics']);
+
+        // Enrollments management - تسجيل المساقات
+        Route::apiResource('enrollments', EnrollmentController::class);
+        Route::post('/enrollments/{enrollment}/drop', [EnrollmentController::class, 'drop']);
+        Route::post('/enrollments/{enrollment}/withdraw', [EnrollmentController::class, 'withdraw']);
+
+        // Late Registration - التسجيل المتأخر بإذن إداري
+        Route::post('/enrollments/late-registration', [EnrollmentController::class, 'lateRegistration']);
+
+        // Section Change - تغيير الشعبة
+        Route::post('/enrollments/{enrollment}/change-section', [EnrollmentController::class, 'changeSection']);
+
+        // Open/Close Registration - فتح/إغلاق التسجيل لطالب معين
+        Route::post('/students/{student}/open-registration', [StudentController::class, 'openRegistration']);
+        Route::post('/students/{student}/close-registration', [StudentController::class, 'closeRegistration']);
+
+        // Study Plans - الخطط الدراسية
+        Route::get('/students/{student}/study-plan', [StudentController::class, 'studyPlan']);
+        Route::post('/students/{student}/assign-study-plan', [StudentController::class, 'assignStudyPlan']);
+        Route::post('/students/{student}/transfer-major', [StudentController::class, 'transferMajor']);
+
+        // Programs - Read access for assigning study plans
+        Route::get('/programs', [ProgramController::class, 'index']);
+        Route::get('/programs/{program}', [ProgramController::class, 'show']);
+        Route::get('/programs/{program}/students', [ProgramController::class, 'students']);
+
+        // Reports - تقارير شؤون الطلاب
+        Route::prefix('reports')->group(function () {
+            Route::get('/students/{student}/transcript', [ReportController::class, 'transcript']);
+            Route::get('/students/{student}/grades', [ReportController::class, 'gradeReport']);
+            Route::get('/students/{student}/enrollments', [ReportController::class, 'enrollmentReport']);
+            Route::get('/students/{student}/academic-summary', [ReportController::class, 'academicSummary']);
+        });
+
+        // Student ID Cards
+        Route::prefix('id-cards')->group(function () {
+            Route::get('/students/{student}', [StudentIdCardController::class, 'show']);
+            Route::post('/students/{student}/generate', [StudentIdCardController::class, 'generatePdf']);
+            Route::get('/students/{student}/download', [StudentIdCardController::class, 'downloadPdf']);
+            Route::post('/students/{student}/photo', [StudentIdCardController::class, 'uploadPhoto']);
+        });
+    });
+
+    // ==========================================
     // ADMIN ROUTES (Full access to all resources)
     // ==========================================
     Route::middleware('role:ADMIN')->group(function () {

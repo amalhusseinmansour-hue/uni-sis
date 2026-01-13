@@ -56,7 +56,7 @@ export const SYSTEM_MODULES = [
     id: 'students',
     name: 'Students',
     nameAr: 'الطلاب',
-    permissions: ['view', 'create', 'edit', 'delete', 'export'],
+    permissions: ['view', 'create', 'edit', 'delete', 'export', 'upload_documents', 'fix_errors'],
   },
   {
     id: 'courses',
@@ -68,7 +68,7 @@ export const SYSTEM_MODULES = [
     id: 'registration',
     name: 'Registration',
     nameAr: 'التسجيل',
-    permissions: ['view', 'manage', 'approve'],
+    permissions: ['view', 'manage', 'approve', 'add_course', 'drop_course', 'change_section', 'late_registration', 'open_close_registration'],
   },
   {
     id: 'finance',
@@ -80,7 +80,13 @@ export const SYSTEM_MODULES = [
     id: 'admissions',
     name: 'Admissions',
     nameAr: 'القبول',
-    permissions: ['view', 'create', 'edit', 'delete', 'approve', 'reject'],
+    permissions: ['view', 'create', 'edit', 'delete', 'approve', 'reject', 'set_admission_year', 'set_admission_type'],
+  },
+  {
+    id: 'study_plans',
+    name: 'Study Plans',
+    nameAr: 'الخطط الدراسية',
+    permissions: ['view', 'assign', 'edit', 'transfer_major', 'restructure', 'track_progress'],
   },
   {
     id: 'exams',
@@ -125,6 +131,16 @@ export const SYSTEM_MODULES = [
     permissions: ['view', 'create', 'edit', 'delete'],
   },
 ];
+
+// Default permissions for student_affairs role
+export const STUDENT_AFFAIRS_PERMISSIONS = {
+  students: ['view', 'create', 'edit', 'upload_documents', 'fix_errors'],
+  admissions: ['view', 'create', 'edit', 'approve', 'reject', 'set_admission_year', 'set_admission_type'],
+  registration: ['view', 'manage', 'approve', 'add_course', 'drop_course', 'change_section', 'late_registration', 'open_close_registration'],
+  study_plans: ['view', 'assign', 'edit', 'transfer_major', 'restructure', 'track_progress'],
+  dashboard: ['view'],
+  reports: ['view', 'export'],
+};
 
 // Default system roles
 export const DEFAULT_ROLES: Omit<Role, 'id' | 'createdAt' | 'updatedAt'>[] = [
@@ -171,11 +187,11 @@ export const DEFAULT_ROLES: Omit<Role, 'id' | 'createdAt' | 'updatedAt'>[] = [
   {
     name: 'student_affairs',
     nameAr: 'شؤون الطلاب',
-    description: 'Student affairs access',
-    descriptionAr: 'صلاحيات شؤون الطلاب',
+    description: 'Student affairs - Manage student records, admissions, registration, and study plans',
+    descriptionAr: 'شؤون الطلاب - إدارة ملفات الطلاب، القبول، التسجيل، والخطط الدراسية',
     color: '#EC4899',
     icon: 'Users',
-    isSystem: false,
+    isSystem: true,
     permissions: [],
   },
   {

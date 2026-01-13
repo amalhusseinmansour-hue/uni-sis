@@ -92,4 +92,109 @@ class StudentController extends Controller
 
         return response()->json($enrollments);
     }
+
+    /**
+     * Get student's study plan and progress
+     */
+    public function studyPlan(Student $student): JsonResponse
+    {
+        $student->load(['program.courses', 'enrollments.course', 'grades']);
+
+        $completedCredits = $student->grades()
+            ->where('grade', '>=', 60)
+            ->with('course')
+            ->get()
+            ->sum(fn($g) => $g->course->credits ?? 3);
+
+        $totalCredits = $student->program->total_credits ?? 132;
+        $progressPercentage = $totalCredits > 0 ? round(($completedCredits / $totalCredits) * 100, 2) : 0;
+
+        return response()->json([
+            'student' => $student,
+            'program' => $student->program,
+            'completed_credits' => $completedCredits,
+            'total_credits' => $totalCredits,
+            'progress_percentage' => $progressPercentage,
+            'remaining_credits' => $totalCredits - $completedCredits,
+        ]);
+    }
+
+    /**
+     * Assign or update student's study plan
+     */
+    public function assignStudyPlan(Request $request, Student $student): JsonResponse
+    {
+        $validated = $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'notes' => 'nullable|string',
+        ]);
+
+        $oldProgramId = $student->program_id;
+        $student->update(['program_id' => $validated['program_id']]);
+
+        return response()->json([
+            'message' => 'تم ربط الخطة الدراسية بنجاح',
+            'student' => $student->fresh(['program']),
+            'old_program_id' => $oldProgramId,
+            'new_program_id' => $validated['program_id'],
+        ]);
+    }
+
+    /**
+     * Transfer student to a different major/program
+     */
+    public function transferMajor(Request $request, Student $student): JsonResponse
+    {
+        $validated = $request->validate([
+            'new_program_id' => 'required|exists:programs,id',
+            'reason' => 'nullable|string',
+            'effective_date' => 'nullable|date',
+        ]);
+
+        $oldProgram = $student->program;
+        $student->update([
+            'program_id' => $validated['new_program_id'],
+        ]);
+
+        return response()->json([
+            'message' => 'تم تحويل التخصص بنجاح',
+            'student' => $student->fresh(['program']),
+            'old_program' => $oldProgram,
+            'new_program' => $student->program,
+            'transfer_date' => $validated['effective_date'] ?? now()->toDateString(),
+        ]);
+    }
+
+    /**
+     * Open registration for a specific student
+     */
+    public function openRegistration(Request $request, Student $student): JsonResponse
+    {
+        $student->update(['registration_hold' => false]);
+
+        return response()->json([
+            'message' => 'تم فتح التسجيل للطالب',
+            'student' => $student,
+        ]);
+    }
+
+    /**
+     * Close registration for a specific student
+     */
+    public function closeRegistration(Request $request, Student $student): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => 'nullable|string',
+        ]);
+
+        $student->update([
+            'registration_hold' => true,
+            'registration_hold_reason' => $validated['reason'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'تم إغلاق التسجيل للطالب',
+            'student' => $student,
+        ]);
+    }
 }
