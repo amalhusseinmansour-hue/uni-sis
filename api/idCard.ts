@@ -9,24 +9,35 @@ export interface DigitalIdCard {
     name_ar?: string;
     profile_picture_url?: string;
     status: string;
+    passport_no?: string;
+    nationality?: string;
   };
   program?: {
     name_en: string;
     name_ar?: string;
     degree: string;
   };
+  college?: {
+    name_en: string;
+    name_ar?: string;
+  };
+  department?: {
+    name_en: string;
+    name_ar?: string;
+  };
   academic: {
     level: number;
     semester: number;
     gpa: number;
     academic_status: string;
+    academic_year?: string;
   };
   validity: {
     current_semester?: {
       name: string;
       name_ar?: string;
-      start_date: string;
-      end_date: string;
+      start_date?: string;
+      end_date?: string;
     };
     issue_date: string;
     expiry_date: string;
