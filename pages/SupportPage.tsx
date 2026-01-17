@@ -381,10 +381,10 @@ const SupportPage: React.FC<SupportPageProps> = ({ lang }) => {
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-400 transition-transform group-open:rotate-90" />
                   </summary>
-                  <div className="mt-4 pl-11 text-slate-600">
+                  <div className="mt-4 ps-11 text-slate-600">
                     {item.answer}
                   </div>
-                  <div className="mt-4 pl-11 flex items-center gap-4">
+                  <div className="mt-4 ps-11 flex items-center gap-4">
                     <span className="text-sm text-slate-500">{lang === 'ar' ? 'هل كان هذا مفيداً؟' : 'Was this helpful?'}</span>
                     <button className="flex items-center gap-1 text-sm text-green-600 hover:text-green-700">
                       <ThumbsUp className="w-4 h-4" />

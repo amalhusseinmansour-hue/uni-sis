@@ -502,7 +502,7 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
     <div className={`space-y-6 animate-in fade-in duration-300 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Save Notification */}
       {showSaveNotification && (
-        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+        <div className="fixed top-4 end-4 z-50 animate-in slide-in-from-top duration-300">
           <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
             <Check className="w-5 h-5" />
             <span>{t.draftSaved[lang]}</span>
@@ -678,13 +678,13 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={t.searchStudents[lang]}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    className="w-full ps-10 pe-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   />
                 </div>
               </div>
@@ -734,9 +734,9 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                   <tr>
-                    <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} w-12`}>#</th>
-                    <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentName[lang]}</th>
-                    <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentId[lang]}</th>
+                    <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'} w-12`}>#</th>
+                    <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.studentName[lang]}</th>
+                    <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.studentId[lang]}</th>
                     <th className={`p-4 text-center`}>{t.attendancePct[lang]}</th>
                     <th className={`p-4 text-center`}>{t.participation[lang]}</th>
                     <th className={`p-4 text-center`}>{t.quizzes[lang]}</th>
@@ -838,7 +838,7 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
         <div className="space-y-4">
           {/* Attendance Saved Notification */}
           {showAttendanceSaved && (
-            <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+            <div className="fixed top-4 end-4 z-50 animate-in slide-in-from-top duration-300">
               <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
                 <Check className="w-5 h-5" />
                 <span>{t.attendanceSaved[lang]}</span>
@@ -906,9 +906,9 @@ const Lecturer: React.FC<LecturerProps> = ({ lang }) => {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                     <tr>
-                      <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} w-12`}>#</th>
-                      <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentId[lang]}</th>
-                      <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentName[lang]}</th>
+                      <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'} w-12`}>#</th>
+                      <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.studentId[lang]}</th>
+                      <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.studentName[lang]}</th>
                       <th className="p-4 text-center">{t.status[lang]}</th>
                     </tr>
                   </thead>

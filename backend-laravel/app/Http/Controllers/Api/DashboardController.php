@@ -30,6 +30,8 @@ class DashboardController extends Controller
                 return $this->financeStats();
             case 'STUDENT':
                 return $this->studentStats($user);
+            case 'STUDENT_AFFAIRS':
+                return $this->studentAffairsStats();
             default:
                 return response()->json(['message' => 'Unknown role'], 403);
         }
@@ -114,6 +116,45 @@ class DashboardController extends Controller
             'students_with_balance' => Student::whereHas('financialRecords', function ($q) {
                 $q->whereIn('status', ['PENDING', 'OVERDUE']);
             })->count(),
+        ]);
+    }
+
+    private function studentAffairsStats(): JsonResponse
+    {
+        return response()->json([
+            'students' => [
+                'total' => Student::count(),
+                'active' => Student::where('status', 'ACTIVE')->count(),
+                'suspended' => Student::where('status', 'SUSPENDED')->count(),
+                'graduated' => Student::where('status', 'GRADUATED')->count(),
+                'withdrawn' => Student::where('status', 'WITHDRAWN')->count(),
+            ],
+            'admissions' => [
+                'total' => AdmissionApplication::count(),
+                'pending' => AdmissionApplication::where('status', 'PENDING')->count(),
+                'under_review' => AdmissionApplication::where('status', 'UNDER_REVIEW')->count(),
+                'approved' => AdmissionApplication::where('status', 'APPROVED')->count(),
+                'rejected' => AdmissionApplication::where('status', 'REJECTED')->count(),
+                'today' => AdmissionApplication::whereDate('created_at', today())->count(),
+                'this_week' => AdmissionApplication::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+            ],
+            'enrollments' => [
+                'total' => Enrollment::count(),
+                'enrolled' => Enrollment::where('status', 'ENROLLED')->count(),
+                'completed' => Enrollment::where('status', 'COMPLETED')->count(),
+                'dropped' => Enrollment::where('status', 'DROPPED')->count(),
+                'withdrawn' => Enrollment::where('status', 'WITHDRAWN')->count(),
+            ],
+            'service_requests' => [
+                'total' => ServiceRequest::count(),
+                'pending' => ServiceRequest::where('status', 'PENDING')->count(),
+                'in_progress' => ServiceRequest::where('status', 'IN_PROGRESS')->count(),
+                'completed' => ServiceRequest::where('status', 'COMPLETED')->count(),
+            ],
+            'recent_applications' => AdmissionApplication::with('program')
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get(['id', 'full_name', 'email', 'status', 'created_at', 'program_id']),
         ]);
     }
 

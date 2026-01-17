@@ -15,10 +15,12 @@ import { financeAPI } from '../api/finance';
 import { attendanceAPI } from '../api/attendance';
 import { printPage, exportToPDF } from '../utils/exportUtils';
 import { useBranding } from '../context/BrandingContext';
+import { UserRole } from '../types';
 
 interface ProfileProps {
   lang: 'en' | 'ar';
   student: any;
+  role?: UserRole;
 }
 
 // Comprehensive Translations
@@ -377,9 +379,29 @@ const t: Record<string, { en: string; ar: string }> = {
   statusGraduated: { en: 'Graduated', ar: 'متخرج' },
   statusWithdrawn: { en: 'Withdrawn', ar: 'منسحب' },
   statusApplicant: { en: 'Applicant', ar: 'متقدم' },
+
+  // Staff Profile Translations
+  staffProfile: { en: 'Staff Profile', ar: 'ملف الموظف' },
+  staffInfo: { en: 'Staff Information', ar: 'معلومات الموظف' },
+  employeeId: { en: 'Employee ID', ar: 'رقم الموظف' },
+  jobTitle: { en: 'Job Title', ar: 'المسمى الوظيفي' },
+  departmentName: { en: 'Department', ar: 'القسم' },
+  hireDate: { en: 'Hire Date', ar: 'تاريخ التعيين' },
+  workEmail: { en: 'Work Email', ar: 'البريد الإلكتروني للعمل' },
+  workPhone: { en: 'Work Phone', ar: 'هاتف العمل' },
+  officeLocation: { en: 'Office Location', ar: 'موقع المكتب' },
+  employmentStatus: { en: 'Employment Status', ar: 'حالة التوظيف' },
+  fullTime: { en: 'Full-time', ar: 'دوام كامل' },
+  partTimeJob: { en: 'Part-time', ar: 'دوام جزئي' },
+  studentAffairsOfficer: { en: 'Student Affairs Officer', ar: 'موظف شؤون الطلبة' },
+  roleLabel: { en: 'Role', ar: 'الدور' },
+  permissions: { en: 'Permissions', ar: 'الصلاحيات' },
+  accountInfo: { en: 'Account Information', ar: 'معلومات الحساب' },
+  lastLoginDate: { en: 'Last Login', ar: 'آخر تسجيل دخول' },
+  accountCreated: { en: 'Account Created', ar: 'تاريخ إنشاء الحساب' },
 };
 
-const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
+const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) => {
   const { branding } = useBranding();
 
   // Currency formatting helper
@@ -702,6 +724,226 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
     );
   }
 
+  // Check if user is staff (not student)
+  const isStaff = role && role !== UserRole.STUDENT;
+
+  // Staff Profile Render
+  if (isStaff) {
+    const staffName = propStudent?.name || propStudent?.full_name_en || propStudent?.fullName || 'Staff Member';
+    const staffEmail = propStudent?.email || '';
+    const staffAvatar = propStudent?.avatar || propStudent?.profile_picture_url || null;
+
+    const getRoleLabel = (r: UserRole) => {
+      const labels: Record<string, { en: string; ar: string }> = {
+        STUDENT_AFFAIRS: { en: 'Student Affairs Officer', ar: 'موظف شؤون الطلبة' },
+        ADMIN: { en: 'System Administrator', ar: 'مدير النظام' },
+        FINANCE: { en: 'Finance Officer', ar: 'موظف مالية' },
+        LECTURER: { en: 'Lecturer', ar: 'محاضر' },
+        REGISTRAR: { en: 'Registrar Officer', ar: 'موظف القبول والتسجيل' },
+        ADMISSIONS: { en: 'Admissions Officer', ar: 'موظف القبول' },
+        ACCOUNTANT: { en: 'Accountant', ar: 'محاسب' },
+      };
+      return labels[r]?.[lang] || r;
+    };
+
+    const getRolePermissions = (r: UserRole) => {
+      const permissions: Record<string, { en: string[]; ar: string[] }> = {
+        STUDENT_AFFAIRS: {
+          en: ['View Students', 'Create Students', 'Edit Students', 'Upload Documents', 'Manage Admissions', 'Course Registration', 'Study Plans'],
+          ar: ['عرض الطلاب', 'إضافة طلاب', 'تعديل الطلاب', 'رفع المستندات', 'إدارة القبول', 'تسجيل المساقات', 'الخطط الدراسية']
+        },
+        ADMIN: {
+          en: ['Full System Access', 'User Management', 'System Settings', 'All Modules'],
+          ar: ['صلاحيات كاملة', 'إدارة المستخدمين', 'إعدادات النظام', 'جميع الوحدات']
+        },
+        FINANCE: {
+          en: ['Financial Records', 'Payments', 'Reports', 'Student Balances'],
+          ar: ['السجلات المالية', 'المدفوعات', 'التقارير', 'أرصدة الطلاب']
+        },
+        LECTURER: {
+          en: ['View Courses', 'Grade Management', 'Attendance', 'Student Grades'],
+          ar: ['عرض المساقات', 'إدارة الدرجات', 'الحضور', 'درجات الطلاب']
+        },
+      };
+      return permissions[r]?.[lang] || [];
+    };
+
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        {/* Staff Header Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="h-32 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 relative">
+            <div className="absolute inset-0 opacity-30"></div>
+            <div className="absolute top-4 end-4 flex gap-2">
+              <button
+                onClick={handlePrint}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 md:px-8 pb-6">
+            <div className="relative flex flex-col lg:flex-row lg:justify-between lg:items-end -mt-14 mb-4 gap-4">
+              {/* Avatar & Basic Info */}
+              <div className="flex items-end gap-4">
+                <div className="relative group">
+                  <div className="w-28 h-28 rounded-2xl border-4 border-white dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+                    {staffAvatar ? (
+                      <img src={staffAvatar} alt={staffName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-3xl font-bold">
+                        {staffName.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -end-1 bg-emerald-500 w-7 h-7 rounded-full border-4 border-white dark:border-slate-700 flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+
+                <div className="pb-1">
+                  <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">{staffName}</h1>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">{staffEmail}</p>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex flex-wrap items-center gap-3 lg:pb-1">
+                <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-bold border border-emerald-100">
+                  {getRoleLabel(role)}
+                </span>
+                <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-100">
+                  {t.active[lang]}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Staff Information Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+            <User className="w-5 h-5 text-emerald-600" />
+            {t.staffInfo[lang]}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Role */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                <Shield className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.roleLabel[lang]}</p>
+                <p className="font-medium text-slate-900 dark:text-white">{getRoleLabel(role)}</p>
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.workEmail[lang]}</p>
+                <p className="font-medium text-slate-900 dark:text-white">{staffEmail || '-'}</p>
+              </div>
+            </div>
+
+            {/* Department */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+                <Building className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.departmentName[lang]}</p>
+                <p className="font-medium text-slate-900 dark:text-white">
+                  {role === UserRole.STUDENT_AFFAIRS ? (lang === 'ar' ? 'شؤون الطلبة' : 'Student Affairs') :
+                   role === UserRole.FINANCE ? (lang === 'ar' ? 'الشؤون المالية' : 'Finance') :
+                   role === UserRole.ADMIN ? (lang === 'ar' ? 'إدارة النظام' : 'System Administration') :
+                   role === UserRole.LECTURER ? (lang === 'ar' ? 'الشؤون الأكاديمية' : 'Academic Affairs') :
+                   (lang === 'ar' ? 'الإدارة' : 'Administration')}
+                </p>
+              </div>
+            </div>
+
+            {/* Employment Status */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                <Briefcase className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.employmentStatus[lang]}</p>
+                <p className="font-medium text-slate-900 dark:text-white">{t.fullTime[lang]}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Permissions Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-emerald-600" />
+            {t.permissions[lang]}
+          </h2>
+
+          <div className="flex flex-wrap gap-2">
+            {getRolePermissions(role).map((permission, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-sm font-medium"
+              >
+                {permission}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Account Information Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+            <Lock className="w-5 h-5 text-emerald-600" />
+            {t.accountInfo[lang]}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Account Status */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.sisAccountStatus[lang]}</p>
+                <p className="font-medium text-green-600 dark:text-green-400">{t.active[lang]}</p>
+              </div>
+            </div>
+
+            {/* Last Login */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                <Clock className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.lastLoginDate[lang]}</p>
+                <p className="font-medium text-slate-900 dark:text-white">
+                  {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Hidden file input for photo upload */}
@@ -763,7 +1005,7 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden print:shadow-none print:border-slate-300">
         <div className="h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative print:bg-blue-600">
           <div className="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml,...')]"></div>
-          <div className="absolute top-4 right-4 flex gap-2 print:hidden">
+          <div className="absolute top-4 end-4 flex gap-2 print:hidden">
             <button className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors">
               <Edit className="w-4 h-4" />
             </button>
@@ -790,12 +1032,12 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                     </div>
                   )}
                 </div>
-                <div className={`absolute -bottom-1 -right-1 ${getStatusColor(safeGet(student, 'status', 'ACTIVE'))} w-7 h-7 rounded-full border-4 border-white dark:border-slate-700 flex items-center justify-center`}>
+                <div className={`absolute -bottom-1 -end-1 ${getStatusColor(safeGet(student, 'status', 'ACTIVE'))} w-7 h-7 rounded-full border-4 border-white dark:border-slate-700 flex items-center justify-center`}>
                   <CheckCircle className="w-4 h-4 text-white" />
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -left-1 p-1.5 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-all shadow-lg hover:scale-110 print:hidden"
+                  className="absolute -bottom-1 -start-1 p-1.5 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-all shadow-lg hover:scale-110 print:hidden"
                 >
                   <Camera className="w-3 h-3" />
                 </button>
@@ -1356,12 +1598,12 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseCode[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseName[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseCode[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseName[lang]}</th>
                         <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.section[lang]}</th>
                         <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.credits[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.instructor[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.schedule[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.instructor[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.schedule[lang]}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1432,11 +1674,11 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseCode[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseName[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseCode[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseName[lang]}</th>
                         <th className="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.credits[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseType[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.prerequisite[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseType[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.prerequisite[lang]}</th>
                         <th className="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.courseStatus[lang]}</th>
                         <th className="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.letterGrade[lang]}</th>
                       </tr>
@@ -1558,12 +1800,12 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50">
-                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseCode[lang]}</th>
-                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.courseName[lang]}</th>
+                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseCode[lang]}</th>
+                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseName[lang]}</th>
                           <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.credits[lang]}</th>
                           <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.finalGrade[lang]}</th>
                           <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.letterGrade[lang]}</th>
-                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.notes[lang]}</th>
+                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.notes[lang]}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1689,7 +1931,7 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
-                            <th className={`py-2 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.assessmentType[lang]}</th>
+                            <th className={`py-2 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.assessmentType[lang]}</th>
                             <th className="py-2 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.score[lang]}</th>
                             <th className="py-2 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.maxScore[lang]}</th>
                             <th className="py-2 px-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.weight[lang]}</th>
@@ -1992,11 +2234,11 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.documentType[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.uploadDate[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.uploadedBy[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-right' : 'text-left'}`}>{t.reviewStatus[lang]}</th>
-                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-left' : 'text-right'}`}>{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.documentType[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.uploadDate[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.uploadedBy[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.reviewStatus[lang]}</th>
+                        <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-start' : 'text-end'}`}>{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2021,7 +2263,7 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent }) => {
                               {doc.status === 'approved' ? t.approved[lang] : doc.status === 'rejected' ? t.rejected[lang] : t.pending[lang]}
                             </span>
                           </td>
-                          <td className={`py-4 px-4 ${isRTL ? 'text-left' : 'text-right'}`}>
+                          <td className={`py-4 px-4 ${isRTL ? 'text-start' : 'text-end'}`}>
                             <div className={`flex items-center gap-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
                               <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title={t.view[lang]}>
                                 <Eye className="w-4 h-4 text-slate-500" />

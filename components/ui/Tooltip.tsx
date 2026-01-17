@@ -106,13 +106,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const getArrowPosition = () => {
     switch (position) {
       case 'top':
-        return 'bottom-0 left-1/2 -translate-x-1/2 translate-y-full border-t-8 border-x-8 border-x-transparent border-b-0';
+        return 'bottom-0 start-1/2 -translate-x-1/2 translate-y-full border-t-8 border-x-8 border-x-transparent border-b-0';
       case 'bottom':
-        return 'top-0 left-1/2 -translate-x-1/2 -translate-y-full border-b-8 border-x-8 border-x-transparent border-t-0';
+        return 'top-0 start-1/2 -translate-x-1/2 -translate-y-full border-b-8 border-x-8 border-x-transparent border-t-0';
       case 'left':
-        return 'right-0 top-1/2 -translate-y-1/2 translate-x-full border-l-8 border-y-8 border-y-transparent border-r-0';
+        return 'end-0 top-1/2 -translate-y-1/2 translate-x-full border-l-8 border-y-8 border-y-transparent border-r-0';
       case 'right':
-        return 'left-0 top-1/2 -translate-y-1/2 -translate-x-full border-r-8 border-y-8 border-y-transparent border-l-0';
+        return 'start-0 top-1/2 -translate-y-1/2 -translate-x-full border-r-8 border-y-8 border-y-transparent border-l-0';
     }
   };
 
@@ -217,10 +217,10 @@ export const Popover: React.FC<PopoverProps> = ({
   }, [isOpen, closeOnClickOutside]);
 
   const positionClasses = {
-    top: 'bottom-full mb-2 left-1/2 -translate-x-1/2',
-    bottom: 'top-full mt-2 left-1/2 -translate-x-1/2',
-    left: 'right-full mr-2 top-1/2 -translate-y-1/2',
-    right: 'left-full ml-2 top-1/2 -translate-y-1/2',
+    top: 'bottom-full mb-2 start-1/2 -translate-x-1/2',
+    bottom: 'top-full mt-2 start-1/2 -translate-x-1/2',
+    left: 'right-full me-2 top-1/2 -translate-y-1/2',
+    right: 'left-full ms-2 top-1/2 -translate-y-1/2',
   };
 
   return (
@@ -288,7 +288,7 @@ export const HoverCard: React.FC<HoverCardProps> = ({
       {isOpen && (
         <div
           className={`
-            absolute left-0 z-50 w-80
+            absolute start-0 z-50 w-80
             bg-white rounded-xl shadow-xl border border-slate-200
             ${positionClasses[position]}
             animate-in fade-in-0 slide-in-from-top-2 duration-200

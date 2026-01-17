@@ -108,4 +108,79 @@ export const academicStatusAPI = {
     const response = await apiClient.get('/my-honors-eligibility');
     return response.data;
   },
+
+  // ====== STAFF FUNCTIONS ======
+
+  // Staff: Get all students with warnings
+  getAllStudentsWithWarnings: async (params?: {
+    status?: 'active' | 'resolved' | 'all';
+    severity?: 'warning' | 'probation' | 'all';
+    search?: string;
+    per_page?: number;
+  }) => {
+    const response = await apiClient.get('/admin/academic-warnings', { params });
+    return response.data;
+  },
+
+  // Staff: Get student's academic status
+  getStudentStatus: async (studentId: string | number) => {
+    const response = await apiClient.get(`/students/${studentId}/academic-status`);
+    return response.data;
+  },
+
+  // Staff: Get student's warnings
+  getStudentWarnings: async (studentId: string | number, status?: 'active' | 'resolved' | 'all') => {
+    const response = await apiClient.get(`/students/${studentId}/warnings`, {
+      params: { status },
+    });
+    return response.data;
+  },
+
+  // Staff: Create warning for a student
+  createWarning: async (data: {
+    student_id: number | string;
+    type: 'academic' | 'attendance' | 'conduct';
+    reason: string;
+    severity: 'warning' | 'probation';
+    deadline?: string;
+    required_action?: string;
+    gpa_at_warning?: number;
+  }) => {
+    const response = await apiClient.post('/admin/academic-warnings', data);
+    return response.data;
+  },
+
+  // Staff: Resolve a warning
+  resolveWarning: async (warningId: string | number, data: {
+    resolution: string;
+    resolution_notes?: string;
+  }) => {
+    const response = await apiClient.post(`/admin/academic-warnings/${warningId}/resolve`, data);
+    return response.data;
+  },
+
+  // Staff: Update a warning
+  updateWarning: async (warningId: string | number, data: {
+    reason?: string;
+    deadline?: string;
+    required_action?: string;
+    severity?: 'warning' | 'probation';
+  }) => {
+    const response = await apiClient.put(`/admin/academic-warnings/${warningId}`, data);
+    return response.data;
+  },
+
+  // Staff: Delete a warning
+  deleteWarning: async (warningId: string | number) => {
+    const response = await apiClient.delete(`/admin/academic-warnings/${warningId}`);
+    return response.data;
+  },
+
+  // Staff: Get warning statistics
+  getWarningStatistics: async (semesterId?: number) => {
+    const response = await apiClient.get('/admin/academic-warnings/statistics', {
+      params: { semester_id: semesterId },
+    });
+    return response.data;
+  },
 };

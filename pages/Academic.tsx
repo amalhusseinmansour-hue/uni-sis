@@ -374,8 +374,8 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
         <div className="space-y-6">
           {/* GPA Card */}
           <GradientCard gradient="from-blue-600 via-indigo-600 to-purple-600" className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <Award className="absolute -right-4 -bottom-4 w-40 h-40 text-white/10" />
+            <div className="absolute top-0 end-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <Award className="absolute -end-4 -bottom-4 w-40 h-40 text-white/10" />
             <div className="relative flex flex-col md:flex-row justify-between items-center gap-6">
               <div>
                 <p className="text-blue-100 text-sm mb-1 uppercase tracking-wider">{t.cumulativeGpa[lang]}</p>
@@ -467,9 +467,9 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.code[lang]}</th>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.courseTitle[lang]}</th>
-                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.semester[lang]}</th>
+                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.code[lang]}</th>
+                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.courseTitle[lang]}</th>
+                      <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.semester[lang]}</th>
                       <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.credits[lang]}</th>
                       <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{lang === 'ar' ? 'أعمال الفصل' : 'Coursework'} (20)</th>
                       <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{lang === 'ar' ? 'النصفي' : 'Midterm'} (40)</th>

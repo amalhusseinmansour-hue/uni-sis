@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\StudentRequestController;
 use App\Http\Controllers\Api\DisciplineController;
 use App\Http\Controllers\Api\StudentIdCardController;
 use App\Http\Controllers\Api\ReportCardController;
+use App\Http\Controllers\Api\DocumentVerificationController;
 use App\Http\Controllers\Api\DynamicFormController;
 use App\Http\Controllers\Api\DynamicTableController;
 use App\Http\Controllers\Api\DynamicReportController;
@@ -191,6 +192,10 @@ Route::post('/admission/apply', [AdmissionApplicationController::class, 'store']
 // Student ID Card Verification (public endpoint)
 Route::get('/verify/student/{encryptedData}', [StudentIdCardController::class, 'verifyFromUrl']);
 Route::post('/verify/student', [StudentIdCardController::class, 'verify']);
+
+// Document Verification (public endpoint)
+Route::get('/verify/document/{code}', [DocumentVerificationController::class, 'verifyByCode']);
+Route::post('/verify/certificate', [DocumentVerificationController::class, 'verifyCertificate']);
 
 // ==========================================
 // WEBHOOK ENDPOINTS (for WordPress integration)
@@ -502,8 +507,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}', [$userController, 'destroy'])->where('id', '[0-9]+');
         });
 
-        // Students management
-        Route::apiResource('students', StudentController::class);
+        // Students management - Admin can archive/restore/delete (STUDENT_AFFAIRS has other operations)
+        Route::delete('/students/{student}', [StudentController::class, 'destroy']);
+        Route::post('/students/{student}/restore', [StudentController::class, 'restore']);
+        Route::delete('/students/{student}/force', [StudentController::class, 'forceDelete']);
 
         // Courses management
         Route::post('/courses', [CourseController::class, 'store']);
@@ -535,16 +542,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/programs/{program}', [ProgramController::class, 'destroy']);
         Route::get('/programs/{program}/students', [ProgramController::class, 'students']);
 
-        // Enrollments management
-        Route::apiResource('enrollments', EnrollmentController::class);
-        Route::post('/enrollments/{enrollment}/drop', [EnrollmentController::class, 'drop']);
-        Route::post('/enrollments/{enrollment}/withdraw', [EnrollmentController::class, 'withdraw']);
+        // Enrollments - Admin only operations (STUDENT_AFFAIRS has CRUD in their section)
+        Route::delete('/enrollments/{enrollment}', [EnrollmentController::class, 'destroy']);
 
         // Semesters management
         Route::post('/semesters', [SemesterController::class, 'store']);
         Route::put('/semesters/{semester}', [SemesterController::class, 'update']);
         Route::delete('/semesters/{semester}', [SemesterController::class, 'destroy']);
         Route::post('/semesters/{semester}/set-current', [SemesterController::class, 'setCurrent']);
+        Route::post('/semesters/{semester}/close', [SemesterController::class, 'close']);
+        Route::post('/semesters/{semester}/reopen', [SemesterController::class, 'reopen']);
 
         // Service Requests management
         Route::put('/service-requests/{serviceRequest}', [ServiceRequestController::class, 'update']);
@@ -553,31 +560,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/service-requests/{serviceRequest}/complete', [ServiceRequestController::class, 'complete']);
         Route::post('/service-requests/{serviceRequest}/reject', [ServiceRequestController::class, 'reject']);
 
-        // Admission Applications management with Workflow
-        Route::apiResource('admission-applications', AdmissionApplicationController::class);
+        // Admission Applications - Admin can delete (STUDENT_AFFAIRS has other operations)
+        Route::delete('/admission-applications/{admissionApplication}', [AdmissionApplicationController::class, 'destroy']);
 
-        // Workflow Routes - قسم القبول والتسجيل
-        // الخطوة 2: بدء المراجعة
-        Route::post('/admission-applications/{admissionApplication}/start-review', [AdmissionApplicationController::class, 'startReview']);
-        // الخطوة 3: التحقق من المستندات
-        Route::post('/admission-applications/{admissionApplication}/verify-documents', [AdmissionApplicationController::class, 'verifyDocuments']);
-        // الخطوة 4: طلب دفع الرسوم (إحالة للمالي)
-        Route::post('/admission-applications/{admissionApplication}/request-payment', [AdmissionApplicationController::class, 'requestPayment']);
-        // الخطوة 6: الموافقة النهائية (إنشاء الرقم الجامعي + خطاب القبول + بطاقة الجامعة)
-        Route::post('/admission-applications/{admissionApplication}/approve', [AdmissionApplicationController::class, 'approve']);
-        Route::post('/admission-applications/{admissionApplication}/reject', [AdmissionApplicationController::class, 'reject']);
-        Route::post('/admission-applications/{admissionApplication}/waitlist', [AdmissionApplicationController::class, 'waitlist']);
-        // سجل workflow
-        Route::get('/admission-applications/{admissionApplication}/workflow-logs', [AdmissionApplicationController::class, 'workflowLogs']);
-        Route::get('/admission-applications-statistics', [AdmissionApplicationController::class, 'statistics']);
-
-        // Student Documents management
-        Route::get('/student-documents', [StudentDocumentController::class, 'index']);
-        Route::get('/student-documents/{studentDocument}', [StudentDocumentController::class, 'show']);
-        Route::put('/student-documents/{studentDocument}', [StudentDocumentController::class, 'update']);
+        // Student Documents - Admin only delete (STUDENT_AFFAIRS has other operations)
         Route::delete('/student-documents/{studentDocument}', [StudentDocumentController::class, 'destroy']);
-        Route::post('/student-documents/{studentDocument}/verify', [StudentDocumentController::class, 'verify']);
-        Route::post('/student-documents/{studentDocument}/reject', [StudentDocumentController::class, 'reject']);
 
         // Schedules management
         Route::post('/schedules', [ScheduleController::class, 'store']);

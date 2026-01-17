@@ -28,11 +28,17 @@ class AdmissionApplication extends Model
         'national_id',
         'email',
         'phone',
+        'whatsapp',
         'date_of_birth',
         'gender',
         'nationality',
+        'country',
+        'city',
+        'residence',
         'address',
         'program_name',
+        'college',
+        'degree',
         'high_school_name',
         'high_school_score',
         'high_school_year',
@@ -46,6 +52,8 @@ class AdmissionApplication extends Model
         // حقول workflow الجديدة
         'student_id',
         'registration_fee',
+        'scholarship_percentage',
+        'payment_method',
         'documents_verified_at',
         'payment_requested_at',
         'payment_received_at',
@@ -54,6 +62,8 @@ class AdmissionApplication extends Model
         'university_card_path',
         'reviewed_by',
         'approved_by',
+        'source',
+        'metadata',
     ];
 
     protected function casts(): array
@@ -65,10 +75,12 @@ class AdmissionApplication extends Model
             'high_school_year' => 'integer',
             'documents' => 'array',
             'registration_fee' => 'decimal:2',
+            'scholarship_percentage' => 'decimal:2',
             'documents_verified_at' => 'datetime',
             'payment_requested_at' => 'datetime',
             'payment_received_at' => 'datetime',
             'approved_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 

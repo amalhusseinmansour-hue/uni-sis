@@ -33,19 +33,29 @@ class SemesterController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
+            'name_en' => 'required|string|max:255',
+            'name_ar' => 'required|string|max:255',
             'academic_year' => 'required|string|max:20',
-            'type' => 'required|in:FALL,SPRING,SUMMER',
+            'type' => 'nullable|in:FALL,SPRING,SUMMER',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'registration_start' => 'nullable|date',
-            'registration_end' => 'nullable|date|after:registration_start',
+            'registration_end' => 'nullable|date',
+            'add_drop_start' => 'nullable|date',
+            'add_drop_end' => 'nullable|date',
             'is_current' => 'boolean',
+            'is_closed' => 'boolean',
         ]);
 
         // If this is set as current, unset all others
         if ($validated['is_current'] ?? false) {
             Semester::where('is_current', true)->update(['is_current' => false]);
+        }
+
+        // Set name from name_en if not provided
+        if (empty($validated['name'])) {
+            $validated['name'] = $validated['name_en'];
         }
 
         $semester = Semester::create($validated);
@@ -56,18 +66,28 @@ class SemesterController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
+            'name_en' => 'sometimes|string|max:255',
+            'name_ar' => 'sometimes|string|max:255',
             'academic_year' => 'sometimes|string|max:20',
             'type' => 'sometimes|in:FALL,SPRING,SUMMER',
             'start_date' => 'sometimes|date',
             'end_date' => 'sometimes|date|after:start_date',
             'registration_start' => 'nullable|date',
-            'registration_end' => 'nullable|date|after:registration_start',
+            'registration_end' => 'nullable|date',
+            'add_drop_start' => 'nullable|date',
+            'add_drop_end' => 'nullable|date',
             'is_current' => 'boolean',
+            'is_closed' => 'boolean',
         ]);
 
         // If this is set as current, unset all others
         if ($validated['is_current'] ?? false) {
             Semester::where('is_current', true)->where('id', '!=', $semester->id)->update(['is_current' => false]);
+        }
+
+        // Update name from name_en if name_en is provided but name is not
+        if (isset($validated['name_en']) && !isset($validated['name'])) {
+            $validated['name'] = $validated['name_en'];
         }
 
         $semester->update($validated);
@@ -97,5 +117,27 @@ class SemesterController extends Controller
         $semester->update(['is_current' => true]);
 
         return response()->json($semester);
+    }
+
+    public function close(Semester $semester): JsonResponse
+    {
+        $semester->close();
+
+        return response()->json([
+            'message' => 'تم إغلاق الفصل الدراسي',
+            'message_en' => 'Semester closed successfully',
+            'semester' => $semester->fresh(),
+        ]);
+    }
+
+    public function reopen(Semester $semester): JsonResponse
+    {
+        $semester->reopen();
+
+        return response()->json([
+            'message' => 'تم إعادة فتح الفصل الدراسي',
+            'message_en' => 'Semester reopened successfully',
+            'semester' => $semester->fresh(),
+        ]);
     }
 }

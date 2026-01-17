@@ -33,6 +33,7 @@ class DynamicTableFilter extends Model
 
     protected $casts = [
         'options' => 'array',
+        'data_source' => 'array',
         'depends_on' => 'array',
         'is_required' => 'boolean',
         'is_visible' => 'boolean',

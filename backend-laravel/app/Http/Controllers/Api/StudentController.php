@@ -11,10 +11,28 @@ class StudentController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $students = Student::with(['user', 'program', 'advisor'])
+        $query = Student::with(['user', 'program', 'advisor']);
+
+        // Include archived students if requested
+        if ($request->boolean('include_archived')) {
+            $query->withTrashed();
+        }
+
+        // Only archived students
+        if ($request->boolean('only_archived')) {
+            $query->onlyTrashed();
+        }
+
+        $students = $query
             ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->search, fn($q) => $q->where('name_en', 'like', "%{$request->search}%")
-                ->orWhere('student_id', 'like', "%{$request->search}%"))
+            ->when($request->admission_type, fn($q) => $q->where('admission_type', $request->admission_type))
+            ->when($request->program_id, fn($q) => $q->where('program_id', $request->program_id))
+            ->when($request->search, fn($q) => $q->where(function($query) use ($request) {
+                $query->where('name_en', 'like', "%{$request->search}%")
+                    ->orWhere('name_ar', 'like', "%{$request->search}%")
+                    ->orWhere('student_id', 'like', "%{$request->search}%")
+                    ->orWhere('national_id', 'like', "%{$request->search}%");
+            }))
             ->paginate($request->per_page ?? 15);
 
         return response()->json($students);
@@ -31,24 +49,72 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'student_id' => 'nullable|unique:students',
-            'name_ar' => 'required',
+            'name_ar' => 'nullable',
             'name_en' => 'required',
             'national_id' => 'required|unique:students',
-            'date_of_birth' => 'required|date',
+            'date_of_birth' => 'nullable|date',
             'gender' => 'required|in:MALE,FEMALE',
-            'nationality' => 'required',
-            'admission_date' => 'required|date',
-            'phone' => 'required',
+            'nationality' => 'nullable',
+            'admission_type' => 'nullable|in:DIRECT,TRANSFER,POSTGRADUATE,SCHOLARSHIP,BRIDGE,READMISSION,VISITING',
+            'admission_date' => 'nullable|date',
+            'phone' => 'nullable',
             'personal_email' => 'required|email',
-            'university_email' => 'required|email|unique:students',
             'program_id' => 'nullable|exists:programs,id',
-            'user_id' => 'nullable|exists:users,id',
+            'password' => 'required|min:6',
         ]);
 
-        // Student ID will be auto-generated in the model's boot method if not provided
-        $student = Student::create($validated);
+        // Generate student ID if not provided
+        if (empty($validated['student_id'])) {
+            $year = date('Y');
+            $lastStudent = Student::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
+            $sequence = $lastStudent ? ((int)substr($lastStudent->student_id, -4) + 1) : 1;
+            $validated['student_id'] = $year . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        }
 
-        return response()->json($student, 201);
+        // Generate university email
+        $emailBase = strtolower(str_replace(' ', '.', $validated['name_en']));
+        $universityEmail = $emailBase . '@student.university.edu';
+        $counter = 1;
+        while (\App\Models\User::where('email', $universityEmail)->exists() || Student::where('university_email', $universityEmail)->exists()) {
+            $universityEmail = $emailBase . $counter . '@student.university.edu';
+            $counter++;
+        }
+
+        // Create user account for the student
+        $user = \App\Models\User::create([
+            'name' => $validated['name_en'],
+            'email' => $universityEmail,
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+            'role' => 'STUDENT',
+        ]);
+
+        // Create student record
+        $student = Student::create([
+            'user_id' => $user->id,
+            'student_id' => $validated['student_id'],
+            'name_en' => $validated['name_en'],
+            'name_ar' => $validated['name_ar'] ?? $validated['name_en'],
+            'national_id' => $validated['national_id'],
+            'date_of_birth' => $validated['date_of_birth'],
+            'gender' => $validated['gender'],
+            'nationality' => $validated['nationality'] ?? 'Unknown',
+            'admission_type' => $validated['admission_type'] ?? 'DIRECT',
+            'admission_date' => $validated['admission_date'] ?? now(),
+            'phone' => $validated['phone'],
+            'personal_email' => $validated['personal_email'],
+            'university_email' => $universityEmail,
+            'program_id' => $validated['program_id'],
+            'status' => 'ACTIVE',
+        ]);
+
+        return response()->json([
+            'message' => 'تم إنشاء الطالب بنجاح',
+            'student' => $student->load(['user', 'program']),
+            'credentials' => [
+                'email' => $universityEmail,
+                'student_id' => $validated['student_id'],
+            ]
+        ], 201);
     }
 
     public function update(Request $request, Student $student): JsonResponse
@@ -57,7 +123,12 @@ class StudentController extends Controller
             'name_ar' => 'sometimes|required',
             'name_en' => 'sometimes|required',
             'status' => 'sometimes|in:ACTIVE,SUSPENDED,GRADUATED,WITHDRAWN',
+            'admission_type' => 'sometimes|in:DIRECT,TRANSFER,POSTGRADUATE,SCHOLARSHIP,BRIDGE,READMISSION,VISITING',
             'phone' => 'sometimes|required',
+            'nationality' => 'sometimes|string',
+            'date_of_birth' => 'sometimes|date',
+            'gender' => 'sometimes|in:MALE,FEMALE',
+            'marital_status' => 'sometimes|in:SINGLE,MARRIED,DIVORCED,WIDOWED',
         ]);
 
         $student->update($validated);
@@ -65,11 +136,46 @@ class StudentController extends Controller
         return response()->json($student);
     }
 
-    public function destroy(Student $student): JsonResponse
+    public function destroy(Request $request, Student $student): JsonResponse
     {
-        $student->delete();
+        $reason = $request->input('archive_reason', 'Archived by administrator');
 
-        return response()->json(null, 204);
+        // Use soft delete (archive) instead of hard delete
+        $student->archive($reason, auth()->id());
+
+        return response()->json([
+            'message' => 'تم أرشفة الطالب بنجاح',
+            'message_en' => 'Student archived successfully',
+        ]);
+    }
+
+    public function restore(Request $request, $studentId): JsonResponse
+    {
+        $student = Student::withTrashed()->findOrFail($studentId);
+        $student->unarchive();
+
+        return response()->json([
+            'message' => 'تم استعادة الطالب بنجاح',
+            'message_en' => 'Student restored successfully',
+            'student' => $student->fresh(['user', 'program']),
+        ]);
+    }
+
+    public function forceDelete($studentId): JsonResponse
+    {
+        $student = Student::withTrashed()->findOrFail($studentId);
+
+        // Also delete the user account
+        if ($student->user) {
+            $student->user->delete();
+        }
+
+        $student->forceDelete();
+
+        return response()->json([
+            'message' => 'تم حذف الطالب نهائياً',
+            'message_en' => 'Student permanently deleted',
+        ]);
     }
 
     public function grades(Student $student): JsonResponse

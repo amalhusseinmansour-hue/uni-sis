@@ -107,9 +107,9 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   if (!isOpen) return null;
 
   const alignClasses = {
-    start: 'left-0',
-    end: 'right-0',
-    center: 'left-1/2 -translate-x-1/2',
+    start: 'start-0',
+    end: 'end-0',
+    center: 'start-1/2 -translate-x-1/2',
   };
 
   return (
@@ -158,7 +158,7 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({
       onClick={handleClick}
       disabled={disabled}
       className={`
-        w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors
+        w-full flex items-center gap-3 px-4 py-2 text-sm text-start transition-colors
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         ${destructive ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'}
         ${className}
@@ -249,7 +249,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
         className={`
           w-full flex items-center justify-between gap-2 px-4 py-2
           bg-white border border-slate-300 rounded-lg
-          text-sm text-left transition-colors
+          text-sm text-start transition-colors
           ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50'}
           ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}
           ${triggerClassName}
@@ -282,7 +282,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
               }}
               disabled={option.disabled}
               className={`
-                w-full flex items-center justify-between gap-3 px-4 py-2 text-sm text-left transition-colors
+                w-full flex items-center justify-between gap-3 px-4 py-2 text-sm text-start transition-colors
                 ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 cursor-pointer'}
                 ${value === option.value ? 'bg-blue-50 text-blue-600' : 'text-slate-700'}
               `}
@@ -358,7 +358,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
             absolute top-full mt-1 z-50 min-w-[160px]
             bg-white rounded-lg shadow-lg border border-slate-200
             py-1 animate-in fade-in-0 zoom-in-95 duration-150
-            ${align === 'end' ? 'right-0' : 'left-0'}
+            ${align === 'end' ? 'end-0' : 'start-0'}
           `}
         >
           {items.map((item, index) => (
@@ -372,7 +372,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
               }}
               disabled={item.disabled}
               className={`
-                w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors
+                w-full flex items-center gap-3 px-4 py-2 text-sm text-start transition-colors
                 ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 ${item.destructive ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'}
               `}

@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Student extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that should be hidden for serialization.
@@ -37,7 +38,13 @@ class Student extends Model
         'qr_code',
         'barcode',
         'status',
+        'admission_type',
         'program_type',
+
+        // Archive fields
+        'archive_reason',
+        'archived_by',
+        'archived_at',
 
         // Arabic Name Parts
         'first_name_ar',
@@ -222,6 +229,7 @@ class Student extends Model
             'has_completed_required_credits' => 'boolean',
             'has_completed_core_courses' => 'boolean',
             'has_completed_electives' => 'boolean',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -633,6 +641,40 @@ class Student extends Model
     public function scopeScholarship($query)
     {
         return $query->where('scholarships', '>', 0);
+    }
+
+    public function scopeByAdmissionType($query, string $type)
+    {
+        return $query->where('admission_type', $type);
+    }
+
+    // ==========================================
+    // Archive Methods
+    // ==========================================
+
+    public function archive(string $reason = null, int $archivedBy = null): bool
+    {
+        $this->update([
+            'archive_reason' => $reason,
+            'archived_by' => $archivedBy ?? auth()->id(),
+            'archived_at' => now(),
+        ]);
+        return $this->delete();
+    }
+
+    public function unarchive(): bool
+    {
+        $this->restore();
+        return $this->update([
+            'archive_reason' => null,
+            'archived_by' => null,
+            'archived_at' => null,
+        ]);
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->trashed();
     }
 
     // ==========================================

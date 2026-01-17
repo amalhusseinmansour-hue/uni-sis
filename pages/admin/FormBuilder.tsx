@@ -393,13 +393,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ lang }) => {
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={t.search[lang]}
-            className="pl-10 pr-4 py-2 w-80 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="ps-10 pe-4 py-2 w-80 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <button
@@ -532,13 +532,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ lang }) => {
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800'
               }`}
             >
-              {tab === 'general' && <Settings className="w-4 h-4 inline mr-2" />}
-              {tab === 'sections' && <Layers className="w-4 h-4 inline mr-2" />}
-              {tab === 'fields' && <List className="w-4 h-4 inline mr-2" />}
-              {tab === 'settings' && <Settings className="w-4 h-4 inline mr-2" />}
+              {tab === 'general' && <Settings className="w-4 h-4 inline me-2" />}
+              {tab === 'sections' && <Layers className="w-4 h-4 inline me-2" />}
+              {tab === 'fields' && <List className="w-4 h-4 inline me-2" />}
+              {tab === 'settings' && <Settings className="w-4 h-4 inline me-2" />}
               {t[tab][lang]}
-              {tab === 'sections' && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs">{sections.length}</span>}
-              {tab === 'fields' && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs">{fields.length}</span>}
+              {tab === 'sections' && <span className="ms-2 px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs">{sections.length}</span>}
+              {tab === 'fields' && <span className="ms-2 px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs">{fields.length}</span>}
             </button>
           ))}
         </div>
@@ -705,7 +705,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ lang }) => {
           }`}
         >
           <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-            formData.is_active ? (isRTL ? 'left-1' : 'left-7') : (isRTL ? 'left-7' : 'left-1')
+            formData.is_active ? (isRTL ? 'start-1' : 'left-7') : (isRTL ? 'left-7' : 'start-1')
           }`} />
         </button>
       </div>
@@ -1050,7 +1050,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ lang }) => {
                 }`}
               >
                 <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                  (settings as any)[setting.key] ? (isRTL ? 'left-0.5' : 'left-5') : (isRTL ? 'left-5' : 'left-0.5')
+                  (settings as any)[setting.key] ? (isRTL ? 'start-0.5' : 'left-5') : (isRTL ? 'left-5' : 'start-0.5')
                 }`} />
               </button>
             </div>
@@ -1139,7 +1139,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ lang }) => {
 
       {/* Message Toast */}
       {message && (
-        <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+        <div className={`fixed bottom-4 end-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
           message.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {message.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}

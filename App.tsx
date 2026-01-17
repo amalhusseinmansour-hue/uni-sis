@@ -42,6 +42,7 @@ import Dashboard from './pages/Dashboard';
 import Finance from './pages/Finance';
 import Academic from './pages/Academic';
 import Admissions from './pages/Admissions';
+import StudentsManagement from './pages/StudentsManagement';
 import Lecturer from './pages/Lecturer';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
@@ -515,9 +516,17 @@ const App: React.FC = () => {
             }
           />
           <Route
+             path="students"
+             element={
+               (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.STUDENT_AFFAIRS)
+               ? <StudentsManagement lang={lang} />
+               : <Navigate to="/" />
+             }
+          />
+          <Route
              path="admissions"
              element={
-               (currentUser.role === UserRole.ADMIN)
+               (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.STUDENT_AFFAIRS)
                ? <Admissions lang={lang} />
                : <Navigate to="/" />
              }
@@ -546,6 +555,7 @@ const App: React.FC = () => {
                <Profile
                   lang={lang}
                   student={getUserProfileData(currentUser)}
+                  role={currentUser.role}
                />
              }
           />
@@ -556,8 +566,8 @@ const App: React.FC = () => {
           <Route
              path="reports"
              element={
-               (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.FINANCE)
-               ? <Reports lang={lang} />
+               (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.FINANCE || currentUser.role === UserRole.STUDENT_AFFAIRS)
+               ? <Reports lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
@@ -572,14 +582,14 @@ const App: React.FC = () => {
           <Route
              path="attendance"
              element={
-               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.LECTURER)
-               ? <AttendancePage lang={lang} />
+               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.LECTURER || currentUser.role === UserRole.STUDENT_AFFAIRS || currentUser.role === UserRole.ADMIN)
+               ? <AttendancePage lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
           <Route
              path="schedule"
-             element={<SchedulePage lang={lang} />}
+             element={<SchedulePage lang={lang} role={currentUser.role} />}
           />
           <Route
              path="support"
@@ -588,16 +598,16 @@ const App: React.FC = () => {
           <Route
              path="requests"
              element={
-               (currentUser.role === UserRole.STUDENT)
-               ? <StudentRequestsPage lang={lang} />
+               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.STUDENT_AFFAIRS || currentUser.role === UserRole.ADMIN)
+               ? <StudentRequestsPage lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
           <Route
              path="registration"
              element={
-               (currentUser.role === UserRole.STUDENT)
-               ? <CourseRegistration lang={lang} />
+               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.STUDENT_AFFAIRS || currentUser.role === UserRole.ADMIN)
+               ? <CourseRegistration lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
@@ -612,8 +622,8 @@ const App: React.FC = () => {
           <Route
              path="transcript"
              element={
-               (currentUser.role === UserRole.STUDENT)
-               ? <TranscriptPage lang={lang} />
+               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.STUDENT_AFFAIRS || currentUser.role === UserRole.ADMIN)
+               ? <TranscriptPage lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
@@ -628,16 +638,16 @@ const App: React.FC = () => {
           <Route
              path="certificates"
              element={
-               (currentUser.role === UserRole.STUDENT)
-               ? <CertificatesPage lang={lang} />
+               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.STUDENT_AFFAIRS || currentUser.role === UserRole.ADMIN)
+               ? <CertificatesPage lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
           <Route
              path="academic-status"
              element={
-               (currentUser.role === UserRole.STUDENT)
-               ? <AcademicWarningsPage lang={lang} />
+               (currentUser.role === UserRole.STUDENT || currentUser.role === UserRole.STUDENT_AFFAIRS || currentUser.role === UserRole.ADMIN)
+               ? <AcademicWarningsPage lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />
@@ -687,8 +697,8 @@ const App: React.FC = () => {
           <Route
              path="admin/users"
              element={
-               (currentUser.role === UserRole.ADMIN)
-               ? <UserManagement lang={lang} />
+               (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.STUDENT_AFFAIRS)
+               ? <UserManagement lang={lang} role={currentUser.role} />
                : <Navigate to="/" />
              }
           />

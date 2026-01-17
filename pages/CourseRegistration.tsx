@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
   Clock, Users, MapPin, CheckCircle, BookOpen, Calendar, GraduationCap,
   Loader2, Info, Building, CreditCard, Plus, Trash2, AlertCircle, Search,
-  Filter, X, ShoppingCart, Check, Lock, AlertTriangle, RefreshCw
+  Filter, X, ShoppingCart, Check, Lock, AlertTriangle, RefreshCw, UserSearch,
+  FileText, ArrowRight, User
 } from 'lucide-react';
 import { enrollmentsAPI } from '../api/enrollments';
 import { settingsAPI } from '../api/settings';
 import { coursesAPI } from '../api/courses';
+import { studentsAPI } from '../api/students';
+import { UserRole } from '../types';
 
 interface CourseRegistrationProps {
   lang: 'en' | 'ar';
+  role?: UserRole;
 }
 
 // Translations
@@ -73,11 +77,41 @@ const t: Record<string, { en: string; ar: string }> = {
   usingCachedData: { en: 'Using cached data', ar: 'استخدام البيانات المخزنة' },
   maxCreditsReached: { en: 'Maximum credits limit reached', ar: 'تم الوصول للحد الأقصى من الساعات' },
   minCreditsWarning: { en: 'Minimum credits not met', ar: 'الحد الأدنى من الساعات غير مستوفى' },
+  // Staff-specific translations
+  staffPageTitle: { en: 'Student Registration Management', ar: 'إدارة تسجيل الطلاب' },
+  staffSubtitle: { en: 'Manage course registration for students', ar: 'إدارة تسجيل المقررات للطلاب' },
+  searchStudent: { en: 'Search for student...', ar: 'البحث عن طالب...' },
+  searchByIdOrName: { en: 'Search by Student ID or Name', ar: 'البحث برقم الطالب أو الاسم' },
+  selectStudent: { en: 'Select Student', ar: 'اختر الطالب' },
+  selectedStudent: { en: 'Selected Student', ar: 'الطالب المحدد' },
+  studentId: { en: 'Student ID', ar: 'رقم الطالب' },
+  studentName: { en: 'Student Name', ar: 'اسم الطالب' },
+  program: { en: 'Program', ar: 'البرنامج' },
+  noStudentSelected: { en: 'No student selected', ar: 'لم يتم اختيار طالب' },
+  selectStudentFirst: { en: 'Please search and select a student first', ar: 'يرجى البحث واختيار طالب أولاً' },
+  studentEnrollments: { en: 'Student Enrollments', ar: 'تسجيلات الطالب' },
+  addCourseForStudent: { en: 'Add Course for Student', ar: 'إضافة مقرر للطالب' },
+  dropCourseForStudent: { en: 'Drop Course for Student', ar: 'حذف مقرر للطالب' },
+  lateRegistration: { en: 'Late Registration', ar: 'تسجيل متأخر' },
+  changeSection: { en: 'Change Section', ar: 'تغيير الشعبة' },
+  registrationActions: { en: 'Registration Actions', ar: 'إجراءات التسجيل' },
+  noStudentsFound: { en: 'No students found', ar: 'لم يتم العثور على طلاب' },
+  searchResults: { en: 'Search Results', ar: 'نتائج البحث' },
+  level: { en: 'Level', ar: 'المستوى' },
+  college: { en: 'College', ar: 'الكلية' },
+  clearSelection: { en: 'Clear Selection', ar: 'إلغاء الاختيار' },
 };
 
-const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
+const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang, role }) => {
   const isRTL = lang === 'ar';
+  const isStaff = role === UserRole.STUDENT_AFFAIRS || role === UserRole.ADMIN;
   const [loading, setLoading] = useState(true);
+
+  // Staff-specific states
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [studentSearchResults, setStudentSearchResults] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [searchingStudents, setSearchingStudents] = useState(false);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [currentSemester, setCurrentSemester] = useState<string>('');
@@ -149,8 +183,95 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [lang]);
+    // Only auto-fetch for students, staff needs to select a student first
+    if (!isStaff) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
+  }, [lang, isStaff]);
+
+  // Staff: Search for students
+  const searchStudents = async (query: string) => {
+    if (!query || query.length < 2) {
+      setStudentSearchResults([]);
+      return;
+    }
+
+    setSearchingStudents(true);
+    try {
+      const response = await studentsAPI.getAll({ search: query, per_page: 10 });
+      const students = response?.data || response || [];
+      setStudentSearchResults(students);
+    } catch (error) {
+      console.error('Error searching students:', error);
+      setStudentSearchResults([]);
+    } finally {
+      setSearchingStudents(false);
+    }
+  };
+
+  // Staff: Select a student and load their enrollments
+  const handleSelectStudent = async (student: any) => {
+    setSelectedStudent(student);
+    setStudentSearchResults([]);
+    setStudentSearchQuery('');
+    setLoading(true);
+
+    try {
+      // Fetch enrollments for the selected student
+      const [enrollmentsData, semesterData, coursesData] = await Promise.all([
+        enrollmentsAPI.getStudentEnrollments(student.id).catch(() => []),
+        settingsAPI.getCurrentSemester().catch(() => null),
+        enrollmentsAPI.getAvailableSections().catch(() =>
+          coursesAPI.getAll().catch(() => [])
+        ),
+      ]);
+
+      const enrollmentsList = enrollmentsData?.data || enrollmentsData || [];
+      setEnrollments(enrollmentsList);
+
+      // Get available courses
+      const enrolledCourseIds = enrollmentsList.map((e: any) =>
+        e.course_id || e.course?.id || e.id
+      );
+
+      let coursesList = coursesData?.data || coursesData || [];
+      coursesList = coursesList.filter((c: any) =>
+        !enrolledCourseIds.includes(c.id) && !enrolledCourseIds.includes(c.course_id)
+      );
+      setAvailableCourses(coursesList);
+
+      if (semesterData) {
+        setCurrentSemester(semesterData.name_en || semesterData.name || '');
+        setSemesterNameAr(semesterData.name_ar || semesterData.name || '');
+      }
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+      setMessage({ type: 'error', text: t.error[lang] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Staff: Clear selected student
+  const clearSelectedStudent = () => {
+    setSelectedStudent(null);
+    setEnrollments([]);
+    setAvailableCourses([]);
+    setCart([]);
+  };
+
+  // Debounce student search
+  useEffect(() => {
+    if (!isStaff) return;
+    const timer = setTimeout(() => {
+      if (studentSearchQuery) {
+        searchStudents(studentSearchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [studentSearchQuery, isStaff]);
 
   // Check course eligibility (prerequisites)
   const checkCourseEligibility = async (courseId: string): Promise<{ eligible: boolean; missingPrerequisites?: string[] }> => {
@@ -236,13 +357,34 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
     setMessage(null);
 
     try {
+      // Get current semester
+      const semesterRes = await settingsAPI.getCurrentSemester().catch(() => null);
+      const semesterId = semesterRes?.id || semesterRes?.data?.id;
+
       // Register each course
       for (const course of cart) {
-        await enrollmentsAPI.enroll(course.section_id || course.id);
+        if (isStaff && selectedStudent) {
+          // Staff registering for a student - use admin endpoint
+          await enrollmentsAPI.create({
+            student_id: selectedStudent.id,
+            course_id: course.id,
+            semester_id: semesterId,
+            section: course.section || 'A',
+            status: 'ENROLLED'
+          });
+        } else {
+          // Student self-registration
+          await enrollmentsAPI.enroll(course.section_id || course.id);
+        }
       }
 
       // Refresh enrollments
-      const enrollmentsData = await enrollmentsAPI.getMyEnrollments();
+      let enrollmentsData;
+      if (isStaff && selectedStudent) {
+        enrollmentsData = await enrollmentsAPI.getStudentEnrollments(selectedStudent.id);
+      } else {
+        enrollmentsData = await enrollmentsAPI.getMyEnrollments();
+      }
       const enrollmentsList = enrollmentsData?.data || enrollmentsData || [];
       setEnrollments(enrollmentsList);
 
@@ -270,7 +412,13 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
     setMessage(null);
 
     try {
-      await enrollmentsAPI.dropMyCourse(enrollmentId);
+      if (isStaff && selectedStudent) {
+        // Staff dropping for a student - use admin endpoint
+        await enrollmentsAPI.drop(enrollmentId);
+      } else {
+        // Student self-dropping
+        await enrollmentsAPI.dropMyCourse(enrollmentId);
+      }
 
       // Remove from enrollments list
       const droppedEnrollment = enrollments.find(e => e.id === enrollmentId);
@@ -315,17 +463,17 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 text-white relative overflow-hidden">
+      <div className={`bg-gradient-to-r ${isStaff ? 'from-emerald-600 via-teal-600 to-cyan-600' : 'from-blue-600 via-indigo-600 to-purple-600'} rounded-2xl p-6 text-white relative overflow-hidden`}>
         <div className="absolute inset-0 bg-grid-white/10 opacity-20"></div>
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-xl">
-                <GraduationCap className="w-6 h-6" />
+                {isStaff ? <UserSearch className="w-6 h-6" /> : <GraduationCap className="w-6 h-6" />}
               </div>
-              {t.pageTitle[lang]}
+              {isStaff ? t.staffPageTitle[lang] : t.pageTitle[lang]}
             </h1>
-            <p className="text-blue-100 mt-1">{t.subtitle[lang]}</p>
+            <p className="text-blue-100 mt-1">{isStaff ? t.staffSubtitle[lang] : t.subtitle[lang]}</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             {(currentSemester || semesterNameAr) && (
@@ -334,36 +482,154 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
                 <p className="font-semibold">{lang === 'ar' ? semesterNameAr : currentSemester}</p>
               </div>
             )}
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
-              <p className="text-xs text-blue-100">{t.registeredCredits[lang]}</p>
-              <p className="font-semibold text-xl">
-                {totalCredits + cartCredits}
-                <span className="text-sm font-normal text-blue-200"> / {maxCredits}</span>
-              </p>
-              {totalCredits + cartCredits < minCredits && (
-                <p className="text-xs text-amber-300 mt-1">{t.minCreditsWarning[lang]}</p>
-              )}
-            </div>
+            {(selectedStudent || !isStaff) && (
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
+                <p className="text-xs text-blue-100">{t.registeredCredits[lang]}</p>
+                <p className="font-semibold text-xl">
+                  {totalCredits + cartCredits}
+                  <span className="text-sm font-normal text-blue-200"> / {maxCredits}</span>
+                </p>
+                {totalCredits + cartCredits < minCredits && (
+                  <p className="text-xs text-amber-300 mt-1">{t.minCreditsWarning[lang]}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Connection Warning */}
-      {isOffline && (
-        <div className="p-4 rounded-xl flex items-center justify-between gap-3 bg-amber-50 text-amber-800 border border-amber-200">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5" />
-            <span>{t.connectionError[lang]}</span>
+      {/* Staff: Student Search Panel */}
+      {isStaff && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <UserSearch className="w-5 h-5 text-emerald-600" />
+            {t.searchByIdOrName[lang]}
+          </h2>
+
+          {/* Search Input */}
+          <div className="relative mb-4">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+              placeholder={t.searchStudent[lang]}
+              className="w-full ps-10 pe-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+            />
+            {searchingStudents && (
+              <Loader2 className="absolute end-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-600 animate-spin" />
+            )}
           </div>
-          <button
-            onClick={() => fetchData(false)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t.retry[lang]}
-          </button>
+
+          {/* Search Results */}
+          {studentSearchResults.length > 0 && !selectedStudent && (
+            <div className="border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden mb-4">
+              <div className="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{t.searchResults[lang]}</p>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {studentSearchResults.map((student) => (
+                  <button
+                    key={student.id}
+                    onClick={() => handleSelectStudent(student)}
+                    className="w-full p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="flex-1 text-start">
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        {lang === 'ar' ? student.full_name_ar || student.full_name_en : student.full_name_en || student.full_name_ar}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {student.student_id} • {student.program?.name_en || student.program?.name_ar || '-'}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No Results */}
+          {studentSearchQuery.length >= 2 && studentSearchResults.length === 0 && !searchingStudents && !selectedStudent && (
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+              <UserSearch className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>{t.noStudentsFound[lang]}</p>
+            </div>
+          )}
+
+          {/* Selected Student Card */}
+          {selectedStudent && (
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-emerald-800 dark:text-emerald-300">{t.selectedStudent[lang]}</h3>
+                <button
+                  onClick={clearSelectedStudent}
+                  className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" />
+                  {t.clearSelection[lang]}
+                </button>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <User className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">
+                    {lang === 'ar' ? selectedStudent.full_name_ar || selectedStudent.full_name_en : selectedStudent.full_name_en || selectedStudent.full_name_ar}
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-4 h-4" />
+                      {selectedStudent.student_id}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <GraduationCap className="w-4 h-4" />
+                      {selectedStudent.program?.name_en || selectedStudent.program?.name_ar || '-'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Building className="w-4 h-4" />
+                      {t.level[lang]}: {selectedStudent.level || '-'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* No Student Selected Message */}
+          {!selectedStudent && studentSearchQuery.length < 2 && (
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+              <UserSearch className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="font-medium">{t.noStudentSelected[lang]}</p>
+              <p className="text-sm mt-1">{t.selectStudentFirst[lang]}</p>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Show course registration only if student is selected (for staff) or always (for students) */}
+      {(!isStaff || selectedStudent) && (
+        <>
+        {/* Connection Warning */}
+        {isOffline && (
+          <div className="p-4 rounded-xl flex items-center justify-between gap-3 bg-amber-50 text-amber-800 border border-amber-200">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5" />
+              <span>{t.connectionError[lang]}</span>
+            </div>
+            <button
+              onClick={() => isStaff && selectedStudent ? handleSelectStudent(selectedStudent) : fetchData(false)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              {t.retry[lang]}
+            </button>
+          </div>
+        )}
 
       {/* Message */}
       {message && (
@@ -382,7 +648,7 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
             <AlertCircle className="w-5 h-5" />
           )}
           <span>{message.text}</span>
-          <button onClick={() => setMessage(null)} className={isRTL ? 'mr-auto' : 'ml-auto'}>
+          <button onClick={() => setMessage(null)} className={isRTL ? 'me-auto' : 'ms-auto'}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -661,13 +927,13 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
                 {t.availableCourses[lang]}
               </h2>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder={t.searchCourses[lang]}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full md:w-64 pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400"
+                  className="w-full md:w-64 ps-10 pe-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400"
                 />
               </div>
             </div>
@@ -807,6 +1073,8 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang }) => {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

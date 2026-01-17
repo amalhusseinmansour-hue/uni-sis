@@ -382,7 +382,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         {/* Context Menu */}
         {showMenu === notification.id && (
           <div
-            className={`absolute ${isRTL ? 'left-4' : 'right-4'} top-12 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-20 min-w-[140px]`}
+            className={`absolute ${isRTL ? 'start-4' : 'end-4'} top-12 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-20 min-w-[140px]`}
             onClick={(e) => e.stopPropagation()}
           >
             {!notification.read && (
@@ -436,7 +436,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   return (
     <div
-      className={`fixed inset-y-0 ${isRTL ? 'left-0' : 'right-0'} w-full sm:w-96 bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col`}
+      className={`fixed inset-y-0 ${isRTL ? 'start-0' : 'end-0'} w-full sm:w-96 bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* Hidden audio for notification sound - using fallback URL */}
@@ -659,7 +659,7 @@ export const NotificationToast: React.FC<{
 
   return (
     <div
-      className={`fixed top-4 ${lang === 'ar' ? 'left-4' : 'right-4'} bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-4 max-w-sm animate-in slide-in-from-top-4 duration-300 z-50`}
+      className={`fixed top-4 ${lang === 'ar' ? 'start-4' : 'end-4'} bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-4 max-w-sm animate-in slide-in-from-top-4 duration-300 z-50`}
       dir={lang === 'ar' ? 'rtl' : 'ltr'}
     >
       <div className="flex gap-3">
@@ -686,7 +686,7 @@ export const NotificationToast: React.FC<{
       </div>
       {/* Progress bar for auto-hide */}
       {autoHide && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 rounded-b-xl overflow-hidden">
+        <div className="absolute bottom-0 start-0 end-0 h-1 bg-slate-200 dark:bg-slate-700 rounded-b-xl overflow-hidden">
           <div
             className="h-full bg-blue-500 animate-shrink-width"
             style={{ animationDuration: `${duration}ms` }}

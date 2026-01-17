@@ -3,7 +3,7 @@ import {
   FileText, Download, Eye, Clock, CheckCircle, XCircle, AlertCircle,
   Plus, Filter, Search, Calendar, Printer, Mail, Building, Award,
   GraduationCap, CreditCard, BookOpen, Shield, Star, Hash, User,
-  ChevronRight, ExternalLink, RefreshCw, Truck, QrCode
+  ChevronRight, ExternalLink, RefreshCw, Truck, QrCode, Users
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
@@ -13,12 +13,15 @@ import Button, { IconButton } from '../components/ui/Button';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Input, { Select, SearchInput, Textarea } from '../components/ui/Input';
+import { UserRole } from '../types';
 
 interface CertificatesPageProps {
   lang: 'en' | 'ar';
+  role?: UserRole;
 }
 
-const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
+const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang, role }) => {
+  const isStaff = role === UserRole.STUDENT_AFFAIRS || role === UserRole.ADMIN;
   const t = TRANSLATIONS;
   const [activeTab, setActiveTab] = useState<'available' | 'requests' | 'documents'>('available');
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -38,10 +41,63 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
     notes: '',
   });
 
+  // Staff-specific state
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentList, setStudentList] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [allCertStats, setAllCertStats] = useState({
+    totalRequests: 0,
+    pendingRequests: 0,
+    readyRequests: 0,
+    deliveredRequests: 0,
+  });
+
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Staff: Fetch all students
+  useEffect(() => {
+    const fetchStaffData = async () => {
+      if (!isStaff) return;
+      try {
+        const studentsRes = await studentsAPI.getAll({ per_page: 100 });
+        setStudentList(studentsRes.data || studentsRes || []);
+
+        // Mock stats for now
+        setAllCertStats({
+          totalRequests: 45,
+          pendingRequests: 12,
+          readyRequests: 8,
+          deliveredRequests: 25,
+        });
+      } catch (error) {
+        console.error('Error fetching staff data:', error);
+      }
+    };
+    fetchStaffData();
+  }, [isStaff]);
+
+  // Staff: Search students
+  useEffect(() => {
+    const searchStudents = async () => {
+      if (!isStaff || !studentSearch.trim()) return;
+      setSearchLoading(true);
+      try {
+        const res = await studentsAPI.getAll({ search: studentSearch, per_page: 20 });
+        setStudentList(res.data || res || []);
+      } catch (error) {
+        console.error('Error searching students:', error);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(searchStudents, 300);
+    return () => clearTimeout(debounce);
+  }, [studentSearch, isStaff]);
 
   // Available certificates
   const availableCertificates = [
@@ -364,7 +420,7 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
                   <h4 className="font-medium text-slate-800">{cert.name}</h4>
                   <p className="text-sm text-slate-500">{cert.description}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <p className={`font-semibold ${cert.fee === 0 ? 'text-green-600' : 'text-slate-800'}`}>
                     {cert.fee === 0 ? '-' : `${cert.fee} USD`}
                   </p>
@@ -463,19 +519,19 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'رقم الطلب' : 'Request #'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'نوع الشهادة' : 'Certificate Type'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'تاريخ الطلب' : 'Request Date'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'اللغة' : 'Language'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الحالة' : 'Status'}
                   </th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">
@@ -686,7 +742,106 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header */}
+      {/* Staff Header Banner */}
+      {isStaff && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">
+                {lang === 'ar' ? 'إدارة الشهادات' : 'Certificates Management'}
+              </h1>
+              <p className="text-emerald-100 mt-1">
+                {lang === 'ar' ? 'معالجة وإصدار الشهادات للطلاب' : 'Process and issue certificates for students'}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{allCertStats.totalRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'إجمالي الطلبات' : 'Total Requests'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-300">{allCertStats.pendingRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'قيد المعالجة' : 'Processing'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-300">{allCertStats.readyRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'جاهزة' : 'Ready'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-blue-300">{allCertStats.deliveredRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'تم التسليم' : 'Delivered'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Search */}
+          <div className="mt-4 relative">
+            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+              <Search className="w-5 h-5 text-emerald-200" />
+              <input
+                type="text"
+                placeholder={lang === 'ar' ? 'ابحث عن طالب بالاسم أو الرقم الجامعي...' : 'Search student by name or ID...'}
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-emerald-200 outline-none"
+              />
+              {searchLoading && (
+                <div className="w-5 h-5 border-2 border-emerald-200 border-t-transparent rounded-full animate-spin"></div>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {studentSearch && studentList.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-y-auto z-50">
+                {studentList.map((student: any) => (
+                  <div
+                    key={student.id}
+                    onClick={() => {
+                      setSelectedStudent(student);
+                      setStudentSearch('');
+                    }}
+                    className="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b last:border-0"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">
+                      {(student.name || student.name_en || 'S').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">{student.name || student.name_en || student.name_ar}</p>
+                      <p className="text-sm text-slate-500">{student.student_id || student.id}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected Student */}
+          {selectedStudent && (
+            <div className="mt-4 bg-white/20 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-xl">
+                  {(selectedStudent.name || selectedStudent.name_en || 'S').charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold">{selectedStudent.name || selectedStudent.name_en || selectedStudent.name_ar}</p>
+                  <p className="text-sm text-emerald-100">
+                    {lang === 'ar' ? 'الرقم الجامعي: ' : 'Student ID: '}{selectedStudent.student_id || selectedStudent.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedStudent(null)}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                {lang === 'ar' ? 'مسح' : 'Clear'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header - Student View */}
+      {!isStaff && (
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">
@@ -700,6 +855,7 @@ const CertificatesPage: React.FC<CertificatesPageProps> = ({ lang }) => {
           {lang === 'ar' ? 'طلب شهادة جديدة' : 'Request New Certificate'}
         </Button>
       </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-slate-200">

@@ -316,6 +316,21 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
       ];
     }
 
+    // Student Affairs Role - شؤون الطلاب
+    if (role === UserRole.STUDENT_AFFAIRS) {
+      return [
+        ...baseNav,
+        { to: '/students', icon: Users, label: t.students[lang] },
+        { to: '/admissions', icon: FileText, label: t.admissions[lang] },
+        { to: '/registration', icon: BookOpen, label: t.registration[lang] },
+        { to: '/schedule', icon: Calendar, label: t.schedule[lang] },
+        { to: '/requests', icon: FileText, label: lang === 'ar' ? 'طلبات الطلاب' : 'Requests' },
+        { to: '/reports', icon: BarChart3, label: t.reports[lang] },
+        { to: '/profile', icon: User, label: t.profile[lang] },
+        { to: '/support', icon: HelpCircle, label: t.support[lang] },
+      ];
+    }
+
     return baseNav;
   };
 
@@ -414,11 +429,11 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
   };
 
   const sidebarClasses = `
-    fixed inset-y-0 z-30 bg-slate-900 text-white transition-all duration-300 ease-in-out flex flex-col
-    ${isRTL ? 'right-0' : 'left-0'}
+    fixed top-0 bottom-0 z-40 bg-slate-900 text-white transition-transform duration-300 ease-in-out flex flex-col
     ${isCollapsed ? 'w-20' : 'w-64'}
+    ${isRTL ? 'right-0' : 'left-0'}
     ${isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'}
-    md:translate-x-0 md:relative md:inset-auto
+    md:translate-x-0 md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto
   `;
 
   return (
@@ -426,43 +441,45 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm"
           onClick={onClose}
         />
       )}
 
       <aside className={sidebarClasses} dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Header */}
-        <div className="flex items-center justify-center h-32 px-4 border-b border-slate-700">
-          {!isCollapsed ? (
-            <div className="flex flex-col items-center justify-center gap-2 w-full">
-              <img
-                src="/logo-white.png"
-                alt="Logo"
-                className="w-20 h-20 object-contain"
-              />
-              <h1 className="text-base font-bold text-white tracking-wide text-center">
-                {isRTL ? (branding?.universityNameAr || 'جامعة فيرتكس') : (branding?.universityName || 'VERTEX UNIVERSITY')}
-              </h1>
-              <p className="text-[9px] text-slate-400 leading-tight text-center">
-                تَعَلَّمْ مِنْ أَيِّ مَكَانٍ وَكُنْ قَائِدًا فِي كُلِّ مَكَانٍ
-              </p>
-            </div>
-          ) : (
-            <img
-              src="/logo-white.png"
-              alt="Logo"
-              className="w-12 h-12 object-contain mx-auto"
-            />
-          )}
-
+        <div className="relative h-32 px-4 border-b border-slate-700">
           {/* Mobile Close Button */}
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-lg md:hidden"
+            className={`absolute top-3 ${isRTL ? 'left-3' : 'right-3'} p-2 hover:bg-slate-800 rounded-lg md:hidden z-10`}
           >
             <X className="w-5 h-5 text-slate-400" />
           </button>
+
+          <div className="flex items-center justify-center h-full">
+            {!isCollapsed ? (
+              <div className="flex flex-col items-center justify-center gap-2 w-full">
+                <img
+                  src="/logo-white.png"
+                  alt="Logo"
+                  className="w-16 h-16 object-contain"
+                />
+                <h1 className="text-sm font-bold text-white tracking-wide text-center">
+                  {isRTL ? (branding?.universityNameAr || 'جامعة فيرتكس') : (branding?.universityName || 'VERTEX UNIVERSITY')}
+                </h1>
+                <p className="text-[8px] text-slate-400 leading-tight text-center">
+                  تَعَلَّمْ مِنْ أَيِّ مَكَانٍ وَكُنْ قَائِدًا فِي كُلِّ مَكَانٍ
+                </p>
+              </div>
+            ) : (
+              <img
+                src="/logo-white.png"
+                alt="Logo"
+                className="w-12 h-12 object-contain mx-auto"
+              />
+            )}
+          </div>
         </div>
 
         {/* Loading indicator */}

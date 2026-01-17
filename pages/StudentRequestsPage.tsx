@@ -3,7 +3,7 @@ import {
   FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle,
   ChevronRight, Send, Upload, Trash2, Eye, Filter,
   RefreshCw, Calendar, Building, BookOpen, User,
-  GraduationCap, ClipboardList, FileCheck, ArrowRight, Download, Loader2
+  GraduationCap, ClipboardList, FileCheck, ArrowRight, Download, Loader2, Search, Users
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { Card, CardHeader, CardBody, StatCard } from '../components/ui/Card';
@@ -12,12 +12,14 @@ import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Input, { Select, SearchInput, Textarea } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
-import { studentRequestsApi, formDataApi, dynamicFormsApi } from '../api';
+import { studentRequestsApi, formDataApi, dynamicFormsApi, studentsAPI } from '../api';
 import { DynamicForm } from '../api/dynamicForms';
 import DynamicFormRenderer, { validateDynamicForm } from '../components/DynamicFormRenderer';
+import { UserRole } from '../types';
 
 interface StudentRequestsPageProps {
   lang: 'en' | 'ar';
+  role?: UserRole;
 }
 
 // Request Types with Arabic/English names
@@ -179,8 +181,10 @@ const fallbackCourses = [
   { id: 4, code: 'MATH101', name_ar: 'رياضيات 1', name_en: 'Mathematics 1' },
 ];
 
-const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
+const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang, role }) => {
   const t = TRANSLATIONS;
+  const isStaff = role === UserRole.STUDENT_AFFAIRS || role === UserRole.ADMIN;
+
   const [activeTab, setActiveTab] = useState<'my-requests' | 'new-request'>('my-requests');
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [showRequestDetailsModal, setShowRequestDetailsModal] = useState(false);
@@ -189,6 +193,18 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('all');
+
+  // Staff-specific state
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentList, setStudentList] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [allRequestsStats, setAllRequestsStats] = useState({
+    totalRequests: 0,
+    pendingRequests: 0,
+    approvedRequests: 0,
+    rejectedRequests: 0,
+  });
 
   // Form state for new request
   const [formData, setFormData] = useState<any>({});
@@ -270,7 +286,58 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
     };
 
     fetchData();
-  }, []);
+  }, [selectedStudent]);
+
+  // Staff action states
+  const [actionLoading, setActionLoading] = useState(false);
+  const [staffComment, setStaffComment] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [allRequests, setAllRequests] = useState<any[]>([]);
+
+  // Staff: Fetch all students for search
+  useEffect(() => {
+    const fetchStaffData = async () => {
+      if (!isStaff) return;
+      try {
+        const studentsRes = await studentsAPI.getAll({ per_page: 100 });
+        setStudentList(studentsRes.data || studentsRes || []);
+
+        // Fetch all requests for staff
+        const requestsRes = await studentRequestsApi.getAllRequests?.({ per_page: 100 }).catch(() => []) || [];
+        const requestsArr = Array.isArray(requestsRes) ? requestsRes : requestsRes?.data || [];
+        setAllRequests(requestsArr);
+        setAllRequestsStats({
+          totalRequests: requestsArr.length,
+          pendingRequests: requestsArr.filter((r: any) => !['APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes(r.status)).length,
+          approvedRequests: requestsArr.filter((r: any) => r.status === 'APPROVED' || r.status === 'COMPLETED').length,
+          rejectedRequests: requestsArr.filter((r: any) => r.status === 'REJECTED').length,
+        });
+      } catch (error) {
+        console.error('Error fetching staff data:', error);
+      }
+    };
+    fetchStaffData();
+  }, [isStaff]);
+
+  // Staff: Search students
+  useEffect(() => {
+    const searchStudents = async () => {
+      if (!isStaff || !studentSearch.trim()) return;
+      setSearchLoading(true);
+      try {
+        const res = await studentsAPI.getAll({ search: studentSearch, per_page: 20 });
+        setStudentList(res.data || res || []);
+      } catch (error) {
+        console.error('Error searching students:', error);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(searchStudents, 300);
+    return () => clearTimeout(debounce);
+  }, [studentSearch, isStaff]);
 
   // Reset form and load dynamic form when request type changes
   useEffect(() => {
@@ -414,15 +481,135 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
     setShowRequestDetailsModal(false);
   };
 
-  const filteredRequests = requests.filter(request => {
+  // Staff: Approve request
+  const handleApproveRequest = async (requestId: number) => {
+    if (!isStaff) return;
+    setActionLoading(true);
+    try {
+      await studentRequestsApi.reviewRequest(requestId, {
+        decision: 'APPROVED',
+        level: 'STUDENT_AFFAIRS',
+        notes: staffComment || undefined,
+      });
+
+      // Refresh requests
+      const requestsRes = await studentRequestsApi.getAllRequests?.({ per_page: 100 }).catch(() => []) || [];
+      const requestsArr = Array.isArray(requestsRes) ? requestsRes : requestsRes?.data || [];
+      setAllRequests(requestsArr);
+
+      alert(lang === 'ar' ? 'تمت الموافقة على الطلب بنجاح!' : 'Request approved successfully!');
+      setShowRequestDetailsModal(false);
+      setStaffComment('');
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ أثناء الموافقة' : 'Error approving request'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Staff: Reject request
+  const handleRejectRequest = async (requestId: number) => {
+    if (!isStaff || !rejectionReason.trim()) {
+      alert(lang === 'ar' ? 'يرجى إدخال سبب الرفض' : 'Please enter rejection reason');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await studentRequestsApi.reviewRequest(requestId, {
+        decision: 'REJECTED',
+        level: 'STUDENT_AFFAIRS',
+        notes: rejectionReason,
+      });
+
+      // Refresh requests
+      const requestsRes = await studentRequestsApi.getAllRequests?.({ per_page: 100 }).catch(() => []) || [];
+      const requestsArr = Array.isArray(requestsRes) ? requestsRes : requestsRes?.data || [];
+      setAllRequests(requestsArr);
+
+      alert(lang === 'ar' ? 'تم رفض الطلب' : 'Request rejected');
+      setShowRejectModal(false);
+      setShowRequestDetailsModal(false);
+      setRejectionReason('');
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ أثناء الرفض' : 'Error rejecting request'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Staff: Execute approved request
+  const handleExecuteRequest = async (requestId: number) => {
+    if (!isStaff) return;
+    setActionLoading(true);
+    try {
+      await studentRequestsApi.executeRequest(requestId, {
+        execution_notes: staffComment || undefined,
+      });
+
+      // Refresh requests
+      const requestsRes = await studentRequestsApi.getAllRequests?.({ per_page: 100 }).catch(() => []) || [];
+      const requestsArr = Array.isArray(requestsRes) ? requestsRes : requestsRes?.data || [];
+      setAllRequests(requestsArr);
+
+      alert(lang === 'ar' ? 'تم تنفيذ الطلب بنجاح!' : 'Request executed successfully!');
+      setShowRequestDetailsModal(false);
+      setStaffComment('');
+    } catch (error: any) {
+      console.error('Error executing request:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ أثناء التنفيذ' : 'Error executing request'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Staff: Add comment
+  const handleAddComment = async (requestId: number) => {
+    if (!isStaff || !staffComment.trim()) return;
+    setActionLoading(true);
+    try {
+      await studentRequestsApi.addComment(requestId, {
+        comment: staffComment,
+        is_internal: false,
+      });
+
+      alert(lang === 'ar' ? 'تم إضافة التعليق' : 'Comment added');
+      setStaffComment('');
+
+      // Refresh request details
+      if (selectedRequest) {
+        const updated = await studentRequestsApi.getAllRequests?.({ per_page: 100 }).catch(() => []) || [];
+        const updatedArr = Array.isArray(updated) ? updated : updated?.data || [];
+        const updatedRequest = updatedArr.find((r: any) => r.id === selectedRequest.id);
+        if (updatedRequest) {
+          setSelectedRequest(updatedRequest);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error adding comment:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ' : 'Error'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Determine which requests to show based on role
+  const displayRequests = isStaff && !selectedStudent ? allRequests : requests;
+
+  const filteredRequests = displayRequests.filter(request => {
     if (selectedStatus !== 'all' && request.status !== selectedStatus) return false;
     if (selectedTypeFilter !== 'all' && request.request_type !== selectedTypeFilter) return false;
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
       const typeName = getRequestTypeName(request.request_type).toLowerCase();
+      const studentName = (request.student?.name_en || request.student?.name_ar || '').toLowerCase();
+      const studentId = (request.student?.student_id || '').toLowerCase();
       return (
-        request.request_number.toLowerCase().includes(searchLower) ||
-        typeName.includes(searchLower)
+        (request.request_number || '').toLowerCase().includes(searchLower) ||
+        typeName.includes(searchLower) ||
+        studentName.includes(searchLower) ||
+        studentId.includes(searchLower)
       );
     }
     return true;
@@ -927,6 +1114,17 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
                     <h4 className="font-medium text-slate-800">
                       {getRequestTypeName(request.request_type)}
                     </h4>
+                    {/* Student Info for Staff View */}
+                    {isStaff && request.student && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm font-medium text-blue-600">
+                          {request.student.name_en || request.student.name_ar}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          ({request.student.student_id})
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -940,7 +1138,7 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="text-sm text-slate-500 mb-1">
                       {lang === 'ar' ? 'مرحلة الموافقة' : 'Approval Step'}
                     </div>
@@ -990,7 +1188,106 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Header */}
+      {/* Staff Header Banner */}
+      {isStaff && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">
+                {lang === 'ar' ? 'إدارة الطلبات الأكاديمية' : 'Academic Requests Management'}
+              </h1>
+              <p className="text-emerald-100 mt-1">
+                {lang === 'ar' ? 'معالجة ومتابعة طلبات الطلاب' : 'Process and track student requests'}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{allRequestsStats.totalRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'إجمالي الطلبات' : 'Total Requests'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-300">{allRequestsStats.pendingRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'قيد الانتظار' : 'Pending'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-300">{allRequestsStats.approvedRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'تمت الموافقة' : 'Approved'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-red-300">{allRequestsStats.rejectedRequests}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'مرفوضة' : 'Rejected'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Search */}
+          <div className="mt-4 relative">
+            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+              <Search className="w-5 h-5 text-emerald-200" />
+              <input
+                type="text"
+                placeholder={lang === 'ar' ? 'ابحث عن طالب بالاسم أو الرقم الجامعي...' : 'Search student by name or ID...'}
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-emerald-200 outline-none"
+              />
+              {searchLoading && (
+                <div className="w-5 h-5 border-2 border-emerald-200 border-t-transparent rounded-full animate-spin"></div>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {studentSearch && studentList.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-y-auto z-50">
+                {studentList.map((student: any) => (
+                  <div
+                    key={student.id}
+                    onClick={() => {
+                      setSelectedStudent(student);
+                      setStudentSearch('');
+                    }}
+                    className="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b last:border-0"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">
+                      {(student.name || student.name_en || 'S').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">{student.name || student.name_en || student.name_ar}</p>
+                      <p className="text-sm text-slate-500">{student.student_id || student.id}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected Student */}
+          {selectedStudent && (
+            <div className="mt-4 bg-white/20 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-xl">
+                  {(selectedStudent.name || selectedStudent.name_en || 'S').charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold">{selectedStudent.name || selectedStudent.name_en || selectedStudent.name_ar}</p>
+                  <p className="text-sm text-emerald-100">
+                    {lang === 'ar' ? 'الرقم الجامعي: ' : 'Student ID: '}{selectedStudent.student_id || selectedStudent.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedStudent(null)}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                {lang === 'ar' ? 'مسح' : 'Clear'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header - Student View */}
+      {!isStaff && (
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">
@@ -1004,6 +1301,7 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
           {lang === 'ar' ? 'طلب جديد' : 'New Request'}
         </Button>
       </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1239,24 +1537,174 @@ const StudentRequestsPage: React.FC<StudentRequestsPageProps> = ({ lang }) => {
               </div>
             )}
 
+            {/* Staff Comment Section */}
+            {isStaff && !['REJECTED', 'CANCELLED', 'COMPLETED'].includes(selectedRequest.status) && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <h4 className="font-medium text-emerald-800 mb-2 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  {lang === 'ar' ? 'ملاحظات الموظف' : 'Staff Notes'}
+                </h4>
+                <Textarea
+                  placeholder={lang === 'ar' ? 'أدخل ملاحظاتك هنا...' : 'Enter your notes here...'}
+                  value={staffComment}
+                  onChange={(e) => setStaffComment(e.target.value)}
+                  rows={2}
+                />
+                {staffComment.trim() && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => handleAddComment(selectedRequest.id)}
+                    disabled={actionLoading}
+                  >
+                    {lang === 'ar' ? 'إضافة تعليق' : 'Add Comment'}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Student Info for Staff */}
+            {isStaff && selectedRequest.student && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  {lang === 'ar' ? 'بيانات الطالب' : 'Student Info'}
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-blue-600">{lang === 'ar' ? 'الاسم: ' : 'Name: '}</span>
+                    <span className="font-medium">{selectedRequest.student.name_en || selectedRequest.student.name_ar}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">{lang === 'ar' ? 'الرقم الجامعي: ' : 'ID: '}</span>
+                    <span className="font-medium">{selectedRequest.student.student_id}</span>
+                  </div>
+                  {selectedRequest.student.phone && (
+                    <div>
+                      <span className="text-blue-600">{lang === 'ar' ? 'الهاتف: ' : 'Phone: '}</span>
+                      <span className="font-medium">{selectedRequest.student.phone}</span>
+                    </div>
+                  )}
+                  {selectedRequest.student.university_email && (
+                    <div>
+                      <span className="text-blue-600">{lang === 'ar' ? 'البريد: ' : 'Email: '}</span>
+                      <span className="font-medium text-xs">{selectedRequest.student.university_email}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t">
-              <Button variant="outline" fullWidth onClick={() => setShowRequestDetailsModal(false)}>
-                {lang === 'ar' ? 'إغلاق' : 'Close'}
-              </Button>
-              {!['APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes(selectedRequest.status) && (
+            <div className="flex flex-col gap-3 pt-4 border-t">
+              {/* Staff Actions */}
+              {isStaff && !['APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes(selectedRequest.status) && (
+                <div className="flex gap-3">
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => handleApproveRequest(selectedRequest.id)}
+                    icon={CheckCircle}
+                    disabled={actionLoading}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {actionLoading ? (lang === 'ar' ? 'جاري...' : 'Processing...') : (lang === 'ar' ? 'موافقة' : 'Approve')}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    fullWidth
+                    onClick={() => setShowRejectModal(true)}
+                    icon={XCircle}
+                    disabled={actionLoading}
+                  >
+                    {lang === 'ar' ? 'رفض' : 'Reject'}
+                  </Button>
+                </div>
+              )}
+
+              {/* Execute Approved Request */}
+              {isStaff && selectedRequest.status === 'APPROVED' && (
                 <Button
-                  variant="danger"
+                  variant="primary"
                   fullWidth
-                  onClick={() => handleCancelRequest(selectedRequest.id)}
-                  icon={XCircle}
+                  onClick={() => handleExecuteRequest(selectedRequest.id)}
+                  icon={CheckCircle}
+                  disabled={actionLoading}
+                  className="bg-emerald-600 hover:bg-emerald-700"
                 >
-                  {lang === 'ar' ? 'إلغاء الطلب' : 'Cancel Request'}
+                  {actionLoading ? (lang === 'ar' ? 'جاري التنفيذ...' : 'Executing...') : (lang === 'ar' ? 'تنفيذ الطلب' : 'Execute Request')}
                 </Button>
               )}
+
+              <div className="flex gap-3">
+                <Button variant="outline" fullWidth onClick={() => setShowRequestDetailsModal(false)}>
+                  {lang === 'ar' ? 'إغلاق' : 'Close'}
+                </Button>
+                {!isStaff && !['APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes(selectedRequest.status) && (
+                  <Button
+                    variant="danger"
+                    fullWidth
+                    onClick={() => handleCancelRequest(selectedRequest.id)}
+                    icon={XCircle}
+                  >
+                    {lang === 'ar' ? 'إلغاء الطلب' : 'Cancel Request'}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setRejectionReason('');
+        }}
+        title={lang === 'ar' ? 'رفض الطلب' : 'Reject Request'}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-700 text-sm">
+              {lang === 'ar'
+                ? 'سيتم إخطار الطالب بسبب الرفض. يرجى إدخال سبب واضح.'
+                : 'The student will be notified with the rejection reason. Please enter a clear reason.'}
+            </p>
+          </div>
+          <Textarea
+            label={lang === 'ar' ? 'سبب الرفض' : 'Rejection Reason'}
+            placeholder={lang === 'ar' ? 'أدخل سبب رفض الطلب...' : 'Enter rejection reason...'}
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            rows={4}
+            required
+          />
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectionReason('');
+              }}
+            >
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => selectedRequest && handleRejectRequest(selectedRequest.id)}
+              disabled={actionLoading || !rejectionReason.trim()}
+              icon={XCircle}
+            >
+              {actionLoading ? (lang === 'ar' ? 'جاري...' : 'Processing...') : (lang === 'ar' ? 'تأكيد الرفض' : 'Confirm Reject')}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

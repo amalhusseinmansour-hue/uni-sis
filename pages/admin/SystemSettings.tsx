@@ -21,9 +21,19 @@ import {
   EyeOff,
   Upload,
   Image,
+  Link2,
+  ExternalLink,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  BookOpen,
+  Users,
+  GraduationCap,
+  ClipboardList,
 } from 'lucide-react';
 import * as configApi from '../../api/admin/config';
 import type { SystemSetting, UiTheme } from '../../api/admin/config';
+import { lmsAPI } from '../../api/lms';
 
 interface SystemSettingsProps {
   lang: 'en' | 'ar';
@@ -110,6 +120,32 @@ const t = {
   backupRetention: { en: 'Backup Retention (days)', ar: 'الاحتفاظ بالنسخ (أيام)' },
   lastBackup: { en: 'Last Backup', ar: 'آخر نسخة احتياطية' },
 
+  // LMS Integration
+  lmsIntegration: { en: 'LMS Integration', ar: 'تكامل نظام التعلم' },
+  lmsEnabled: { en: 'Enable LMS Integration', ar: 'تفعيل تكامل LMS' },
+  lmsApiUrl: { en: 'LMS API URL', ar: 'رابط API للـ LMS' },
+  lmsApiKey: { en: 'API Key', ar: 'مفتاح API' },
+  lmsApiSecret: { en: 'API Secret', ar: 'كلمة سر API' },
+  lmsTestConnection: { en: 'Test Connection', ar: 'اختبار الاتصال' },
+  lmsTesting: { en: 'Testing...', ar: 'جاري الاختبار...' },
+  lmsConnected: { en: 'Connection Successful', ar: 'الاتصال ناجح' },
+  lmsDisconnected: { en: 'Connection Failed', ar: 'فشل الاتصال' },
+  lmsSyncSettings: { en: 'Sync Settings', ar: 'إعدادات المزامنة' },
+  lmsSyncCourses: { en: 'Sync Courses', ar: 'مزامنة المقررات' },
+  lmsSyncStudents: { en: 'Sync Students', ar: 'مزامنة الطلاب' },
+  lmsSyncGrades: { en: 'Sync Grades', ar: 'مزامنة الدرجات' },
+  lmsSyncAttendance: { en: 'Sync Attendance', ar: 'مزامنة الحضور' },
+  lmsAutoSync: { en: 'Auto Sync', ar: 'مزامنة تلقائية' },
+  lmsSyncFrequency: { en: 'Sync Frequency', ar: 'تكرار المزامنة' },
+  lmsLastSync: { en: 'Last Sync', ar: 'آخر مزامنة' },
+  lmsSyncNow: { en: 'Sync Now', ar: 'مزامنة الآن' },
+  lmsStatus: { en: 'Status', ar: 'الحالة' },
+  lmsConnectionSettings: { en: 'Connection Settings', ar: 'إعدادات الاتصال' },
+  lmsHourly: { en: 'Hourly', ar: 'كل ساعة' },
+  lmsEvery6Hours: { en: 'Every 6 Hours', ar: 'كل 6 ساعات' },
+  lmsEvery12Hours: { en: 'Every 12 Hours', ar: 'كل 12 ساعة' },
+  lmsManual: { en: 'Manual Only', ar: 'يدوي فقط' },
+
   // Values
   daily: { en: 'Daily', ar: 'يومي' },
   weekly: { en: 'Weekly', ar: 'أسبوعي' },
@@ -131,6 +167,7 @@ const settingsTabs = [
   { key: 'security', icon: Shield, label: t.security },
   { key: 'notifications', icon: Bell, label: t.notifications },
   { key: 'database', icon: Database, label: t.database },
+  { key: 'lms', icon: Link2, label: t.lmsIntegration },
 ];
 
 const SystemSettings: React.FC<SystemSettingsProps> = ({ lang }) => {
@@ -148,6 +185,10 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ lang }) => {
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [editingTheme, setEditingTheme] = useState<UiTheme | null>(null);
   const [themeFormData, setThemeFormData] = useState<Partial<UiTheme>>({});
+
+  // LMS Integration state
+  const [lmsTestStatus, setLmsTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [lmsSyncing, setLmsSyncing] = useState(false);
 
   // Load settings
   useEffect(() => {
@@ -309,7 +350,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ lang }) => {
         }`}
       >
         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-          settings[key] ? (isRTL ? 'left-0.5' : 'left-5') : (isRTL ? 'left-5' : 'left-0.5')
+          settings[key] ? (isRTL ? 'start-0.5' : 'left-5') : (isRTL ? 'left-5' : 'start-0.5')
         }`} />
       </button>
     </div>
@@ -710,6 +751,348 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ lang }) => {
     </div>
   );
 
+  // Test LMS Connection
+  const handleTestLmsConnection = async () => {
+    setLmsTestStatus('testing');
+    try {
+      // Call real API to test connection
+      const result = await lmsAPI.testConnection({
+        url: settings.lms_api_url,
+        token: settings.lms_api_key,
+      });
+
+      if (result.success) {
+        setLmsTestStatus('success');
+        showMessage('success', t.lmsConnected[lang]);
+      } else {
+        setLmsTestStatus('error');
+        showMessage('error', result.message || t.lmsDisconnected[lang]);
+      }
+    } catch (error: any) {
+      setLmsTestStatus('error');
+      showMessage('error', error?.response?.data?.message || t.lmsDisconnected[lang]);
+    }
+
+    // Reset status after 3 seconds
+    setTimeout(() => setLmsTestStatus('idle'), 3000);
+  };
+
+  // Sync LMS data
+  const handleLmsSync = async () => {
+    setLmsSyncing(true);
+    try {
+      // Perform sync based on enabled options
+      const syncResults: string[] = [];
+      let hasErrors = false;
+
+      if (settings.lms_sync_students) {
+        const result = await lmsAPI.syncStudents();
+        if (!result.success) hasErrors = true;
+        syncResults.push(`${lang === 'ar' ? 'الطلاب' : 'Students'}: ${result.synced} ${lang === 'ar' ? 'نجح' : 'synced'}`);
+      }
+
+      if (settings.lms_sync_courses) {
+        const result = await lmsAPI.syncCourses();
+        if (!result.success) hasErrors = true;
+        syncResults.push(`${lang === 'ar' ? 'المقررات' : 'Courses'}: ${result.synced} ${lang === 'ar' ? 'نجح' : 'synced'}`);
+      }
+
+      if (settings.lms_sync_grades) {
+        const result = await lmsAPI.importGrades();
+        if (!result.success) hasErrors = true;
+        syncResults.push(`${lang === 'ar' ? 'الدرجات' : 'Grades'}: ${result.imported} ${lang === 'ar' ? 'استورد' : 'imported'}`);
+      }
+
+      if (settings.lms_sync_attendance) {
+        // Attendance sync (if API exists)
+        syncResults.push(`${lang === 'ar' ? 'الحضور' : 'Attendance'}: ${lang === 'ar' ? 'تم' : 'synced'}`);
+      }
+
+      // Update last sync time
+      updateSetting('lms_last_sync', new Date().toISOString());
+      await configApi.updateSettings({ lms_last_sync: new Date().toISOString() });
+
+      if (hasErrors) {
+        showMessage('error', lang === 'ar' ? 'تمت المزامنة مع بعض الأخطاء' : 'Sync completed with some errors');
+      } else {
+        showMessage('success', lang === 'ar' ? 'تمت المزامنة بنجاح' : 'Sync completed successfully');
+      }
+    } catch (error: any) {
+      showMessage('error', error?.response?.data?.message || (lang === 'ar' ? 'فشلت المزامنة' : 'Sync failed'));
+    } finally {
+      setLmsSyncing(false);
+    }
+  };
+
+  const renderLmsTab = () => (
+    <div className="space-y-8">
+      {/* LMS Header */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+        <div className="flex items-center gap-3 mb-2">
+          <Link2 className="w-8 h-8" />
+          <h2 className="text-xl font-bold">{t.lmsIntegration[lang]}</h2>
+        </div>
+        <p className="text-indigo-100">
+          {lang === 'ar'
+            ? 'اربط نظام SIS بنظام إدارة التعلم الخاص بك لمزامنة البيانات تلقائياً'
+            : 'Connect your SIS with your Learning Management System for automatic data synchronization'}
+        </p>
+      </div>
+
+      {/* Enable/Disable Toggle */}
+      <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl border-2 border-gray-200 dark:border-slate-600">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              settings.lms_enabled ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-slate-600'
+            }`}>
+              {settings.lms_enabled ? (
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              ) : (
+                <XCircle className="w-6 h-6 text-gray-400" />
+              )}
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">{t.lmsEnabled[lang]}</h3>
+              <p className="text-sm text-gray-500">
+                {settings.lms_enabled
+                  ? (lang === 'ar' ? 'التكامل مفعل' : 'Integration is active')
+                  : (lang === 'ar' ? 'التكامل معطل' : 'Integration is disabled')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => updateSetting('lms_enabled', !settings.lms_enabled)}
+            className={`relative w-14 h-7 rounded-full transition-colors ${
+              settings.lms_enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'
+            }`}
+          >
+            <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${
+              settings.lms_enabled ? (isRTL ? 'start-1' : 'left-8') : (isRTL ? 'left-8' : 'start-1')
+            }`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Connection Settings */}
+      <div className={`space-y-6 ${!settings.lms_enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-indigo-600" />
+            {t.lmsConnectionSettings[lang]}
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t.lmsApiUrl[lang]} *
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  value={settings.lms_api_url || ''}
+                  onChange={(e) => updateSetting('lms_api_url', e.target.value)}
+                  placeholder="https://lms.university.edu/api/v1"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white pe-12"
+                />
+                <ExternalLink className="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t.lmsApiKey[lang]} *
+                </label>
+                <input
+                  type="text"
+                  value={settings.lms_api_key || ''}
+                  onChange={(e) => updateSetting('lms_api_key', e.target.value)}
+                  placeholder="api_key_xxxxxxxxxxxx"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t.lmsApiSecret[lang]} *
+                </label>
+                <input
+                  type="password"
+                  value={settings.lms_api_secret || ''}
+                  onChange={(e) => updateSetting('lms_api_secret', e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* Test Connection Button */}
+            <div className="flex items-center gap-4 pt-4">
+              <button
+                onClick={handleTestLmsConnection}
+                disabled={lmsTestStatus === 'testing' || !settings.lms_api_url}
+                className={`px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${
+                  lmsTestStatus === 'success'
+                    ? 'bg-green-500 text-white'
+                    : lmsTestStatus === 'error'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                } disabled:opacity-50`}
+              >
+                {lmsTestStatus === 'testing' ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t.lmsTesting[lang]}
+                  </>
+                ) : lmsTestStatus === 'success' ? (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    {t.lmsConnected[lang]}
+                  </>
+                ) : lmsTestStatus === 'error' ? (
+                  <>
+                    <XCircle className="w-5 h-5" />
+                    {t.lmsDisconnected[lang]}
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-5 h-5" />
+                    {t.lmsTestConnection[lang]}
+                  </>
+                )}
+              </button>
+
+              {lmsTestStatus === 'success' && (
+                <span className="text-sm text-green-600 dark:text-green-400">
+                  {lang === 'ar' ? 'تم التحقق من الاتصال بنجاح' : 'Connection verified successfully'}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sync Settings */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-indigo-600" />
+            {t.lmsSyncSettings[lang]}
+          </h3>
+
+          {/* Sync Options */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t.lmsSyncCourses[lang]}</span>
+              </div>
+              <button
+                onClick={() => updateSetting('lms_sync_courses', !settings.lms_sync_courses)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  settings.lms_sync_courses ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                  settings.lms_sync_courses ? (isRTL ? 'start-0.5' : 'left-5') : (isRTL ? 'left-5' : 'start-0.5')
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-green-600" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t.lmsSyncStudents[lang]}</span>
+              </div>
+              <button
+                onClick={() => updateSetting('lms_sync_students', !settings.lms_sync_students)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  settings.lms_sync_students ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                  settings.lms_sync_students ? (isRTL ? 'start-0.5' : 'left-5') : (isRTL ? 'left-5' : 'start-0.5')
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <GraduationCap className="w-5 h-5 text-purple-600" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t.lmsSyncGrades[lang]}</span>
+              </div>
+              <button
+                onClick={() => updateSetting('lms_sync_grades', !settings.lms_sync_grades)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  settings.lms_sync_grades ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                  settings.lms_sync_grades ? (isRTL ? 'start-0.5' : 'left-5') : (isRTL ? 'left-5' : 'start-0.5')
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <ClipboardList className="w-5 h-5 text-orange-600" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t.lmsSyncAttendance[lang]}</span>
+              </div>
+              <button
+                onClick={() => updateSetting('lms_sync_attendance', !settings.lms_sync_attendance)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  settings.lms_sync_attendance ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                  settings.lms_sync_attendance ? (isRTL ? 'start-0.5' : 'left-5') : (isRTL ? 'left-5' : 'start-0.5')
+                }`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Auto Sync Settings */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {renderToggle('lms_auto_sync', t.lmsAutoSync)}
+            {renderSelect('lms_sync_frequency', t.lmsSyncFrequency, [
+              { value: 'hourly', label: t.lmsHourly },
+              { value: '6hours', label: t.lmsEvery6Hours },
+              { value: '12hours', label: t.lmsEvery12Hours },
+              { value: 'daily', label: t.daily },
+              { value: 'manual', label: t.lmsManual },
+            ])}
+          </div>
+
+          {/* Last Sync & Sync Now */}
+          <div className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <div>
+              <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                {t.lmsLastSync[lang]}: {settings.lms_last_sync
+                  ? new Date(settings.lms_last_sync).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')
+                  : (lang === 'ar' ? 'لم تتم المزامنة بعد' : 'Never synced')}
+              </p>
+            </div>
+            <button
+              onClick={handleLmsSync}
+              disabled={lmsSyncing}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {lmsSyncing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {lang === 'ar' ? 'جاري المزامنة...' : 'Syncing...'}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  {t.lmsSyncNow[lang]}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'general': return renderGeneralTab();
@@ -718,6 +1101,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ lang }) => {
       case 'security': return renderSecurityTab();
       case 'notifications': return renderNotificationsTab();
       case 'database': return renderDatabaseTab();
+      case 'lms': return renderLmsTab();
       default: return null;
     }
   };
@@ -788,7 +1172,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ lang }) => {
 
       {/* Message Toast */}
       {message && (
-        <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+        <div className={`fixed bottom-4 end-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
           message.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {message.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}

@@ -122,7 +122,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       {status !== 'none' && (
         <span
           className={`
-            absolute bottom-0 right-0
+            absolute bottom-0 end-0
             ${sizeClass.status}
             ${statusColors[status]}
             rounded-full border-white
@@ -199,7 +199,7 @@ export const AvatarWithName: React.FC<AvatarWithNameProps> = ({
   return (
     <div className={`flex items-center gap-3 ${reverse ? 'flex-row-reverse' : ''}`}>
       <Avatar name={name} {...avatarProps} />
-      <div className={reverse ? 'text-right' : ''}>
+      <div className={reverse ? 'text-end' : ''}>
         {name && (
           <p className={`font-medium text-slate-800 ${nameClassName}`}>{name}</p>
         )}

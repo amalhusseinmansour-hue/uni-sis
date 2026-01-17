@@ -160,9 +160,14 @@ class EnrollmentController extends Controller
         }
 
         // Check registration period
-        // if (!$currentSemester->isRegistrationOpen()) {
-        //     return response()->json(['message' => 'Registration period is closed'], 422);
-        // }
+        if (!$currentSemester->isRegistrationOpen()) {
+            return response()->json([
+                'message' => 'فترة التسجيل مغلقة',
+                'message_en' => 'Registration period is closed',
+                'registration_start' => $currentSemester->registration_start,
+                'registration_end' => $currentSemester->registration_end,
+            ], 422);
+        }
 
         // Find course by section_id (could be course_id or a section identifier)
         $course = \App\Models\Course::find($validated['section_id']);
@@ -183,19 +188,32 @@ class EnrollmentController extends Controller
         }
 
         // Check prerequisites
-        // TODO: Add prerequisite checking logic
+        $eligibility = $course->canStudentEnroll($student);
+        if (!$eligibility['can_enroll']) {
+            return response()->json([
+                'message' => 'لا يمكن التسجيل في هذا المقرر',
+                'message_en' => 'Cannot enroll in this course',
+                'reasons' => $eligibility['reasons'],
+            ], 422);
+        }
 
-        // Check credit limit
+        // Check credit limit from settings
         $currentCredits = Enrollment::where('student_id', $student->id)
             ->where('semester_id', $currentSemester->id)
             ->where('status', 'ENROLLED')
             ->join('courses', 'enrollments.course_id', '=', 'courses.id')
             ->sum('courses.credits');
 
-        $maxCredits = 21; // Could be from settings
+        $maxCredits = (int) \App\Models\SystemSetting::get('enrollment.max_credits', 21);
+        $minCredits = (int) \App\Models\SystemSetting::get('enrollment.min_credits', 12);
 
         if (($currentCredits + $course->credits) > $maxCredits) {
-            return response()->json(['message' => 'Maximum credit limit exceeded'], 422);
+            return response()->json([
+                'message' => 'تجاوز الحد الأقصى للساعات المعتمدة',
+                'message_en' => 'Maximum credit limit exceeded',
+                'current_credits' => $currentCredits,
+                'max_credits' => $maxCredits,
+            ], 422);
         }
 
         // Create enrollment
@@ -234,7 +252,15 @@ class EnrollmentController extends Controller
         }
 
         // Check if drop is allowed (deadline check)
-        // TODO: Add deadline checking logic
+        $currentSemester = \App\Models\Semester::where('is_current', true)->first();
+        if ($currentSemester && !$currentSemester->isAddDropOpen()) {
+            return response()->json([
+                'message' => 'فترة الحذف والإضافة مغلقة',
+                'message_en' => 'Add/drop period is closed',
+                'add_drop_start' => $currentSemester->add_drop_start ?? $currentSemester->registration_start,
+                'add_drop_end' => $currentSemester->add_drop_end ?? $currentSemester->registration_end,
+            ], 422);
+        }
 
         $enrollment->update(['status' => 'DROPPED']);
 

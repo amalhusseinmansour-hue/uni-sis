@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   PieChart,
@@ -26,7 +26,15 @@ import {
   Eye,
   FileSpreadsheet,
   FileType2,
+  Building,
+  Loader2,
 } from 'lucide-react';
+import { UserRole } from '../types';
+import { dashboardAPI } from '../api/dashboard';
+import { studentsAPI } from '../api/students';
+import { admissionsApi } from '../api/admissions';
+import { financeAPI } from '../api/finance';
+import { enrollmentsAPI } from '../api/enrollments';
 import {
   BarChart,
   Bar,
@@ -55,7 +63,19 @@ import { exportToCSV, exportToPDF, printPage, sendViaEmail, formatTableHTML } fr
 
 interface ReportsProps {
   lang: 'en' | 'ar';
+  role?: UserRole;
 }
+
+// Staff-specific translations
+const staffT: Record<string, { en: string; ar: string }> = {
+  staffPageTitle: { en: 'Student Affairs Reports & Analytics', ar: 'تقارير وتحليلات شؤون الطلاب' },
+  staffSubtitle: { en: 'Comprehensive reports for student affairs management', ar: 'تقارير شاملة لإدارة شؤون الطلاب' },
+  studentStatistics: { en: 'Student Statistics', ar: 'إحصائيات الطلاب' },
+  enrollmentReports: { en: 'Enrollment Reports', ar: 'تقارير التسجيل' },
+  academicReports: { en: 'Academic Reports', ar: 'التقارير الأكاديمية' },
+  studentRequestsReport: { en: 'Student Requests Report', ar: 'تقرير طلبات الطلاب' },
+  admissionStatistics: { en: 'Admission Statistics', ar: 'إحصائيات القبول' },
+};
 
 const t = {
   ...TRANSLATIONS,
@@ -157,13 +177,186 @@ const performanceData = [
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
-const Reports: React.FC<ReportsProps> = ({ lang }) => {
+const Reports: React.FC<ReportsProps> = ({ lang, role }) => {
+  const isStaff = role === UserRole.STUDENT_AFFAIRS || role === UserRole.ADMIN;
   const [activeTab, setActiveTab] = useState<'overview' | 'enrollment' | 'academic' | 'financial' | 'custom'>('overview');
   const [selectedPeriod, setSelectedPeriod] = useState('thisYear');
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Real data state
+  const [realStats, setRealStats] = useState({
+    // Students
+    totalStudents: 0,
+    activeStudents: 0,
+    suspendedStudents: 0,
+    graduatedStudents: 0,
+    // Admissions
+    totalApplications: 0,
+    pendingApplications: 0,
+    underReviewApplications: 0,
+    approvedApplications: 0,
+    rejectedApplications: 0,
+    todayApplications: 0,
+    weekApplications: 0,
+    // Enrollments
+    totalEnrollments: 0,
+    activeEnrollments: 0,
+    completedEnrollments: 0,
+    droppedEnrollments: 0,
+    // Financial
+    totalRevenue: 0,
+    pendingPayments: 0,
+    paidPayments: 0,
+    overduePayments: 0,
+    // Service Requests
+    totalRequests: 0,
+    pendingRequests: 0,
+    completedRequests: 0,
+  });
+  const [admissionStats, setAdmissionStats] = useState<any>(null);
+  const [studentsList, setStudentsList] = useState<any[]>([]);
+  const [programStats, setProgramStats] = useState<any[]>([]);
+  const [recentApplications, setRecentApplications] = useState<any[]>([]);
 
   const isRTL = lang === 'ar';
+
+  // Theme colors based on staff role
+  const themeColors = {
+    primary: isStaff ? 'emerald' : 'blue',
+    primaryBg: isStaff ? 'bg-emerald-600' : 'bg-blue-600',
+    primaryHover: isStaff ? 'hover:bg-emerald-700' : 'hover:bg-blue-700',
+    primaryText: isStaff ? 'text-emerald-600' : 'text-blue-600',
+    primaryBgLight: isStaff ? 'bg-emerald-50' : 'bg-blue-50',
+    primaryBorder: isStaff ? 'border-emerald-600' : 'border-blue-600',
+  };
+
+  // Fetch real data from APIs
+  const fetchReportData = async () => {
+    try {
+      // Fetch dashboard stats, admissions stats, students, and financial stats in parallel
+      const [dashStats, admStats, studentsRes, finStats] = await Promise.all([
+        dashboardAPI.getStats().catch(() => ({})),
+        admissionsApi.getStatistics().catch(() => null),
+        studentsAPI.getAll({ per_page: 1000 }).catch(() => ({ data: [], meta: { total: 0 } })),
+        financeAPI.getStatistics().catch(() => null),
+      ]);
+
+      console.log('Dashboard Stats:', dashStats);
+      console.log('Admission Stats:', admStats);
+      console.log('Students:', studentsRes);
+      console.log('Finance Stats:', finStats);
+
+      // Process dashboard stats (handle nested structure from STUDENT_AFFAIRS role)
+      const studentsData = dashStats?.students || {};
+      const admissionsData = dashStats?.admissions || {};
+      const enrollmentsData = dashStats?.enrollments || {};
+      const financialData = dashStats?.financial || {};
+      const serviceRequestsData = dashStats?.service_requests || {};
+
+      // Store recent applications if available
+      if (dashStats?.recent_applications) {
+        setRecentApplications(dashStats.recent_applications);
+      }
+
+      // Initialize with dashboard data - comprehensive mapping
+      setRealStats(prev => ({
+        ...prev,
+        // Students
+        totalStudents: studentsData?.total || 0,
+        activeStudents: studentsData?.active || 0,
+        suspendedStudents: studentsData?.suspended || 0,
+        graduatedStudents: studentsData?.graduated || 0,
+        // Admissions
+        totalApplications: admissionsData?.total || 0,
+        pendingApplications: admissionsData?.pending || 0,
+        underReviewApplications: admissionsData?.under_review || 0,
+        approvedApplications: admissionsData?.approved || 0,
+        rejectedApplications: admissionsData?.rejected || 0,
+        todayApplications: admissionsData?.today || 0,
+        weekApplications: admissionsData?.this_week || 0,
+        // Enrollments
+        totalEnrollments: enrollmentsData?.total || 0,
+        activeEnrollments: enrollmentsData?.enrolled || 0,
+        completedEnrollments: enrollmentsData?.completed || 0,
+        droppedEnrollments: enrollmentsData?.dropped || 0,
+        // Financial
+        totalRevenue: financialData?.total_credit || financialData?.total_received || financialData?.total_receivable || 0,
+        pendingPayments: financialData?.pending_amount || financialData?.pending || 0,
+        paidPayments: financialData?.paid_amount || 0,
+        overduePayments: financialData?.overdue_amount || financialData?.overdue || 0,
+        // Service Requests
+        totalRequests: serviceRequestsData?.total || 0,
+        pendingRequests: serviceRequestsData?.pending || 0,
+        completedRequests: serviceRequestsData?.completed || 0,
+      }));
+
+      // Process admission stats (from dedicated endpoint)
+      if (admStats) {
+        setAdmissionStats(admStats);
+        setRealStats(prev => ({
+          ...prev,
+          pendingApplications: (admStats.pending || 0) + (admStats.under_review || 0) + (admStats.documents_verified || 0) + (admStats.pending_payment || 0),
+          approvedApplications: admStats.approved || prev.approvedApplications,
+          rejectedApplications: admStats.rejected || prev.rejectedApplications,
+        }));
+      }
+
+      // Process students list
+      const students = studentsRes?.data || [];
+      setStudentsList(students);
+
+      // Update total students from students list if dashboard didn't have it
+      if (students.length > 0) {
+        setRealStats(prev => ({
+          ...prev,
+          totalStudents: prev.totalStudents || students.length,
+          activeEnrollments: prev.activeEnrollments || students.filter((s: any) => s.status === 'ACTIVE' || s.status === 'active').length,
+        }));
+      }
+
+      // Process program statistics
+      const programCounts: Record<string, { name: string; nameAr: string; count: number }> = {};
+      students.forEach((student: any) => {
+        const programName = student.program?.name_en || student.program?.name || student.program_name || 'Unknown';
+        const programNameAr = student.program?.name_ar || programName;
+        if (!programCounts[programName]) {
+          programCounts[programName] = { name: programName, nameAr: programNameAr, count: 0 };
+        }
+        programCounts[programName].count++;
+      });
+      setProgramStats(Object.values(programCounts));
+
+      // Process financial stats (from dedicated endpoint)
+      if (finStats) {
+        setRealStats(prev => ({
+          ...prev,
+          totalRevenue: finStats.total_credits || finStats.total_credit || finStats.total_revenue || prev.totalRevenue,
+          pendingPayments: finStats.pending_amount || finStats.total_pending || prev.pendingPayments,
+          paidPayments: finStats.paid_amount || finStats.total_paid || prev.paidPayments,
+        }));
+      }
+
+    } catch (error) {
+      console.error('Error fetching report data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchReportData();
+  }, []);
+
+  // Handle refresh
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchReportData();
+  };
 
   // Export handlers
   const handleExportPDF = () => {
@@ -407,49 +600,49 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
   const statCards = [
     {
       title: t.totalStudents[lang],
-      value: '2,000',
-      change: '+12.5%',
+      value: realStats.totalStudents.toLocaleString(),
+      change: lang === 'ar' ? `${realStats.activeStudents} نشط` : `${realStats.activeStudents} active`,
       trend: 'up',
       icon: Users,
       color: 'blue',
     },
     {
-      title: t.activeEnrollments[lang],
-      value: '1,850',
-      change: '+8.2%',
-      trend: 'up',
-      icon: GraduationCap,
-      color: 'green',
-    },
-    {
-      title: t.graduationRate[lang],
-      value: '94.5%',
-      change: '+2.1%',
-      trend: 'up',
-      icon: CheckCircle,
+      title: lang === 'ar' ? 'إجمالي طلبات القبول' : 'Total Applications',
+      value: realStats.totalApplications.toLocaleString(),
+      change: lang === 'ar' ? `${realStats.weekApplications} هذا الأسبوع` : `${realStats.weekApplications} this week`,
+      trend: realStats.weekApplications > 0 ? 'up' : 'down',
+      icon: FileText,
       color: 'purple',
     },
     {
-      title: t.averageGPA[lang],
-      value: '3.24',
-      change: '-0.05',
-      trend: 'down',
-      icon: TrendingUp,
+      title: lang === 'ar' ? 'طلبات القبول المعلقة' : 'Pending Applications',
+      value: realStats.pendingApplications.toLocaleString(),
+      change: lang === 'ar' ? `${realStats.underReviewApplications} قيد المراجعة` : `${realStats.underReviewApplications} under review`,
+      trend: realStats.pendingApplications > 0 ? 'up' : 'down',
+      icon: AlertCircle,
       color: 'orange',
     },
     {
-      title: t.totalRevenue[lang],
-      value: '$2.8M',
-      change: '+15.3%',
+      title: lang === 'ar' ? 'الطلبات المقبولة' : 'Approved Applications',
+      value: realStats.approvedApplications.toLocaleString(),
+      change: lang === 'ar' ? `${realStats.rejectedApplications} مرفوض` : `${realStats.rejectedApplications} rejected`,
       trend: 'up',
-      icon: CreditCard,
+      icon: CheckCircle,
+      color: 'green',
+    },
+    {
+      title: lang === 'ar' ? 'التسجيلات النشطة' : 'Active Enrollments',
+      value: realStats.activeEnrollments.toLocaleString(),
+      change: lang === 'ar' ? `${realStats.completedEnrollments} مكتمل` : `${realStats.completedEnrollments} completed`,
+      trend: 'up',
+      icon: GraduationCap,
       color: 'emerald',
     },
     {
-      title: t.attendanceRate[lang],
-      value: '89.2%',
-      change: '+1.8%',
-      trend: 'up',
+      title: lang === 'ar' ? 'طلبات الخدمة' : 'Service Requests',
+      value: realStats.totalRequests.toLocaleString(),
+      change: lang === 'ar' ? `${realStats.pendingRequests} معلق` : `${realStats.pendingRequests} pending`,
+      trend: realStats.pendingRequests > 0 ? 'up' : 'down',
       icon: Clock,
       color: 'cyan',
     },
@@ -464,8 +657,27 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
     cyan: 'bg-cyan-100 text-cyan-600',
   };
 
+  // Generate real program data for charts
+  const realProgramChartData = programStats.length > 0 ? programStats.map((p, i) => ({
+    name: lang === 'ar' ? p.nameAr : p.name,
+    students: p.count,
+    color: COLORS[i % COLORS.length],
+  })) : departmentData;
+
   const renderOverviewTab = () => (
     <div className="space-y-6">
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto mb-2" />
+            <p className="text-slate-500">{lang === 'ar' ? 'جاري تحميل البيانات...' : 'Loading data...'}</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map((stat, index) => {
@@ -546,7 +758,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">{t.departmentEnrollment[lang]}</h3>
+              <h3 className="text-lg font-bold text-slate-800">{lang === 'ar' ? 'التسجيل حسب البرنامج' : 'Enrollment by Program'}</h3>
               <button className="p-2 hover:bg-slate-100 rounded-lg">
                 <MoreHorizontal className="w-4 h-4 text-slate-400" />
               </button>
@@ -556,7 +768,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
             <ResponsiveContainer width="100%" height={300}>
               <RechartsPieChart>
                 <Pie
-                  data={departmentData}
+                  data={realProgramChartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -564,7 +776,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
                   paddingAngle={5}
                   dataKey="students"
                 >
-                  {departmentData.map((entry, index) => (
+                  {realProgramChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -578,7 +790,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
               </RechartsPieChart>
             </ResponsiveContainer>
             <div className="flex flex-wrap justify-center gap-3 mt-4">
-              {departmentData.map((dept, index) => (
+              {realProgramChartData.map((dept, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
                   <span className="text-xs text-slate-600">{dept.name}</span>
@@ -710,6 +922,8 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
           </div>
         </CardBody>
       </Card>
+        </>
+      )}
     </div>
   );
 
@@ -1121,10 +1335,25 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Staff Header Banner */}
+      {isStaff && (
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-6 text-white">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <Building className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{staffT.staffPageTitle[lang]}</h1>
+              <p className="text-emerald-100 mt-1">{staffT.staffSubtitle[lang]}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">{t.reports[lang]}</h1>
+          {!isStaff && <h1 className="text-2xl font-bold text-slate-800">{t.reports[lang]}</h1>}
           <p className="text-sm text-slate-500 mt-1">
             {t.lastUpdated[lang]}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
           </p>
@@ -1149,7 +1378,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
                       setSelectedPeriod(period.key);
                       setShowPeriodDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-sm text-left hover:bg-slate-50 ${
+                    className={`w-full px-4 py-2 text-sm text-start hover:bg-slate-50 ${
                       selectedPeriod === period.key ? 'bg-blue-50 text-blue-600' : 'text-slate-700'
                     }`}
                   >
@@ -1161,46 +1390,50 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
           </div>
 
           {/* Refresh */}
-          <button className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
-            <RefreshCw className="w-4 h-4 text-slate-500" />
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-500 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
 
           {/* Export */}
           <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg ${themeColors.primaryBg} ${themeColors.primaryHover}`}
             >
               <Download className="w-4 h-4" />
               <span className="text-sm">{t.export[lang]}</span>
               <ChevronDown className="w-4 h-4" />
             </button>
             {showExportMenu && (
-              <div className={`absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 ${isRTL ? 'left-0' : 'right-0'}`}>
+              <div className={`absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 ${isRTL ? 'start-0' : 'end-0'}`}>
                 <button
                   onClick={handleExportPDF}
-                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2"
                 >
                   <FileType2 className="w-4 h-4 text-red-500" />
                   {isRTL ? 'تصدير PDF' : 'Export as PDF'}
                 </button>
                 <button
                   onClick={handleExportExcel}
-                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-green-600" />
                   {isRTL ? 'تصدير Excel' : 'Export as Excel'}
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2"
                 >
                   <Printer className="w-4 h-4 text-slate-600" />
                   {t.print[lang]}
                 </button>
                 <button
                   onClick={handleSendEmail}
-                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4 text-blue-600" />
                   {isRTL ? 'إرسال بالبريد' : 'Send via Email'}
@@ -1222,7 +1455,7 @@ const Reports: React.FC<ReportsProps> = ({ lang }) => {
                 onClick={() => setActiveTab(tab.key as any)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.key
-                    ? 'border-blue-600 text-blue-600'
+                    ? `${themeColors.primaryBorder} ${themeColors.primaryText}`
                     : 'border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300'
                 }`}
               >

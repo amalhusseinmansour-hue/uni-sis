@@ -122,6 +122,55 @@ export const studentRequestsApi = {
     return response.data.data;
   },
 
+  // Staff: Get all requests (for staff/admin)
+  getAllRequests: async (params?: {
+    status?: string;
+    type?: string;
+    search?: string;
+    per_page?: number;
+    page?: number;
+  }): Promise<{ data: StudentRequest[]; meta: any }> => {
+    const response = await apiClient.get('/student-requests', { params });
+    return response.data.data || response.data;
+  },
+
+  // Staff: Review request (approve/reject/forward)
+  reviewRequest: async (id: number, data: {
+    decision: 'APPROVED' | 'REJECTED' | 'FORWARDED';
+    level: 'ADVISOR' | 'DEPARTMENT' | 'DEAN' | 'STUDENT_AFFAIRS';
+    notes?: string;
+  }): Promise<StudentRequest> => {
+    const response = await apiClient.post(`/student-requests/${id}/review`, data);
+    return response.data.data;
+  },
+
+  // Staff: Execute approved request
+  executeRequest: async (id: number, data?: {
+    execution_notes?: string;
+    execution_result?: any;
+  }): Promise<StudentRequest> => {
+    const response = await apiClient.post(`/student-requests/${id}/execute`, data);
+    return response.data.data;
+  },
+
+  // Staff: Add comment to request
+  addComment: async (id: number, data: {
+    comment: string;
+    is_internal?: boolean;
+    attachments?: string[];
+  }): Promise<any> => {
+    const response = await apiClient.post(`/student-requests/${id}/comments`, data);
+    return response.data.data;
+  },
+
+  // Staff: Get request statistics
+  getRequestStatistics: async (semesterId?: number): Promise<any> => {
+    const response = await apiClient.get('/student-requests/statistics', {
+      params: { semester_id: semesterId },
+    });
+    return response.data.data;
+  },
+
   // Get form schema for a specific request type
   getFormSchema: async (requestType: string): Promise<FormSchema> => {
     const response = await apiClient.get(`/request-forms/schema/${requestType}`);

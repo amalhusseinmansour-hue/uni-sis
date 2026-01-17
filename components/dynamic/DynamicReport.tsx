@@ -125,7 +125,7 @@ export const DynamicReport: React.FC<DynamicReportProps> = ({
     const label = (
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {param.label}
-        {param.is_required && <span className="text-red-500 mr-1">*</span>}
+        {param.is_required && <span className="text-red-500 me-1">*</span>}
       </label>
     );
 

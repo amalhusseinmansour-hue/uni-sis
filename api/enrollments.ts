@@ -39,7 +39,19 @@ export const enrollmentsAPI = {
     return response.data;
   },
 
-  // ========== Admin Methods ==========
+  // ========== Admin/Staff Methods ==========
+
+  // Get enrollments for a specific student (staff/admin)
+  getStudentEnrollments: async (studentId: number | string, semester?: string) => {
+    const response = await apiClient.get('/enrollments', {
+      params: {
+        student_id: studentId,
+        semester,
+        status: 'ENROLLED'
+      }
+    });
+    return response.data;
+  },
 
   // Get all enrollments (admin)
   getAll: async (filters?: {

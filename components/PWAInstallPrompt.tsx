@@ -112,7 +112,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
   // Installation success message
   if (installed) {
     return (
-      <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-80 bg-green-500 text-white p-4 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up">
+      <div className="fixed bottom-4 end-4 start-4 sm:left-auto sm:w-80 bg-green-500 text-white p-4 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up">
         <CheckCircle className="w-6 h-6 flex-shrink-0" />
         <span className="font-medium">{t.installed[lang]}</span>
       </div>
@@ -123,10 +123,10 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
     <>
       {/* Floating Install Banner */}
       {showBanner && !showPrompt && (
-        <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 z-50 animate-slide-up">
+        <div className="fixed bottom-4 end-4 start-4 sm:left-auto sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 z-50 animate-slide-up">
           <button
             onClick={handleDismiss}
-            className="absolute top-2 right-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            className="absolute top-2 end-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <X className="w-4 h-4 text-slate-400" />
           </button>
@@ -180,7 +180,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white text-center relative">
               <button
                 onClick={handleDismiss}
-                className="absolute top-3 right-3 p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                className="absolute top-3 end-3 p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

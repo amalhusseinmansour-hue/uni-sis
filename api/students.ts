@@ -90,6 +90,18 @@ export const studentsAPI = {
     return response.data;
   },
 
+  // Get student transcript (for staff/admin)
+  getStudentTranscript: async (studentId: string | number) => {
+    const response = await apiClient.get(`/students/${studentId}/transcript`);
+    return response.data;
+  },
+
+  // Get student study plan (for staff/admin)
+  getStudentStudyPlan: async (studentId: string | number) => {
+    const response = await apiClient.get(`/students/${studentId}/study-plan`);
+    return response.data;
+  },
+
   // Get my grades (for students)
   getMyGrades: async () => {
     try {

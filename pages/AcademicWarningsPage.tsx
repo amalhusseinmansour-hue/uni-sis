@@ -3,30 +3,105 @@ import {
   AlertTriangle, AlertCircle, CheckCircle, Clock, TrendingUp, TrendingDown,
   FileText, Calendar, User, BookOpen, Target, ArrowRight, ChevronRight,
   Shield, XCircle, Info, MessageSquare, Download, Eye, History,
-  Lightbulb, Award, BarChart2, Activity, AlertOctagon, ThumbsUp
+  Lightbulb, Award, BarChart2, Activity, AlertOctagon, ThumbsUp, Search, Users
 } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { studentsAPI } from '../api/students';
+import { academicStatusAPI } from '../api/academicStatus';
 import { exportToPDF } from '../utils/exportUtils';
 import { Card, CardHeader, CardBody, StatCard, GradientCard } from '../components/ui/Card';
 import Button, { IconButton } from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
+import { Input, Textarea, Select } from '../components/ui/Input';
+import { UserRole } from '../types';
 
 interface AcademicWarningsPageProps {
   lang: 'en' | 'ar';
+  role?: UserRole;
 }
 
-const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => {
+const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang, role }) => {
+  const isStaff = role === UserRole.STUDENT_AFFAIRS || role === UserRole.ADMIN;
   const [activeTab, setActiveTab] = useState<'current' | 'history' | 'improvement'>('current');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedWarning, setSelectedWarning] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Staff-specific state
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentList, setStudentList] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [allWarningsStats, setAllWarningsStats] = useState({
+    totalStudents: 0,
+    warningStudents: 0,
+    probationStudents: 0,
+    goodStandingStudents: 0,
+  });
+
+  // Staff: Create warning modal
+  const [showCreateWarningModal, setShowCreateWarningModal] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [newWarning, setNewWarning] = useState({
+    type: 'academic' as 'academic' | 'attendance' | 'conduct',
+    reason: '',
+    severity: 'warning' as 'warning' | 'probation',
+    deadline: '',
+    required_action: '',
+    gpa_at_warning: '',
+  });
+  const [resolveData, setResolveData] = useState({
+    resolution: '',
+    resolution_notes: '',
+  });
+
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Staff: Fetch all students
+  useEffect(() => {
+    const fetchStaffData = async () => {
+      if (!isStaff) return;
+      try {
+        const studentsRes = await studentsAPI.getAll({ per_page: 100 });
+        setStudentList(studentsRes.data || studentsRes || []);
+
+        // Mock stats
+        setAllWarningsStats({
+          totalStudents: (studentsRes.data || studentsRes || []).length,
+          warningStudents: 5,
+          probationStudents: 2,
+          goodStandingStudents: (studentsRes.data || studentsRes || []).length - 7,
+        });
+      } catch (error) {
+        console.error('Error fetching staff data:', error);
+      }
+    };
+    fetchStaffData();
+  }, [isStaff]);
+
+  // Staff: Search students
+  useEffect(() => {
+    const searchStudents = async () => {
+      if (!isStaff || !studentSearch.trim()) return;
+      setSearchLoading(true);
+      try {
+        const res = await studentsAPI.getAll({ search: studentSearch, per_page: 20 });
+        setStudentList(res.data || res || []);
+      } catch (error) {
+        console.error('Error searching students:', error);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(searchStudents, 300);
+    return () => clearTimeout(debounce);
+  }, [studentSearch, isStaff]);
 
   // Academic status
   const academicStatus = {
@@ -184,6 +259,69 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
       hours: lang === 'ar' ? 'راجع التقويم الأكاديمي' : 'Check academic calendar',
     },
   ];
+
+  // Staff: Create warning handler
+  const handleCreateWarning = async () => {
+    if (!selectedStudent || !newWarning.reason.trim()) {
+      alert(lang === 'ar' ? 'يرجى اختيار طالب وإدخال سبب الإنذار' : 'Please select a student and enter warning reason');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await academicStatusAPI.createWarning({
+        student_id: selectedStudent.id,
+        type: newWarning.type,
+        reason: newWarning.reason,
+        severity: newWarning.severity,
+        deadline: newWarning.deadline || undefined,
+        required_action: newWarning.required_action || undefined,
+        gpa_at_warning: newWarning.gpa_at_warning ? parseFloat(newWarning.gpa_at_warning) : undefined,
+      });
+
+      alert(lang === 'ar' ? 'تم إنشاء الإنذار بنجاح!' : 'Warning created successfully!');
+      setShowCreateWarningModal(false);
+      setNewWarning({
+        type: 'academic',
+        reason: '',
+        severity: 'warning',
+        deadline: '',
+        required_action: '',
+        gpa_at_warning: '',
+      });
+    } catch (error: any) {
+      console.error('Error creating warning:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ' : 'Error occurred'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Staff: Resolve warning handler
+  const handleResolveWarning = async () => {
+    if (!selectedWarning || !resolveData.resolution.trim()) {
+      alert(lang === 'ar' ? 'يرجى إدخال قرار الحل' : 'Please enter resolution');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await academicStatusAPI.resolveWarning(selectedWarning.id, {
+        resolution: resolveData.resolution,
+        resolution_notes: resolveData.resolution_notes || undefined,
+      });
+
+      alert(lang === 'ar' ? 'تم حل الإنذار بنجاح!' : 'Warning resolved successfully!');
+      setShowResolveModal(false);
+      setShowDetailsModal(false);
+      setResolveData({ resolution: '', resolution_notes: '' });
+    } catch (error: any) {
+      console.error('Error resolving warning:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ' : 'Error occurred'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -436,7 +574,7 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
               </div>
               <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full"
+                  className="absolute inset-y-0 start-0 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full"
                   style={{ width: `${(improvementPlan.currentGPA / 4) * 100}%` }}
                 ></div>
                 <div
@@ -569,7 +707,115 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header */}
+      {/* Staff Header Banner */}
+      {isStaff && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">
+                {lang === 'ar' ? 'إدارة الحالات الأكاديمية' : 'Academic Status Management'}
+              </h1>
+              <p className="text-emerald-100 mt-1">
+                {lang === 'ar' ? 'متابعة الإنذارات والحالات الأكاديمية للطلاب' : 'Monitor student warnings and academic status'}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{allWarningsStats.totalStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'إجمالي الطلاب' : 'Total Students'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-300">{allWarningsStats.warningStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'إنذار' : 'Warning'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-red-300">{allWarningsStats.probationStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'مراقبة' : 'Probation'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-300">{allWarningsStats.goodStandingStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'جيد' : 'Good'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Search */}
+          <div className="mt-4 relative">
+            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+              <Search className="w-5 h-5 text-emerald-200" />
+              <input
+                type="text"
+                placeholder={lang === 'ar' ? 'ابحث عن طالب بالاسم أو الرقم الجامعي...' : 'Search student by name or ID...'}
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-emerald-200 outline-none"
+              />
+              {searchLoading && (
+                <div className="w-5 h-5 border-2 border-emerald-200 border-t-transparent rounded-full animate-spin"></div>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {studentSearch && studentList.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-y-auto z-50">
+                {studentList.map((student: any) => (
+                  <div
+                    key={student.id}
+                    onClick={() => {
+                      setSelectedStudent(student);
+                      setStudentSearch('');
+                    }}
+                    className="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b last:border-0"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">
+                      {(student.name || student.name_en || 'S').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">{student.name || student.name_en || student.name_ar}</p>
+                      <p className="text-sm text-slate-500">{student.student_id || student.id}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected Student */}
+          {selectedStudent && (
+            <div className="mt-4 bg-white/20 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-xl">
+                  {(selectedStudent.name || selectedStudent.name_en || 'S').charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold">{selectedStudent.name || selectedStudent.name_en || selectedStudent.name_ar}</p>
+                  <p className="text-sm text-emerald-100">
+                    {lang === 'ar' ? 'الرقم الجامعي: ' : 'Student ID: '}{selectedStudent.student_id || selectedStudent.id}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowCreateWarningModal(true)}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  {lang === 'ar' ? 'إنشاء إنذار' : 'Create Warning'}
+                </button>
+                <button
+                  onClick={() => setSelectedStudent(null)}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+                >
+                  {lang === 'ar' ? 'مسح' : 'Clear'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header - Student View */}
+      {!isStaff && (
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">
@@ -599,6 +845,7 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
           </Button>
         </div>
       </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-slate-200">
@@ -674,12 +921,223 @@ const AcademicWarningsPage: React.FC<AcademicWarningsPageProps> = ({ lang }) => 
               <Button variant="outline" fullWidth onClick={() => setShowDetailsModal(false)}>
                 {lang === 'ar' ? 'إغلاق' : 'Close'}
               </Button>
-              <Button variant="primary" fullWidth icon={MessageSquare}>
-                {lang === 'ar' ? 'تواصل مع المرشد' : 'Contact Advisor'}
-              </Button>
+              {isStaff && selectedWarning?.status === 'active' && (
+                <Button
+                  variant="success"
+                  fullWidth
+                  icon={CheckCircle}
+                  onClick={() => setShowResolveModal(true)}
+                >
+                  {lang === 'ar' ? 'حل الإنذار' : 'Resolve Warning'}
+                </Button>
+              )}
+              {!isStaff && (
+                <Button variant="primary" fullWidth icon={MessageSquare}>
+                  {lang === 'ar' ? 'تواصل مع المرشد' : 'Contact Advisor'}
+                </Button>
+              )}
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Create Warning Modal - Staff Only */}
+      <Modal
+        isOpen={showCreateWarningModal}
+        onClose={() => setShowCreateWarningModal(false)}
+        title={lang === 'ar' ? 'إنشاء إنذار جديد' : 'Create New Warning'}
+        size="md"
+      >
+        <div className="space-y-4">
+          {/* Student Info */}
+          {selectedStudent && (
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                  {(selectedStudent.name || selectedStudent.name_en || 'S').charAt(0)}
+                </div>
+                <div>
+                  <p className="font-medium text-blue-800">{selectedStudent.name || selectedStudent.name_en || selectedStudent.name_ar}</p>
+                  <p className="text-sm text-blue-600">{selectedStudent.student_id || selectedStudent.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Warning Type */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'نوع الإنذار' : 'Warning Type'}
+            </label>
+            <select
+              value={newWarning.type}
+              onChange={(e) => setNewWarning({ ...newWarning, type: e.target.value as any })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="academic">{lang === 'ar' ? 'أكاديمي' : 'Academic'}</option>
+              <option value="attendance">{lang === 'ar' ? 'حضور' : 'Attendance'}</option>
+              <option value="conduct">{lang === 'ar' ? 'سلوك' : 'Conduct'}</option>
+            </select>
+          </div>
+
+          {/* Severity */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'شدة الإنذار' : 'Severity'}
+            </label>
+            <select
+              value={newWarning.severity}
+              onChange={(e) => setNewWarning({ ...newWarning, severity: e.target.value as any })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="warning">{lang === 'ar' ? 'إنذار' : 'Warning'}</option>
+              <option value="probation">{lang === 'ar' ? 'مراقبة' : 'Probation'}</option>
+            </select>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'سبب الإنذار' : 'Warning Reason'} *
+            </label>
+            <textarea
+              value={newWarning.reason}
+              onChange={(e) => setNewWarning({ ...newWarning, reason: e.target.value })}
+              placeholder={lang === 'ar' ? 'أدخل سبب الإنذار...' : 'Enter warning reason...'}
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+
+          {/* GPA at Warning (for academic) */}
+          {newWarning.type === 'academic' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                {lang === 'ar' ? 'المعدل عند الإنذار' : 'GPA at Warning'}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="4"
+                value={newWarning.gpa_at_warning}
+                onChange={(e) => setNewWarning({ ...newWarning, gpa_at_warning: e.target.value })}
+                placeholder="e.g., 1.85"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          {/* Deadline */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'الموعد النهائي للتحسين' : 'Improvement Deadline'}
+            </label>
+            <input
+              type="date"
+              value={newWarning.deadline}
+              onChange={(e) => setNewWarning({ ...newWarning, deadline: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Required Action */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'الإجراء المطلوب' : 'Required Action'}
+            </label>
+            <textarea
+              value={newWarning.required_action}
+              onChange={(e) => setNewWarning({ ...newWarning, required_action: e.target.value })}
+              placeholder={lang === 'ar' ? 'أدخل الإجراء المطلوب من الطالب...' : 'Enter required action from student...'}
+              rows={2}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" fullWidth onClick={() => setShowCreateWarningModal(false)}>
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              icon={AlertTriangle}
+              onClick={handleCreateWarning}
+              disabled={actionLoading || !newWarning.reason.trim()}
+            >
+              {actionLoading ? (lang === 'ar' ? 'جاري الإنشاء...' : 'Creating...') : (lang === 'ar' ? 'إنشاء الإنذار' : 'Create Warning')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Resolve Warning Modal - Staff Only */}
+      <Modal
+        isOpen={showResolveModal}
+        onClose={() => setShowResolveModal(false)}
+        title={lang === 'ar' ? 'حل الإنذار' : 'Resolve Warning'}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+            <p className="text-green-700 text-sm">
+              {lang === 'ar'
+                ? 'سيتم إغلاق هذا الإنذار وإعلام الطالب. يرجى إدخال سبب الحل.'
+                : 'This warning will be closed and the student will be notified. Please enter resolution reason.'}
+            </p>
+          </div>
+
+          {/* Resolution */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'قرار الحل' : 'Resolution'} *
+            </label>
+            <select
+              value={resolveData.resolution}
+              onChange={(e) => setResolveData({ ...resolveData, resolution: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
+              <option value="improved">{lang === 'ar' ? 'تحسن الأداء' : 'Performance Improved'}</option>
+              <option value="conditions_met">{lang === 'ar' ? 'تم استيفاء الشروط' : 'Conditions Met'}</option>
+              <option value="appeal_accepted">{lang === 'ar' ? 'قُبل الاستئناف' : 'Appeal Accepted'}</option>
+              <option value="administrative">{lang === 'ar' ? 'قرار إداري' : 'Administrative Decision'}</option>
+            </select>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {lang === 'ar' ? 'ملاحظات إضافية' : 'Additional Notes'}
+            </label>
+            <textarea
+              value={resolveData.resolution_notes}
+              onChange={(e) => setResolveData({ ...resolveData, resolution_notes: e.target.value })}
+              placeholder={lang === 'ar' ? 'أدخل أي ملاحظات إضافية...' : 'Enter any additional notes...'}
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" fullWidth onClick={() => setShowResolveModal(false)}>
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button
+              variant="success"
+              fullWidth
+              icon={CheckCircle}
+              onClick={handleResolveWarning}
+              disabled={actionLoading || !resolveData.resolution}
+            >
+              {actionLoading ? (lang === 'ar' ? 'جاري الحل...' : 'Resolving...') : (lang === 'ar' ? 'حل الإنذار' : 'Resolve Warning')}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

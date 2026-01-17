@@ -32,7 +32,7 @@ const Input: React.FC<InputProps> = ({
       )}
       <div className="relative">
         {Icon && iconPosition === 'left' && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <div className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon className="w-5 h-5" />
           </div>
         )}
@@ -43,14 +43,14 @@ const Input: React.FC<InputProps> = ({
             focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
             disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
             ${error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-200'}
-            ${Icon && iconPosition === 'left' ? 'pl-11' : ''}
-            ${Icon && iconPosition === 'right' ? 'pr-11' : ''}
+            ${Icon && iconPosition === 'left' ? 'ps-11' : ''}
+            ${Icon && iconPosition === 'right' ? 'pe-11' : ''}
             ${className}
           `}
           {...props}
         />
         {Icon && iconPosition === 'right' && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <div className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon className="w-5 h-5" />
           </div>
         )}
@@ -76,7 +76,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({ showToggle = true,
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors mt-3"
+          className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors mt-3"
         >
           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
         </button>
@@ -187,7 +187,7 @@ export const Select: React.FC<SelectProps> = ({
           disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
           appearance-none bg-white
           bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23666%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')]
-          bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10
+          bg-[length:20px] bg-[right_12px_center] bg-no-repeat pe-10
           ${error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-200'}
           ${className}
         `}

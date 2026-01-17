@@ -216,7 +216,7 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
                         className={`w-4 h-4 ${star <= Math.floor(advisor.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300'}`}
                       />
                     ))}
-                    <span className="text-sm text-slate-600 ml-2">{advisor.rating}</span>
+                    <span className="text-sm text-slate-600 ms-2">{advisor.rating}</span>
                   </div>
                 </div>
               </div>

@@ -193,14 +193,14 @@ const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({ lang }) => {
                     <span>{formatDate(deadline.date)}</span>
                     {deadline.time && (
                       <>
-                        <Clock className="w-3 h-3 ml-2" />
+                        <Clock className="w-3 h-3 ms-2" />
                         <span>{deadline.time}</span>
                       </>
                     )}
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-end">
                   {daysUntil <= 0 ? (
                     <Badge variant="danger">
                       {lang === 'ar' ? 'اليوم!' : 'Today!'}

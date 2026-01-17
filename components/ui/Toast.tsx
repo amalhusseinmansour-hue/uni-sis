@@ -122,7 +122,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ id, type, message, duration = 500
 
       {/* Progress bar */}
       {duration > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-100 dark:bg-slate-700">
+        <div className="absolute bottom-0 start-0 end-0 h-1 bg-slate-100 dark:bg-slate-700">
           <div
             className={`h-full ${getProgressColor()} transition-all duration-100 ease-linear`}
             style={{ width: `${progress}%` }}
@@ -164,7 +164,7 @@ const Toast: React.FC = () => {
 
   return (
     <div
-      className={`fixed bottom-4 z-50 flex flex-col gap-3 max-w-md w-full px-4 ${isRTL ? 'left-4' : 'right-4'}`}
+      className={`fixed bottom-4 z-50 flex flex-col gap-3 max-w-md w-full px-4 ${isRTL ? 'start-4' : 'end-4'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {toasts.map((t) => (

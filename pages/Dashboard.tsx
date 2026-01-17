@@ -173,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             setEnrollments([]);
             setFinancials(null);
           }
-        } else if (role === UserRole.ADMIN || role === UserRole.FINANCE) {
+        } else if (role === UserRole.ADMIN || role === UserRole.FINANCE || role === UserRole.STUDENT_AFFAIRS) {
           try {
             const [statsData, appsData] = await Promise.all([
               dashboardAPI.getStats().catch(() => null),
@@ -304,8 +304,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     <div className="space-y-6">
       {/* Welcome Banner */}
       <GradientCard gradient="from-blue-600 via-indigo-600 to-purple-600" className="relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+        <div className="absolute top-0 end-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 start-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-blue-100 text-sm font-medium mb-1">{t.welcome[lang]}</p>
@@ -355,7 +355,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <Award className="w-6 h-6" />
               </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
+            <div className="absolute bottom-0 start-0 end-0 h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
           </CardBody>
         </Card>
 
@@ -371,7 +371,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <BookOpen className="w-6 h-6" />
               </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600" style={{ width: `${completedCredits > 0 ? (completedCredits / totalRequired) * 100 : 0}%` }}></div>
+            <div className="absolute bottom-0 start-0 end-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600" style={{ width: `${completedCredits > 0 ? (completedCredits / totalRequired) * 100 : 0}%` }}></div>
           </CardBody>
         </Card>
 
@@ -624,7 +624,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <p className="text-sm text-slate-500">{course.code} - {course.instructor || course.instructor_name}</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <Badge variant="primary">{course.credits} {lang === 'ar' ? 'ساعات' : 'Cr'}</Badge>
                   <p className="text-xs text-slate-400 mt-1">{course.schedule}</p>
                 </div>
@@ -821,6 +821,362 @@ const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 
+  // Student Affairs Dashboard
+  const renderStudentAffairsDashboard = () => {
+    // Extract data from dashboardStats (nested structure from studentAffairsStats)
+    const studentsData = dashboardStats?.students || {};
+    const admissionsData = dashboardStats?.admissions || {};
+    const enrollmentsData = dashboardStats?.enrollments || {};
+    const serviceRequestsData = dashboardStats?.service_requests || {};
+    const recentApps = dashboardStats?.recent_applications || applications.slice(0, 5);
+
+    return (
+      <div className="space-y-6">
+        {/* Welcome Banner */}
+        <GradientCard gradient="from-emerald-600 via-teal-600 to-cyan-600" className="relative overflow-hidden">
+          <div className="absolute top-0 end-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 start-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <p className="text-emerald-100 text-sm font-medium mb-1">{t.welcome[lang]}</p>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{student.name}</h1>
+              <p className="text-emerald-100">
+                {lang === 'ar' ? 'لوحة تحكم شؤون الطلاب' : 'Student Affairs Dashboard'}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                icon={Users}
+                onClick={() => navigate('/admin/users')}
+                className="bg-white/20 hover:bg-white/30 text-white border-0"
+              >
+                {lang === 'ar' ? 'إدارة الطلاب' : 'Manage Students'}
+              </Button>
+              <Button
+                variant="secondary"
+                icon={FileText}
+                onClick={() => navigate('/admissions')}
+                className="bg-white/20 hover:bg-white/30 text-white border-0"
+              >
+                {lang === 'ar' ? 'طلبات القبول' : 'Admissions'}
+              </Button>
+            </div>
+          </div>
+        </GradientCard>
+
+        {/* Stats Grid - Row 1: Students */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="relative overflow-hidden border-l-4 border-l-blue-500">
+            <CardBody>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">{lang === 'ar' ? 'إجمالي الطلاب' : 'Total Students'}</p>
+                  <p className="text-3xl font-bold text-slate-800">{studentsData.total || 0}</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden border-l-4 border-l-green-500">
+            <CardBody>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">{lang === 'ar' ? 'الطلاب النشطين' : 'Active Students'}</p>
+                  <p className="text-3xl font-bold text-green-600">{studentsData.active || 0}</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden border-l-4 border-l-purple-500">
+            <CardBody>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">{lang === 'ar' ? 'الخريجين' : 'Graduated'}</p>
+                  <p className="text-3xl font-bold text-purple-600">{studentsData.graduated || 0}</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-xl">
+                  <GraduationCap className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden border-l-4 border-l-red-500">
+            <CardBody>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">{lang === 'ar' ? 'الموقوفين' : 'Suspended'}</p>
+                  <p className="text-3xl font-bold text-red-600">{studentsData.suspended || 0}</p>
+                </div>
+                <div className="p-3 bg-red-100 rounded-xl">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Stats Grid - Row 2: Admissions */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="relative overflow-hidden">
+            <CardBody>
+              <div className="text-center">
+                <p className="text-sm text-slate-500 mb-1">{lang === 'ar' ? 'إجمالي الطلبات' : 'Total Applications'}</p>
+                <p className="text-2xl font-bold text-slate-800">{admissionsData.total || 0}</p>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-yellow-50">
+            <CardBody>
+              <div className="text-center">
+                <p className="text-sm text-yellow-700 mb-1">{lang === 'ar' ? 'قيد الانتظار' : 'Pending'}</p>
+                <p className="text-2xl font-bold text-yellow-700">{admissionsData.pending || 0}</p>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-blue-50">
+            <CardBody>
+              <div className="text-center">
+                <p className="text-sm text-blue-700 mb-1">{lang === 'ar' ? 'قيد المراجعة' : 'Under Review'}</p>
+                <p className="text-2xl font-bold text-blue-700">{admissionsData.under_review || 0}</p>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-green-50">
+            <CardBody>
+              <div className="text-center">
+                <p className="text-sm text-green-700 mb-1">{lang === 'ar' ? 'مقبول' : 'Approved'}</p>
+                <p className="text-2xl font-bold text-green-700">{admissionsData.approved || 0}</p>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-red-50">
+            <CardBody>
+              <div className="text-center">
+                <p className="text-sm text-red-700 mb-1">{lang === 'ar' ? 'مرفوض' : 'Rejected'}</p>
+                <p className="text-2xl font-bold text-red-700">{admissionsData.rejected || 0}</p>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardBody className="p-4">
+            <h3 className="font-semibold text-slate-800 mb-4">{lang === 'ar' ? 'الإجراءات السريعة' : 'Quick Actions'}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              {[
+                { icon: Users, label: lang === 'ar' ? 'إدارة الطلاب' : 'Students', color: 'bg-blue-500', path: '/admin/users' },
+                { icon: FileText, label: lang === 'ar' ? 'طلبات القبول' : 'Admissions', color: 'bg-orange-500', path: '/admissions' },
+                { icon: BookOpen, label: lang === 'ar' ? 'التسجيل' : 'Registration', color: 'bg-purple-500', path: '/registration' },
+                { icon: Calendar, label: lang === 'ar' ? 'الجداول' : 'Schedules', color: 'bg-cyan-500', path: '/schedule' },
+                { icon: BarChart2, label: lang === 'ar' ? 'التقارير' : 'Reports', color: 'bg-green-500', path: '/reports' },
+                { icon: Activity, label: lang === 'ar' ? 'الطلبات' : 'Requests', color: 'bg-rose-500', path: '/requests' },
+              ].map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => navigate(action.path)}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-slate-50 transition-colors group border border-slate-100"
+                >
+                  <div className={`p-3 ${action.color} rounded-xl text-white group-hover:scale-110 transition-transform shadow-sm`}>
+                    <action.icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Applications */}
+          <Card>
+            <CardHeader
+              title={lang === 'ar' ? 'آخر طلبات القبول' : 'Recent Applications'}
+              icon={FileText}
+              iconColor="text-orange-600 bg-orange-50"
+              action={
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admissions')}>
+                  {t.viewAll[lang]}
+                </Button>
+              }
+            />
+            <CardBody noPadding>
+              <div className="divide-y divide-slate-100">
+                {recentApps.length > 0 ? recentApps.map((app: any) => (
+                  <div key={app.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800">{app.full_name || app.fullName}</p>
+                        <p className="text-sm text-slate-500">{app.email}</p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={app.status === 'APPROVED' ? 'success' : app.status === 'REJECTED' ? 'danger' : 'warning'}
+                      dot
+                    >
+                      {app.status === 'PENDING' ? (lang === 'ar' ? 'معلق' : 'Pending') :
+                       app.status === 'APPROVED' ? (lang === 'ar' ? 'مقبول' : 'Approved') :
+                       app.status === 'REJECTED' ? (lang === 'ar' ? 'مرفوض' : 'Rejected') :
+                       app.status === 'UNDER_REVIEW' ? (lang === 'ar' ? 'قيد المراجعة' : 'Under Review') : app.status}
+                    </Badge>
+                  </div>
+                )) : (
+                  <div className="p-8 text-center text-slate-500">
+                    {lang === 'ar' ? 'لا توجد طلبات' : 'No applications'}
+                  </div>
+                )}
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Enrollments & Requests Stats */}
+          <div className="space-y-6">
+            {/* Enrollments */}
+            <Card>
+              <CardHeader
+                title={lang === 'ar' ? 'التسجيلات' : 'Enrollments'}
+                icon={GraduationCap}
+                iconColor="text-purple-600 bg-purple-50"
+              />
+              <CardBody>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-slate-800">{enrollmentsData.total || 0}</p>
+                    <p className="text-sm text-slate-500">{lang === 'ar' ? 'إجمالي' : 'Total'}</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-green-600">{enrollmentsData.enrolled || 0}</p>
+                    <p className="text-sm text-green-600">{lang === 'ar' ? 'نشط' : 'Active'}</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-blue-600">{enrollmentsData.completed || 0}</p>
+                    <p className="text-sm text-blue-600">{lang === 'ar' ? 'مكتمل' : 'Completed'}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-red-600">{enrollmentsData.dropped || 0}</p>
+                    <p className="text-sm text-red-600">{lang === 'ar' ? 'منسحب' : 'Dropped'}</p>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Service Requests */}
+            <Card>
+              <CardHeader
+                title={lang === 'ar' ? 'طلبات الخدمة' : 'Service Requests'}
+                icon={Activity}
+                iconColor="text-rose-600 bg-rose-50"
+              />
+              <CardBody>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-slate-800">{serviceRequestsData.total || 0}</p>
+                    <p className="text-sm text-slate-500">{lang === 'ar' ? 'إجمالي' : 'Total'}</p>
+                  </div>
+                  <div className="p-4 bg-yellow-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{serviceRequestsData.pending || 0}</p>
+                    <p className="text-sm text-yellow-600">{lang === 'ar' ? 'معلق' : 'Pending'}</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-green-600">{serviceRequestsData.completed || 0}</p>
+                    <p className="text-sm text-green-600">{lang === 'ar' ? 'مكتمل' : 'Done'}</p>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+
+        {/* Today's Stats */}
+        <Card>
+          <CardHeader
+            title={lang === 'ar' ? 'إحصائيات اليوم' : "Today's Statistics"}
+            icon={Calendar}
+            iconColor="text-cyan-600 bg-cyan-50"
+          />
+          <CardBody>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-emerald-600" />
+                  <span className="text-sm text-emerald-700">{lang === 'ar' ? 'طلبات اليوم' : "Today's Apps"}</span>
+                </div>
+                <p className="text-2xl font-bold text-emerald-700">{admissionsData.today || 0}</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-blue-700">{lang === 'ar' ? 'هذا الأسبوع' : 'This Week'}</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-700">{admissionsData.this_week || 0}</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm text-purple-700">{lang === 'ar' ? 'طلبات معلقة' : 'Pending Requests'}</span>
+                </div>
+                <p className="text-2xl font-bold text-purple-700">{serviceRequestsData.in_progress || 0}</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm text-orange-700">{lang === 'ar' ? 'نسبة القبول' : 'Approval Rate'}</span>
+                </div>
+                <p className="text-2xl font-bold text-orange-700">
+                  {admissionsData.total > 0 ? Math.round((admissionsData.approved / admissionsData.total) * 100) : 0}%
+                </p>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Announcements */}
+        <Card>
+          <CardHeader title={t.announcements[lang]} icon={Bell} iconColor="text-red-600 bg-red-50" />
+          <CardBody noPadding>
+            <div className="divide-y divide-slate-100">
+              {announcementsList.length > 0 ? announcementsList.map((ann: any) => (
+                <div key={ann.id} className="p-4 hover:bg-slate-50">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-2 h-2 mt-2 rounded-full ${
+                      ann.type === 'ACADEMIC' ? 'bg-blue-500' : ann.type === 'FINANCIAL' ? 'bg-red-500' : 'bg-green-500'
+                    }`}></div>
+                    <div>
+                      <h4 className="font-semibold text-slate-800">{ann.title}</h4>
+                      <p className="text-sm text-slate-600">{ann.content}</p>
+                      <p className="text-xs text-slate-400 mt-1">{ann.date}</p>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="p-8 text-center text-slate-500">
+                  {lang === 'ar' ? 'لا توجد إعلانات' : 'No announcements'}
+                </div>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  };
+
   // Lecturer Dashboard
   const renderLecturerDashboard = () => (
     <div className="space-y-6">
@@ -907,7 +1263,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <p className="text-sm text-slate-500">{course.schedule}</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <p className="font-semibold text-slate-800">{course.enrolled || 0}/{course.capacity || '--'}</p>
                   <p className="text-xs text-slate-500">{lang === 'ar' ? 'طالب مسجل' : 'Students'}</p>
                 </div>
@@ -940,6 +1296,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <>
           {role === UserRole.STUDENT && renderStudentDashboard()}
           {(role === UserRole.ADMIN || role === UserRole.FINANCE) && renderAdminDashboard()}
+          {role === UserRole.STUDENT_AFFAIRS && renderStudentAffairsDashboard()}
           {role === UserRole.LECTURER && renderLecturerDashboard()}
         </>
       )}

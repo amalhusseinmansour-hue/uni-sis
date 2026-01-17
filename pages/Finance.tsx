@@ -456,7 +456,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
 
         {/* Balance Card */}
         <GradientCard gradient="from-slate-800 via-slate-900 to-slate-800" className="relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute top-0 end-0 w-96 h-96 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
           <div className="relative">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2">
@@ -618,11 +618,11 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.date[lang]}</th>
-                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.description[lang]}</th>
-                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.type[lang]}</th>
-                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.amount[lang]}</th>
-                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
+                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.date[lang]}</th>
+                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.description[lang]}</th>
+                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.type[lang]}</th>
+                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.amount[lang]}</th>
+                    <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.status[lang]}</th>
                     <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.actions[lang]}</th>
                   </tr>
                 </thead>
@@ -766,16 +766,16 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                       <table className="w-full">
                         <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                           <tr>
-                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                               {lang === 'ar' ? 'رقم القسط' : 'Installment #'}
                             </th>
-                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                               {lang === 'ar' ? 'المبلغ' : 'Amount'}
                             </th>
-                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                               {lang === 'ar' ? 'تاريخ الاستحقاق' : 'Due Date'}
                             </th>
-                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                            <th className={`p-3 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                               {lang === 'ar' ? 'الحالة' : 'Status'}
                             </th>
                             <th className="p-3 text-xs font-semibold text-slate-500 uppercase text-center">
@@ -1396,11 +1396,11 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.date[lang]}</th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{lang === 'ar' ? 'الطالب' : 'Student'}</th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.description[lang]}</th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.amount[lang]}</th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.date[lang]}</th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{lang === 'ar' ? 'الطالب' : 'Student'}</th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.description[lang]}</th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.amount[lang]}</th>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>{t.status[lang]}</th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.actions[lang]}</th>
                 </tr>
               </thead>
@@ -1511,9 +1511,9 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
                       <span className="text-sm font-medium text-slate-700">{item.range}</span>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <span className="text-sm font-bold text-slate-800">{formatCurrency(item.amount)}</span>
-                      <span className="text-xs text-slate-500 ml-2">({item.count} {lang === 'ar' ? 'طالب' : 'students'})</span>
+                      <span className="text-xs text-slate-500 ms-2">({item.count} {lang === 'ar' ? 'طالب' : 'students'})</span>
                     </div>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-3">
@@ -1583,16 +1583,16 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'البرنامج' : 'Program'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'عدد الطلاب' : 'Students'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'إجمالي الذمم' : 'Total Receivables'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'النسبة' : 'Percentage'}
                   </th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">
@@ -1740,22 +1740,22 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'رقم الفاتورة' : 'Invoice #'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الطالب' : 'Student'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {t.description[lang]}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {t.amount[lang]}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'تاريخ الاستحقاق' : 'Due Date'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {t.status[lang]}
                   </th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">
@@ -1900,22 +1900,22 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الطالب' : 'Student'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'البرنامج' : 'Program'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'المبلغ المستحق' : 'Amount Due'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'أيام التأخير' : 'Days Overdue'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'آخر دفعة' : 'Last Payment'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'التواصل' : 'Contact'}
                   </th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">
@@ -2071,22 +2071,22 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'رقم المعاملة' : 'Transaction ID'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الطالب' : 'Student'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {t.amount[lang]}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'طريقة الدفع' : 'Method'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {t.date[lang]}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {t.status[lang]}
                   </th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">
@@ -2223,22 +2223,22 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'رقم الخطة' : 'Plan ID'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الطالب' : 'Student'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'المبلغ الإجمالي' : 'Total Amount'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الأقساط' : 'Installments'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'التقدم' : 'Progress'}
                   </th>
-                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                     {lang === 'ar' ? 'الحالة' : 'Status'}
                   </th>
                   <th className="p-4 text-xs font-semibold text-slate-500 uppercase text-center">

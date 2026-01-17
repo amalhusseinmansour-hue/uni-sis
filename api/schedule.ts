@@ -51,6 +51,17 @@ export const scheduleAPI = {
     }
   },
 
+  // Get student's timetable by student ID (for staff/admin)
+  getStudentTimetable: async (studentId: number | string) => {
+    try {
+      const response = await apiClient.get(`/students/${studentId}/timetable`);
+      return response.data;
+    } catch (error: any) {
+      console.warn('[Schedule API] Student timetable fetch failed:', error?.message);
+      return [];
+    }
+  },
+
   // Get course schedule
   getCourseSchedule: async (courseId: string) => {
     const response = await apiClient.get(`/courses/${courseId}/schedule`);

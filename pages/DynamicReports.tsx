@@ -378,7 +378,7 @@ const DynamicReportsPage: React.FC<DynamicReportsPageProps> = ({ lang }) => {
                       setSelectedPeriod(period.key);
                       setShowPeriodDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-sm text-left hover:bg-slate-50 ${
+                    className={`w-full px-4 py-2 text-sm text-start hover:bg-slate-50 ${
                       selectedPeriod === period.key ? 'bg-blue-50 text-blue-600' : 'text-slate-700'
                     }`}
                   >
@@ -408,22 +408,22 @@ const DynamicReportsPage: React.FC<DynamicReportsPageProps> = ({ lang }) => {
               <ChevronDown className="w-4 h-4" />
             </button>
             {showExportMenu && (
-              <div className={`absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 ${isRTL ? 'left-0' : 'right-0'}`}>
+              <div className={`absolute top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 ${isRTL ? 'start-0' : 'end-0'}`}>
                 <button
                   onClick={() => handleExport('pdf')}
-                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2"
                 >
                   <FileType2 className="w-4 h-4 text-red-500" />
                   Export as PDF
                 </button>
                 <button
                   onClick={() => handleExport('excel')}
-                  className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-green-600" />
                   Export as Excel
                 </button>
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-slate-50 flex items-center gap-2">
+                <button className="w-full px-4 py-2 text-sm text-start hover:bg-slate-50 flex items-center gap-2">
                   <Printer className="w-4 h-4 text-slate-600" />
                   {t.print[lang]}
                 </button>
@@ -501,7 +501,7 @@ const DynamicReportsPage: React.FC<DynamicReportsPageProps> = ({ lang }) => {
                       {Object.keys(reportData.data[0] || {}).map((key) => (
                         <th
                           key={key}
-                          className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+                          className="px-4 py-3 text-start text-xs font-medium text-slate-500 uppercase tracking-wider"
                         >
                           {key}
                         </th>

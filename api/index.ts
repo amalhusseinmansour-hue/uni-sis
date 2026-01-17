@@ -20,6 +20,7 @@ export { paymentPlansAPI } from './paymentPlans';
 export { brandingAPI } from './branding';
 export { usersAPI } from './users';
 export { rolesAPI, SYSTEM_MODULES, DEFAULT_ROLES } from './roles';
+export { lmsAPI } from './lms';
 export { default as apiClient } from './client';
 
 // Dynamic Configuration APIs

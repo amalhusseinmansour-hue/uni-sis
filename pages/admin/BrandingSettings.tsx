@@ -263,7 +263,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">{t.loading[lang]}</span>
+        <span className="ms-2 text-gray-600">{t.loading[lang]}</span>
       </div>
     );
   }
@@ -393,7 +393,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                             <img src={settings.logo} alt="Logo" className="max-h-24 mx-auto" />
                             <button
                               onClick={() => updateSetting('logo', '')}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                              className="absolute -top-2 -end-2 bg-red-500 text-white rounded-full p-1"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -429,7 +429,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                             <img src={settings.logoLight} alt="Light Logo" className="max-h-24 mx-auto" />
                             <button
                               onClick={() => updateSetting('logoLight', '')}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                              className="absolute -top-2 -end-2 bg-red-500 text-white rounded-full p-1"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -597,7 +597,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                                 />
                                 <button
                                   onClick={() => updateSetting('idCardCustomTemplateFront', '')}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                  className="absolute -top-2 -end-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
@@ -636,7 +636,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                                 />
                                 <button
                                   onClick={() => updateSetting('idCardCustomTemplateBack', '')}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                  className="absolute -top-2 -end-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
@@ -788,7 +788,7 @@ const BrandingSettingsPage: React.FC<BrandingSettingsPageProps> = ({ lang }) => 
                           <img src={settings.reportHeaderLogo} alt="Report Header" className="max-h-20 mx-auto" />
                           <button
                             onClick={() => updateSetting('reportHeaderLogo', '')}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                            className="absolute -top-2 -end-2 bg-red-500 text-white rounded-full p-1"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -1296,7 +1296,7 @@ const IDCardPreview: React.FC<{ settings: BrandingSettings; lang: 'en' | 'ar' }>
               {lang === 'ar' ? settings.universityNameAr : settings.universityName}
             </div>
           )}
-          <div className="text-right" style={{ color: settings.idCardTemplate === 'minimal' ? settings.idCardPrimaryColor : settings.idCardTextColor }}>
+          <div className="text-end" style={{ color: settings.idCardTemplate === 'minimal' ? settings.idCardPrimaryColor : settings.idCardTextColor }}>
             <div className="text-[10px] opacity-80">{settings.universityNameAr}</div>
             <div className="text-xs font-semibold">{settings.universityName}</div>
           </div>
@@ -1332,7 +1332,7 @@ const IDCardPreview: React.FC<{ settings: BrandingSettings; lang: 'en' | 'ar' }>
         </div>
 
         {/* Footer with QR/Barcode */}
-        <div className="absolute bottom-0 left-0 right-0 p-2 flex justify-between items-end bg-black/10">
+        <div className="absolute bottom-0 start-0 end-0 p-2 flex justify-between items-end bg-black/10">
           {settings.showQRCode && (
             <div className="w-12 h-12 bg-white rounded p-1">
               <div className="w-full h-full bg-gray-200 rounded grid grid-cols-3 gap-0.5">
@@ -1376,7 +1376,7 @@ const ReportPreview: React.FC<{ settings: BrandingSettings; lang: 'en' | 'ar' }>
           ) : (
             <div className="font-bold">{settings.universityName}</div>
           )}
-          <div className="text-right">
+          <div className="text-end">
             <div className="text-sm">{settings.universityNameAr}</div>
             <div className="text-lg font-bold">{settings.universityName}</div>
           </div>

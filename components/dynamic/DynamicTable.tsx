@@ -347,7 +347,7 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
           <thead className="bg-gray-50 dark:bg-slate-700">
             <tr>
               {table.settings.show_selection && (
-                <th className="px-4 py-3 text-left">
+                <th className="px-4 py-3 text-start">
                   <input
                     type="checkbox"
                     checked={selectedRows.size === data.length && data.length > 0}
@@ -357,7 +357,7 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
                 </th>
               )}
               {table.settings.show_row_numbers && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   #
                 </th>
               )}

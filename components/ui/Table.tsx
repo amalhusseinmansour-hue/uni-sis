@@ -201,9 +201,9 @@ function DataTable<T extends Record<string, any>>({
       case 'center':
         return 'text-center';
       case 'right':
-        return isRTL ? 'text-left' : 'text-right';
+        return isRTL ? 'text-start' : 'text-end';
       default:
-        return isRTL ? 'text-right' : 'text-left';
+        return isRTL ? 'text-end' : 'text-start';
     }
   };
 
@@ -214,7 +214,7 @@ function DataTable<T extends Record<string, any>>({
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
           {searchable && (
             <div className="relative">
-              <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${isRTL ? 'right-3' : 'left-3'}`} />
+              <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${isRTL ? 'end-3' : 'start-3'}`} />
               <input
                 type="text"
                 value={searchQuery}
@@ -223,7 +223,7 @@ function DataTable<T extends Record<string, any>>({
                   setCurrentPage(1);
                 }}
                 placeholder={searchPlaceholder || t.search[lang]}
-                className={`w-64 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
+                className={`w-64 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isRTL ? 'pe-10 ps-3' : 'ps-10 pe-3'}`}
               />
             </div>
           )}

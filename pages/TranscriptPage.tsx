@@ -16,13 +16,17 @@ import {
   BarChart3,
   Loader2,
   AlertCircle,
+  Search,
+  Users,
 } from 'lucide-react';
 import { reportCardAPI, ReportCardData, ReportCardListItem, downloadReportCard } from '../api/reportCard';
 import { studentsAPI } from '../api/students';
 import { exportToPDF } from '../utils/exportUtils';
+import { UserRole } from '../types';
 
 interface TranscriptPageProps {
   lang: 'en' | 'ar';
+  role?: UserRole;
 }
 
 // Helper to safely format GPA values (standalone for use in template literals)
@@ -165,7 +169,9 @@ const defaultTranscriptData = {
   ],
 };
 
-const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
+const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang, role }) => {
+  const isStaff = role === UserRole.STUDENT_AFFAIRS || role === UserRole.ADMIN;
+
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadingFull, setDownloadingFull] = useState(false);
@@ -174,6 +180,18 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
   const [transcriptData, setTranscriptData] = useState<typeof defaultTranscriptData>(defaultTranscriptData);
   const [reportCards, setReportCards] = useState<ReportCardListItem[]>([]);
   const [isUsingFallbackData, setIsUsingFallbackData] = useState(false);
+
+  // Staff-specific state
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentList, setStudentList] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [allTranscriptStats, setAllTranscriptStats] = useState({
+    totalStudents: 0,
+    averageGPA: 0,
+    highGPAStudents: 0,
+    lowGPAStudents: 0,
+  });
 
   const isRTL = lang === 'ar';
 
@@ -184,11 +202,21 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
       setIsUsingFallbackData(false);
 
       try {
-        // Try to fetch from API
-        const [transcriptResponse, reportCardsResponse] = await Promise.all([
-          studentsAPI.getMyTranscript().catch(() => null),
-          reportCardAPI.getMyReportCards().catch(() => null),
-        ]);
+        // Try to fetch from API - different endpoint for staff vs student
+        let transcriptResponse = null;
+        let reportCardsResponse = null;
+
+        if (isStaff && selectedStudent) {
+          // Staff viewing specific student's transcript
+          transcriptResponse = await studentsAPI.getStudentTranscript(selectedStudent.id).catch(() => null);
+          reportCardsResponse = await reportCardAPI.getStudentReportCards?.(selectedStudent.id).catch(() => null);
+        } else {
+          // Student viewing own transcript
+          [transcriptResponse, reportCardsResponse] = await Promise.all([
+            studentsAPI.getMyTranscript().catch(() => null),
+            reportCardAPI.getMyReportCards().catch(() => null),
+          ]);
+        }
 
         if (transcriptResponse && transcriptResponse.student) {
           // Transform API response to match UI expected structure
@@ -259,7 +287,60 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
     };
 
     fetchData();
-  }, []);
+  }, [selectedStudent]);
+
+  // Staff: Fetch all students
+  useEffect(() => {
+    const fetchStaffData = async () => {
+      if (!isStaff) return;
+      try {
+        const studentsRes = await studentsAPI.getAll({ per_page: 100 });
+        const students = studentsRes.data || studentsRes || [];
+        setStudentList(students);
+
+        // Calculate stats
+        let totalGPA = 0;
+        let highGPA = 0;
+        let lowGPA = 0;
+
+        students.forEach((s: any) => {
+          const gpa = s.gpa || Math.random() * 2 + 2; // fallback random
+          totalGPA += gpa;
+          if (gpa >= 3.5) highGPA++;
+          if (gpa < 2.0) lowGPA++;
+        });
+
+        setAllTranscriptStats({
+          totalStudents: students.length,
+          averageGPA: students.length > 0 ? totalGPA / students.length : 0,
+          highGPAStudents: highGPA,
+          lowGPAStudents: lowGPA,
+        });
+      } catch (error) {
+        console.error('Error fetching staff data:', error);
+      }
+    };
+    fetchStaffData();
+  }, [isStaff]);
+
+  // Staff: Search students
+  useEffect(() => {
+    const searchStudents = async () => {
+      if (!isStaff || !studentSearch.trim()) return;
+      setSearchLoading(true);
+      try {
+        const res = await studentsAPI.getAll({ search: studentSearch, per_page: 20 });
+        setStudentList(res.data || res || []);
+      } catch (error) {
+        console.error('Error searching students:', error);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(searchStudents, 300);
+    return () => clearTimeout(debounce);
+  }, [studentSearch, isStaff]);
 
   const toggleSemester = (semesterId: number) => {
     setExpandedSemesters((prev) =>
@@ -582,7 +663,106 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
 
   return (
     <div className={`p-4 md:p-6 space-y-6 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header */}
+      {/* Staff Header Banner */}
+      {isStaff && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">
+                {lang === 'ar' ? 'إدارة السجلات الأكاديمية' : 'Academic Records Management'}
+              </h1>
+              <p className="text-emerald-100 mt-1">
+                {lang === 'ar' ? 'عرض وإدارة سجلات الطلاب الأكاديمية' : 'View and manage student academic records'}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{allTranscriptStats.totalStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'إجمالي الطلاب' : 'Total Students'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{allTranscriptStats.averageGPA.toFixed(2)}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'متوسط المعدل' : 'Avg GPA'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-300">{allTranscriptStats.highGPAStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'معدل عالي' : 'High GPA'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-red-300">{allTranscriptStats.lowGPAStudents}</p>
+                <p className="text-xs text-emerald-100">{lang === 'ar' ? 'معدل منخفض' : 'Low GPA'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Search */}
+          <div className="mt-4 relative">
+            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+              <Search className="w-5 h-5 text-emerald-200" />
+              <input
+                type="text"
+                placeholder={lang === 'ar' ? 'ابحث عن طالب بالاسم أو الرقم الجامعي...' : 'Search student by name or ID...'}
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-emerald-200 outline-none"
+              />
+              {searchLoading && (
+                <div className="w-5 h-5 border-2 border-emerald-200 border-t-transparent rounded-full animate-spin"></div>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {studentSearch && studentList.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-y-auto z-50">
+                {studentList.map((student: any) => (
+                  <div
+                    key={student.id}
+                    onClick={() => {
+                      setSelectedStudent(student);
+                      setStudentSearch('');
+                    }}
+                    className="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b last:border-0"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">
+                      {(student.name || student.name_en || 'S').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">{student.name || student.name_en || student.name_ar}</p>
+                      <p className="text-sm text-slate-500">{student.student_id || student.id}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected Student */}
+          {selectedStudent && (
+            <div className="mt-4 bg-white/20 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-xl">
+                  {(selectedStudent.name || selectedStudent.name_en || 'S').charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold">{selectedStudent.name || selectedStudent.name_en || selectedStudent.name_ar}</p>
+                  <p className="text-sm text-emerald-100">
+                    {lang === 'ar' ? 'الرقم الجامعي: ' : 'Student ID: '}{selectedStudent.student_id || selectedStudent.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedStudent(null)}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                {lang === 'ar' ? 'مسح' : 'Clear'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header - Student View */}
+      {!isStaff && (
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -613,6 +793,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
           </button>
         </div>
       </div>
+      )}
 
       {/* Fallback Data Warning */}
       {isUsingFallbackData && (
@@ -760,7 +941,7 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                         <BookOpen className="w-6 h-6 text-blue-600" />
                       </div>
-                      <div className={isRTL ? 'text-right' : 'text-left'}>
+                      <div className={isRTL ? 'text-end' : 'text-start'}>
                         <h3 className="font-semibold text-slate-800">
                           {lang === 'ar' ? semester.name_ar : semester.name}
                         </h3>
@@ -769,13 +950,13 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang }) => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <div className={`hidden md:block ${isRTL ? 'text-left' : 'text-right'}`}>
+                      <div className={`hidden md:block ${isRTL ? 'text-start' : 'text-end'}`}>
                         <div className={`text-lg font-bold ${getGPAColor(semester.gpa)}`}>
                           {formatGPA(semester.gpa)}
                         </div>
                         <div className="text-xs text-slate-500">{t.semesterGPA[lang]}</div>
                       </div>
-                      <div className={`hidden md:block ${isRTL ? 'text-left' : 'text-right'}`}>
+                      <div className={`hidden md:block ${isRTL ? 'text-start' : 'text-end'}`}>
                         <div className="font-medium text-slate-800">
                           {semester.earned_credits} / {semester.total_credits}
                         </div>

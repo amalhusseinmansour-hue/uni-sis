@@ -465,7 +465,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     <div className="p-6 space-y-6">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 ${lang === 'ar' ? 'left-4' : 'right-4'} z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 ${
+        <div className={`fixed top-4 ${lang === 'ar' ? 'start-4' : 'end-4'} z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 ${
           notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {notification.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -537,13 +537,13 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+            <Search className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
             <input
               type="text"
               placeholder={t('search', lang)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
+              className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
             />
           </div>
           <select
@@ -580,22 +580,22 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-slate-700">
               <tr>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('email', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {lang === 'ar' ? 'الاسم' : 'Name'}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('role', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('status', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('createdAt', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-right' : 'text-left'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
                   {t('actions', lang)}
                 </th>
               </tr>
@@ -744,12 +744,12 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                     {t('email', lang)} *
                   </label>
                   <div className="relative">
-                    <Mail className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                    <Mail className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
+                      className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                         errors.email ? 'border-red-500' : ''
                       }`}
                     />
@@ -763,20 +763,20 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                   </label>
                   <div className="relative flex gap-2">
                     <div className="relative flex-1">
-                      <Lock className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                      <Lock className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         placeholder={editingUser ? (lang === 'ar' ? 'اتركه فارغاً للإبقاء' : 'Leave empty to keep') : ''}
-                        className={`w-full ${lang === 'ar' ? 'pr-10 pl-10' : 'pl-10 pr-10'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
+                        className={`w-full ${lang === 'ar' ? 'pe-10 ps-10' : 'ps-10 pe-10'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                           errors.password ? 'border-red-500' : ''
                         }`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className={`absolute ${lang === 'ar' ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600`}
+                        className={`absolute ${lang === 'ar' ? 'start-3' : 'end-3'} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600`}
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -878,12 +878,12 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                   {t('phone', lang)}
                 </label>
                 <div className="relative">
-                  <Phone className={`absolute ${lang === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                  <Phone className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className={`w-full ${lang === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
+                    className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
                   />
                 </div>
               </div>
@@ -916,7 +916,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                               setProfilePicture(null);
                               setProfilePicturePreview(null);
                             }}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                            className="absolute -top-2 -end-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -977,7 +977,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                 </>
               )}
 
-              {(formData.role === 'lecturer' || formData.role === 'student_affairs' || formData.role === 'registrar') && (
+              {(formData.role === 'lecturer') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('department', lang)}

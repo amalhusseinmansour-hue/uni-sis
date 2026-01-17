@@ -475,13 +475,13 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={isRTL ? 'بحث...' : 'Search...'}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white"
+                  className="w-full ps-10 pe-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white"
                 />
               </div>
             </div>
@@ -505,16 +505,16 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-slate-700">
               <tr>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   {isRTL ? 'رقم الطلب' : 'App ID'}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   {isRTL ? 'الاسم' : 'Name'}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   {isRTL ? 'البريد الإلكتروني' : 'Email'}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   {isRTL ? 'البرنامج' : 'Program'}
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
@@ -608,13 +608,13 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
               </div>
               <div className="flex-1 min-w-[200px] max-w-md">
                 <div className="relative">
-                  <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
+                  <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                   <input
                     type="text"
                     value={studentSearchTerm}
                     onChange={(e) => setStudentSearchTerm(e.target.value)}
                     placeholder={isRTL ? 'بحث بالاسم أو البريد أو الرقم...' : 'Search by name, email, or ID...'}
-                    className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white`}
+                    className={`w-full ${isRTL ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white`}
                   />
                 </div>
               </div>
@@ -626,19 +626,19 @@ const DynamicAdmissionsPage: React.FC<DynamicAdmissionsPageProps> = ({ lang }) =
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
+                  <th className={`px-4 py-3 ${isRTL ? 'text-end' : 'text-start'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
                     {t.studentId[lang]}
                   </th>
-                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
+                  <th className={`px-4 py-3 ${isRTL ? 'text-end' : 'text-start'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
                     {t.fullName[lang]}
                   </th>
-                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
+                  <th className={`px-4 py-3 ${isRTL ? 'text-end' : 'text-start'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
                     {t.email[lang]}
                   </th>
-                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
+                  <th className={`px-4 py-3 ${isRTL ? 'text-end' : 'text-start'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
                     {t.program[lang]}
                   </th>
-                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
+                  <th className={`px-4 py-3 ${isRTL ? 'text-end' : 'text-start'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase`}>
                     {t.registrationDate[lang]}
                   </th>
                 </tr>

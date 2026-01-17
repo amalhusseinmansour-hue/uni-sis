@@ -337,7 +337,7 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                   {lang === 'ar' ? 'الاختبار' : 'Exam'}
                 </th>
                 <th className={`p-4 text-xs font-semibold text-slate-500 uppercase text-center`}>
@@ -388,7 +388,7 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
                   </td>
                   <td className="p-4 text-center">
                     <Badge variant="success">
-                      <CheckCircle className="w-3 h-3 mr-1" />
+                      <CheckCircle className="w-3 h-3 me-1" />
                       {lang === 'ar' ? 'مصحح' : 'Graded'}
                     </Badge>
                   </td>
@@ -416,7 +416,7 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                <th className={`p-4 text-xs font-semibold text-slate-500 uppercase ${lang === 'ar' ? 'text-end' : 'text-start'}`}>
                   {lang === 'ar' ? 'المقرر' : 'Course'}
                 </th>
                 <th className={`p-4 text-xs font-semibold text-slate-500 uppercase text-center`}>
@@ -545,7 +545,7 @@ const ExamsPage: React.FC<ExamsPageProps> = ({ lang }) => {
 
       {/* Reminder Success Message */}
       {showReminderSuccess && (
-        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-right duration-300">
+        <div className="fixed bottom-4 end-4 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-right duration-300">
           <CheckCircle className="w-5 h-5" />
           <span>{lang === 'ar' ? 'تم تعيين التذكير بنجاح!' : 'Reminder set successfully!'}</span>
         </div>

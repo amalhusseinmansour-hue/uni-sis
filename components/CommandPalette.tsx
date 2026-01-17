@@ -198,7 +198,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, lang }
                       <button
                         key={index}
                         onClick={() => setQuery(search)}
-                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-start"
                       >
                         <Clock className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-700">{search}</span>
@@ -222,7 +222,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, lang }
                         <button
                           key={fav.id}
                           onClick={() => handleSelect(result)}
-                          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-left"
+                          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-start"
                         >
                           <Star className="w-4 h-4 text-yellow-500" />
                           <span className="text-slate-700">{result.title}</span>
@@ -244,7 +244,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, lang }
                       <button
                         key={result.id}
                         onClick={() => handleSelect(result)}
-                        className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-left"
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-start"
                       >
                         <result.icon className="w-4 h-4 text-slate-500" />
                         <span className="text-sm text-slate-700">{result.title}</span>
@@ -264,7 +264,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, lang }
                       key={result.id}
                       onClick={() => handleSelect(result)}
                       onMouseEnter={() => setSelectedIndex(index)}
-                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-start transition-colors ${
                         index === selectedIndex ? 'bg-blue-50' : 'hover:bg-slate-50'
                       }`}
                     >

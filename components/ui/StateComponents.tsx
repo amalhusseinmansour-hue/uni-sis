@@ -415,7 +415,7 @@ export const InlineError: React.FC<{
     {onRetry && (
       <button
         onClick={onRetry}
-        className="text-sm underline hover:no-underline ml-2"
+        className="text-sm underline hover:no-underline ms-2"
       >
         <RefreshCw className="w-3 h-3 inline" />
       </button>

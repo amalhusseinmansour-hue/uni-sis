@@ -283,7 +283,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ lang, isOpen, onClose }) =>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Search Modal */}
-      <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+      <div className="absolute top-[15%] start-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Search Header */}
           <div className="p-4 border-b border-slate-200">
@@ -339,7 +339,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ lang, isOpen, onClose }) =>
                       <button
                         key={result.id}
                         onClick={() => handleSelect(result)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-start transition-colors ${
                           index === selectedIndex ? 'bg-blue-50' : 'hover:bg-slate-50'
                         }`}
                       >
@@ -389,7 +389,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ lang, isOpen, onClose }) =>
                         <button
                           key={index}
                           onClick={() => setQuery(search)}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-slate-50"
+                          className="w-full flex items-center gap-3 px-4 py-2 text-start hover:bg-slate-50"
                         >
                           <Clock className="w-4 h-4 text-slate-400" />
                           <span className="text-slate-600">{search}</span>
@@ -411,7 +411,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ lang, isOpen, onClose }) =>
                         <button
                           key={link.id}
                           onClick={() => handleSelect(link)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-left"
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-start"
                         >
                           <Icon className="w-4 h-4 text-slate-400" />
                           <span className="text-sm text-slate-600">
@@ -432,15 +432,15 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ lang, isOpen, onClose }) =>
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px]">↑</kbd>
                 <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px]">↓</kbd>
-                <span className="ml-1">{lang === 'en' ? 'Navigate' : 'التنقل'}</span>
+                <span className="ms-1">{lang === 'en' ? 'Navigate' : 'التنقل'}</span>
               </span>
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px]">Enter</kbd>
-                <span className="ml-1">{lang === 'en' ? 'Select' : 'اختيار'}</span>
+                <span className="ms-1">{lang === 'en' ? 'Select' : 'اختيار'}</span>
               </span>
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px]">Esc</kbd>
-                <span className="ml-1">{lang === 'en' ? 'Close' : 'إغلاق'}</span>
+                <span className="ms-1">{lang === 'en' ? 'Close' : 'إغلاق'}</span>
               </span>
             </div>
           </div>
@@ -464,7 +464,7 @@ export const SearchTrigger: React.FC<{
     <span className="text-sm text-slate-500 hidden sm:inline">
       {lang === 'en' ? 'Search...' : 'بحث...'}
     </span>
-    <div className="hidden sm:flex items-center gap-0.5 ml-2">
+    <div className="hidden sm:flex items-center gap-0.5 ms-2">
       <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-500">⌘</kbd>
       <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-slate-500">K</kbd>
     </div>

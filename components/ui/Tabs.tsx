@@ -67,7 +67,7 @@ export const TabsList: React.FC<TabsListProps> = ({ className = '', children }) 
 
   const variantClasses = {
     default: orientation === 'vertical'
-      ? 'border-r border-slate-200 pr-4 gap-1'
+      ? 'border-r border-slate-200 pe-4 gap-1'
       : 'border-b border-slate-200 gap-1',
     pills: 'bg-slate-100 p-1 rounded-lg gap-1',
     underline: 'gap-4 relative',
@@ -114,7 +114,7 @@ export const TabsTrigger: React.FC<TabsTriggerProps> = ({
   const variantClasses = {
     default: `${
       isActive
-        ? `text-blue-600 ${orientation === 'vertical' ? 'border-r-2 border-blue-600 -mr-px' : 'border-b-2 border-blue-600 -mb-px'}`
+        ? `text-blue-600 ${orientation === 'vertical' ? 'border-r-2 border-blue-600 -me-px' : 'border-b-2 border-blue-600 -mb-px'}`
         : 'text-slate-600 hover:text-slate-800'
     }`,
     pills: `rounded-md ${isActive ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'}`,

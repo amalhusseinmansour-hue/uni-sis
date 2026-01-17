@@ -427,7 +427,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
     <div className="space-y-6 pb-8" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Notification */}
       {notification && (
-        <div className={`no-print fixed top-4 right-4 left-4 md:left-auto md:w-96 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-in slide-in-from-top ${
+        <div className={`no-print fixed top-4 end-4 start-4 md:left-auto md:w-96 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-in slide-in-from-top ${
           notification.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
         }`}>
           {notification.type === 'success' ? (
@@ -438,7 +438,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
           <span className={notification.type === 'success' ? 'text-green-800' : 'text-red-800'}>
             {notification.message}
           </span>
-          <button onClick={() => setNotification(null)} className="ml-auto">
+          <button onClick={() => setNotification(null)} className="ms-auto">
             <XCircle className="w-4 h-4 text-slate-400 hover:text-slate-600" />
           </button>
         </div>
@@ -448,8 +448,8 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
       <div className="no-print bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900 rounded-2xl p-6 text-white relative overflow-hidden">
         {/* Decorative Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
+          <div className="absolute top-0 end-0 w-64 h-64 bg-yellow-400 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 start-0 w-48 h-48 bg-indigo-400 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
         </div>
 
         <div className="relative z-10">
@@ -588,9 +588,9 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                   {/* Decorative Elements - Only show for non-custom templates */}
                   {branding?.idCardTemplate !== 'custom' && (
                     <div className="absolute inset-0 pointer-events-none">
-                      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.accentColor || '#f59e0b'}20` }} />
-                      <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.idCardSecondaryColor || '#2563eb'}20` }} />
-                      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}80, ${branding?.accentColor || '#f59e0b'})` }} />
+                      <div className="absolute top-0 end-0 w-32 h-32 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.accentColor || '#f59e0b'}20` }} />
+                      <div className="absolute bottom-0 start-0 w-24 h-24 rounded-full blur-2xl" style={{ backgroundColor: `${branding?.idCardSecondaryColor || '#2563eb'}20` }} />
+                      <div className="absolute bottom-0 start-0 end-0 h-1" style={{ background: `linear-gradient(to right, ${branding?.accentColor || '#f59e0b'}, ${branding?.accentColor || '#f59e0b'}80, ${branding?.accentColor || '#f59e0b'})` }} />
                     </div>
                   )}
 
@@ -678,7 +678,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                   </div>
 
                   {/* Status Badge */}
-                  <div className={`absolute top-16 left-4 px-2 py-0.5 rounded text-xs font-bold shadow-md ${
+                  <div className={`absolute top-16 start-4 px-2 py-0.5 rounded text-xs font-bold shadow-md ${
                     card.student.status === 'ACTIVE' ? 'bg-green-500 text-white' :
                     card.student.status === 'GRADUATED' ? 'bg-blue-500 text-white' :
                     card.student.status === 'SUSPENDED' ? 'bg-yellow-500 text-slate-900' :
@@ -688,7 +688,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                   </div>
 
                   {/* Footer */}
-                  <div className={`absolute bottom-0 left-0 right-0 ${branding?.idCardTemplate === 'custom' ? 'bg-black/60' : 'bg-black/40'} p-2 px-4 flex justify-between items-center text-xs`} style={{ color: branding?.idCardTextColor || '#ffffff' }}>
+                  <div className={`absolute bottom-0 start-0 end-0 ${branding?.idCardTemplate === 'custom' ? 'bg-black/60' : 'bg-black/40'} p-2 px-4 flex justify-between items-center text-xs`} style={{ color: branding?.idCardTextColor || '#ffffff' }}>
                     <div className="flex gap-4">
                       <span>{t.issuedOn[lang]}: {formatDate(card.validity.issue_date)}</span>
                       <span>{t.validUntil[lang]}: {formatDate(card.validity.expiry_date)}</span>

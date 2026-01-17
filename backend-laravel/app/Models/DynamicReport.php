@@ -21,6 +21,8 @@ class DynamicReport extends Model
         'category',
         'report_type',
         'data_source',
+        'settings',
+        'roles',
         'data_source_type',
         'query',
         'model_class',
@@ -55,6 +57,9 @@ class DynamicReport extends Model
     ];
 
     protected $casts = [
+        'data_source' => 'array',
+        'settings' => 'array',
+        'roles' => 'array',
         'model_relations' => 'array',
         'parameters' => 'array',
         'default_values' => 'array',

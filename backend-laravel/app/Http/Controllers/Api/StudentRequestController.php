@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\StudentRequest;
 use App\Models\StudentRequestComment;
 use App\Models\Semester;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -242,7 +243,7 @@ class StudentRequestController extends Controller
     {
         $validated = $request->validate([
             'decision' => 'required|in:APPROVED,REJECTED,FORWARDED',
-            'level' => 'required|in:ADVISOR,DEPARTMENT,DEAN',
+            'level' => 'required|in:ADVISOR,DEPARTMENT,DEAN,STUDENT_AFFAIRS,FINANCE,ACADEMIC_AFFAIRS',
             'notes' => 'nullable|string',
         ]);
 
@@ -302,6 +303,23 @@ class StudentRequestController extends Controller
                     $updateData['rejection_reason'] = $validated['notes'];
                 }
                 break;
+
+            case 'STUDENT_AFFAIRS':
+            case 'FINANCE':
+            case 'ACADEMIC_AFFAIRS':
+                $updateData = [
+                    'department_reviewed_by' => $user->id,
+                    'department_reviewed_at' => now(),
+                    'department_decision' => $validated['decision'],
+                    'department_notes' => $validated['notes'],
+                    'final_decision_by' => $user->id,
+                    'final_decision_at' => now(),
+                ];
+                $newStatus = $validated['decision'] === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+                if ($validated['decision'] === 'REJECTED') {
+                    $updateData['rejection_reason'] = $validated['notes'];
+                }
+                break;
         }
 
         $updateData['status'] = $newStatus;
@@ -314,6 +332,16 @@ class StudentRequestController extends Controller
             $newStatus,
             $validated['notes']
         );
+
+        // Send notification to student
+        $student = $studentRequest->student;
+        if ($student && $student->user) {
+            NotificationService::notifyServiceRequestStatus(
+                $student->user,
+                $studentRequest->request_type,
+                $newStatus
+            );
+        }
 
         return response()->json([
             'success' => true,
@@ -359,6 +387,16 @@ class StudentRequestController extends Controller
             'COMPLETED',
             $validated['execution_notes'] ?? 'Request executed'
         );
+
+        // Send notification to student
+        $student = $studentRequest->student;
+        if ($student && $student->user) {
+            NotificationService::notifyServiceRequestStatus(
+                $student->user,
+                $studentRequest->request_type,
+                'COMPLETED'
+            );
+        }
 
         return response()->json([
             'success' => true,

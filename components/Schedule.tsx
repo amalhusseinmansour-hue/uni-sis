@@ -179,7 +179,7 @@ const Schedule: React.FC<ScheduleProps> = ({ lang, events, onEventClick }) => {
           <div className="relative">
             {hours.map((hour) => (
               <div key={hour} className="grid grid-cols-8 border-b border-slate-100">
-                <div className="p-2 text-xs text-slate-400 text-right pr-3 bg-slate-50">
+                <div className="p-2 text-xs text-slate-400 text-end pe-3 bg-slate-50">
                   {formatTime(hour)}
                 </div>
                 {weekDates.map((_, dayIndex) => (

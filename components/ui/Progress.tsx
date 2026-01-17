@@ -253,7 +253,7 @@ export const ProgressSteps: React.FC<ProgressStepsProps> = ({
           {index < steps.length - 1 && isHorizontal && (
             <div
               className={`
-                absolute top-4 left-1/2 w-full h-0.5
+                absolute top-4 start-1/2 w-full h-0.5
                 ${step.status === 'completed' ? 'bg-blue-600' : 'bg-slate-200'}
               `}
             />
@@ -279,7 +279,7 @@ export const ProgressSteps: React.FC<ProgressStepsProps> = ({
           {index < steps.length - 1 && !isHorizontal && (
             <div
               className={`
-                absolute left-4 top-10 w-0.5 h-8 -translate-x-1/2
+                absolute start-4 top-10 w-0.5 h-8 -translate-x-1/2
                 ${step.status === 'completed' ? 'bg-blue-600' : 'bg-slate-200'}
               `}
             />
@@ -392,7 +392,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       <div className="mb-2">
         <span className="text-3xl font-bold text-slate-800">{value}</span>
         {previousValue && (
-          <span className="text-sm text-slate-400 ml-2">from {previousValue}</span>
+          <span className="text-sm text-slate-400 ms-2">from {previousValue}</span>
         )}
       </div>
       {change !== undefined && (

@@ -57,8 +57,8 @@ const GPAProgress: React.FC<GPAProgressProps> = ({
     <GradientCard gradient="from-indigo-600 via-purple-600 to-pink-600">
       <div className="relative">
         {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+        <div className="absolute top-0 end-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 start-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
         <div className="relative">
           {/* Header */}

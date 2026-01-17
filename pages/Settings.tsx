@@ -302,7 +302,7 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
     <div className={`space-y-6 animate-in fade-in duration-300 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Save Notification */}
       {showSaveNotification && (
-        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+        <div className="fixed top-4 end-4 z-50 animate-in slide-in-from-top duration-300">
           <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
             <Check className="w-5 h-5" />
             <span>{t.changesSaved[lang]}</span>
@@ -328,7 +328,7 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                       : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
+                  <Icon className={`w-5 h-5 ${isRTL ? 'ms-3' : 'me-3'}`} />
                   {tab.label}
                 </button>
               );
@@ -350,7 +350,7 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                       alt="Avatar"
                       className="w-24 h-24 rounded-full bg-slate-100 object-cover ring-4 ring-slate-100"
                     />
-                    <button className="absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg">
+                    <button className="absolute bottom-0 end-0 p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg">
                       <Camera className="w-4 h-4" />
                     </button>
                   </div>
@@ -610,12 +610,12 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                         value={passwords.current}
                         onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-12"
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pe-12"
                       />
                       <button
                         type="button"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
                         {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -629,12 +629,12 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                         value={passwords.new}
                         onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-12"
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pe-12"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
                         {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -678,12 +678,12 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                         value={passwords.confirm}
                         onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-12"
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pe-12"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -967,7 +967,7 @@ const Settings: React.FC<SettingsProps> = ({ lang, setLang, user }) => {
                   return (
                     <button
                       key={index}
-                      className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-left hover:shadow-md transition-shadow"
+                      className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-start hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-start gap-4">
                         <div className={`p-3 rounded-lg ${colorClasses[item.color as keyof typeof colorClasses]}`}>

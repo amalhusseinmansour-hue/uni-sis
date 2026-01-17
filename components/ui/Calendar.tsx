@@ -266,7 +266,7 @@ export const EventList: React.FC<EventListProps> = ({
         <button
           key={event.id}
           onClick={() => onEventClick?.(event)}
-          className="w-full flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors text-left"
+          className="w-full flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors text-start"
         >
           <div
             className="w-1 h-full min-h-[40px] rounded-full flex-shrink-0"

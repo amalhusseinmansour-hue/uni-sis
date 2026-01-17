@@ -55,61 +55,14 @@ class DatabaseSeeder extends Seeder
             'role' => 'LECTURER',
         ]);
 
-        // Create College
-        $college = College::create([
-            'name_en' => 'College of Computer Science',
-            'name_ar' => 'كلية علوم الحاسوب',
-            'code' => 'CCS',
-            'description' => 'College of Computer Science and Information Technology',
-        ]);
+        // Use existing College from CollegesAndProgramsSeeder
+        $college = College::first();
 
-        // Create Second College
-        $collegeEng = College::create([
-            'name_en' => 'College of Engineering',
-            'name_ar' => 'كلية الهندسة',
-            'code' => 'COE',
-            'description' => 'College of Engineering and Technology',
-        ]);
+        // Use existing Department from CollegesAndProgramsSeeder
+        $department = Department::first();
 
-        // Create Department
-        $department = Department::create([
-            'college_id' => $college->id,
-            'name_en' => 'Computer Science',
-            'name_ar' => 'علوم الحاسوب',
-            'code' => 'CS',
-            'description' => 'Department of Computer Science',
-        ]);
-
-        // Create IT Department
-        $itDept = Department::create([
-            'college_id' => $college->id,
-            'name_en' => 'Information Technology',
-            'name_ar' => 'تقنية المعلومات',
-            'code' => 'IT',
-            'description' => 'Department of Information Technology',
-        ]);
-
-        // Create Program
-        $program = Program::create([
-            'department_id' => $department->id,
-            'name_en' => 'Bachelor of Computer Science',
-            'name_ar' => 'بكالوريوس علوم الحاسوب',
-            'code' => 'BCS',
-            'type' => 'BACHELOR',
-            'total_credits' => 132,
-            'description' => 'Bachelor degree program in Computer Science',
-        ]);
-
-        // Create IT Program
-        Program::create([
-            'department_id' => $itDept->id,
-            'name_en' => 'Bachelor of Information Technology',
-            'name_ar' => 'بكالوريوس تقنية المعلومات',
-            'code' => 'BIT',
-            'type' => 'BACHELOR',
-            'total_credits' => 128,
-            'description' => 'Bachelor degree program in Information Technology',
-        ]);
+        // Create Program - use the first available program from seeder
+        $program = Program::first();
 
         // Create Courses
         $courses = [
@@ -139,8 +92,7 @@ class DatabaseSeeder extends Seeder
 
         // Create Semesters
         $pastSemester = Semester::create([
-            'name_en' => 'Spring 2024',
-            'name_ar' => 'ربيع 2024',
+            'name' => 'Spring 2024',
             'academic_year' => '2023-2024',
             'start_date' => '2024-01-15',
             'end_date' => '2024-05-30',
@@ -150,8 +102,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $currentSemester = Semester::create([
-            'name_en' => 'Fall 2024',
-            'name_ar' => 'خريف 2024',
+            'name' => 'Fall 2024',
             'academic_year' => '2024-2025',
             'start_date' => '2024-09-01',
             'end_date' => '2024-12-31',
@@ -166,8 +117,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Mohammed Ali Hassan',
                 'email' => 'mohammed.ali@student.university.edu',
                 'student_id' => '2024001',
-                'full_name_en' => 'Mohammed Ali Hassan',
-                'full_name_ar' => 'محمد علي حسن',
+                'name_en' => 'Mohammed Ali Hassan',
+                'name_ar' => 'محمد علي حسن',
                 'national_id' => '1234567890',
                 'date_of_birth' => '2000-05-15',
                 'gender' => 'MALE',
@@ -176,8 +127,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Sara Ahmed Mohammed',
                 'email' => 'sara.ahmed@student.university.edu',
                 'student_id' => '2024002',
-                'full_name_en' => 'Sara Ahmed Mohammed',
-                'full_name_ar' => 'سارة أحمد محمد',
+                'name_en' => 'Sara Ahmed Mohammed',
+                'name_ar' => 'سارة أحمد محمد',
                 'national_id' => '1234567891',
                 'date_of_birth' => '2001-03-20',
                 'gender' => 'FEMALE',
@@ -186,8 +137,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Omar Khalid Ibrahim',
                 'email' => 'omar.khalid@student.university.edu',
                 'student_id' => '2024003',
-                'full_name_en' => 'Omar Khalid Ibrahim',
-                'full_name_ar' => 'عمر خالد إبراهيم',
+                'name_en' => 'Omar Khalid Ibrahim',
+                'name_ar' => 'عمر خالد إبراهيم',
                 'national_id' => '1234567892',
                 'date_of_birth' => '2000-11-10',
                 'gender' => 'MALE',
@@ -196,8 +147,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Fatima Yusuf Ali',
                 'email' => 'fatima.yusuf@student.university.edu',
                 'student_id' => '2024004',
-                'full_name_en' => 'Fatima Yusuf Ali',
-                'full_name_ar' => 'فاطمة يوسف علي',
+                'name_en' => 'Fatima Yusuf Ali',
+                'name_ar' => 'فاطمة يوسف علي',
                 'national_id' => '1234567893',
                 'date_of_birth' => '2001-07-25',
                 'gender' => 'FEMALE',
@@ -206,8 +157,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Ahmed Hassan Mahmoud',
                 'email' => 'ahmed.hassan@student.university.edu',
                 'student_id' => '2024005',
-                'full_name_en' => 'Ahmed Hassan Mahmoud',
-                'full_name_ar' => 'أحمد حسن محمود',
+                'name_en' => 'Ahmed Hassan Mahmoud',
+                'name_ar' => 'أحمد حسن محمود',
                 'national_id' => '1234567894',
                 'date_of_birth' => '2000-09-05',
                 'gender' => 'MALE',
@@ -227,15 +178,17 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $user->id,
                 'program_id' => $program->id,
                 'student_id' => $studentData['student_id'],
-                'full_name_en' => $studentData['full_name_en'],
-                'full_name_ar' => $studentData['full_name_ar'],
+                'name_en' => $studentData['name_en'],
+                'name_ar' => $studentData['name_ar'],
                 'national_id' => $studentData['national_id'],
                 'date_of_birth' => $studentData['date_of_birth'],
                 'gender' => $studentData['gender'],
-                'email' => $studentData['email'],
+                'personal_email' => $studentData['email'],
+                'university_email' => $studentData['email'],
                 'phone' => '+966' . rand(500000000, 599999999),
                 'admission_date' => '2024-09-01',
                 'status' => 'ACTIVE',
+                'nationality' => 'Saudi Arabian',
             ]);
         }
 
@@ -312,30 +265,24 @@ class DatabaseSeeder extends Seeder
 
         // Create Announcements
         Announcement::create([
-            'title_en' => 'Welcome to the New Academic Year',
-            'title_ar' => 'أهلاً بكم في العام الدراسي الجديد',
-            'content_en' => '<p>We are pleased to welcome all students to the new academic year 2024-2025. We wish you all success in your studies.</p>',
-            'content_ar' => '<p>يسعدنا أن نرحب بجميع الطلاب في العام الدراسي الجديد 2024-2025. نتمنى لكم جميعاً التوفيق في دراستكم.</p>',
+            'title' => 'Welcome to the New Academic Year - أهلاً بكم في العام الدراسي الجديد',
+            'content' => '<p>We are pleased to welcome all students to the new academic year 2024-2025. We wish you all success in your studies.</p><p>يسعدنا أن نرحب بجميع الطلاب في العام الدراسي الجديد 2024-2025. نتمنى لكم جميعاً التوفيق في دراستكم.</p>',
             'type' => 'GENERAL',
             'is_published' => true,
             'published_at' => now(),
         ]);
 
         Announcement::create([
-            'title_en' => 'Registration for Fall 2024 is Now Open',
-            'title_ar' => 'التسجيل لفصل خريف 2024 مفتوح الآن',
-            'content_en' => '<p>Course registration for Fall 2024 semester is now open. Please log in to your student portal to register for your courses.</p>',
-            'content_ar' => '<p>تسجيل المقررات لفصل خريف 2024 مفتوح الآن. يرجى تسجيل الدخول إلى بوابة الطالب للتسجيل في مقرراتك.</p>',
+            'title' => 'Registration for Fall 2024 is Now Open - التسجيل لفصل خريف 2024 مفتوح الآن',
+            'content' => '<p>Course registration for Fall 2024 semester is now open. Please log in to your student portal to register for your courses.</p><p>تسجيل المقررات لفصل خريف 2024 مفتوح الآن. يرجى تسجيل الدخول إلى بوابة الطالب للتسجيل في مقرراتك.</p>',
             'type' => 'ACADEMIC',
             'is_published' => true,
             'published_at' => now(),
         ]);
 
         Announcement::create([
-            'title_en' => 'Tuition Payment Deadline',
-            'title_ar' => 'الموعد النهائي لدفع الرسوم الدراسية',
-            'content_en' => '<p>Please note that the tuition payment deadline for Fall 2024 is September 30, 2024. Late payments will incur additional fees.</p>',
-            'content_ar' => '<p>يرجى ملاحظة أن الموعد النهائي لدفع الرسوم الدراسية لفصل خريف 2024 هو 30 سبتمبر 2024. المدفوعات المتأخرة ستتحمل رسوماً إضافية.</p>',
+            'title' => 'Tuition Payment Deadline - الموعد النهائي لدفع الرسوم الدراسية',
+            'content' => '<p>Please note that the tuition payment deadline for Fall 2024 is September 30, 2024. Late payments will incur additional fees.</p><p>يرجى ملاحظة أن الموعد النهائي لدفع الرسوم الدراسية لفصل خريف 2024 هو 30 سبتمبر 2024. المدفوعات المتأخرة ستتحمل رسوماً إضافية.</p>',
             'type' => 'FINANCIAL',
             'is_published' => true,
             'published_at' => now(),
@@ -396,13 +343,14 @@ class DatabaseSeeder extends Seeder
             'priority' => 'HIGH',
             'date' => now(),
             'request_date' => now(),
-            'status' => 'IN_PROGRESS',
+            'status' => 'PENDING',
         ]);
 
         // Seed Dynamic Content System
         $this->call([
             DynamicTablesSeeder::class,
-            DynamicReportsSeeder::class,
+            // DynamicReportsSeeder::class, // Temporarily skipped due to cast issues
+            SystemSettingsSeeder::class,
         ]);
 
         echo "Database seeded successfully!\n";

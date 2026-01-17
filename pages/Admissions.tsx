@@ -103,6 +103,9 @@ const t = {
   female: { en: 'Female', ar: 'أنثى' },
   gender: { en: 'Gender', ar: 'الجنس' },
   city: { en: 'City', ar: 'المدينة' },
+  country: { en: 'Country', ar: 'الدولة' },
+  residence: { en: 'Place of Residence', ar: 'مكان الإقامة' },
+  whatsapp: { en: 'WhatsApp Number', ar: 'رقم الواتساب' },
   close: { en: 'Close', ar: 'إغلاق' },
   viewAll: { en: 'View All', ar: 'عرض الكل' },
   applicant: { en: 'Applicant', ar: 'المتقدم' },
@@ -130,12 +133,16 @@ const t = {
   dob: { en: 'Date of Birth', ar: 'تاريخ الميلاد' },
   address: { en: 'Address', ar: 'العنوان' },
   highSchool: { en: 'High School', ar: 'الثانوية' },
+  college: { en: 'College', ar: 'الكلية' },
+  degree: { en: 'Degree', ar: 'الدرجة العلمية' },
   semester: { en: 'Semester', ar: 'الفصل الدراسي' },
   scholarship: { en: 'Apply for Scholarship', ar: 'التقدم لمنحة' },
+  scholarshipPercentage: { en: 'Scholarship Percentage', ar: 'نسبة المنحة' },
   paymentMethod: { en: 'Payment Method', ar: 'طريقة الدفع' },
   cash: { en: 'Cash', ar: 'نقدي' },
   card: { en: 'Card', ar: 'بطاقة' },
   transfer: { en: 'Bank Transfer', ar: 'تحويل بنكي' },
+  intermediary: { en: 'Intermediary', ar: 'الوسيط' },
   initialDeposit: { en: 'Initial Deposit', ar: 'الدفعة الأولى' },
   next: { en: 'Next', ar: 'التالي' },
   previous: { en: 'Previous', ar: 'السابق' },
@@ -227,16 +234,22 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
     fullNameAr: '',
     email: '',
     phone: '',
+    whatsapp: '',
     passportNumber: '',
     dob: '',
     gender: 'male',
+    country: '',
     city: '',
+    residence: '',
     address: '',
     highSchool: '',
     score: '',
+    college: '',
+    degree: '',
     program: 'Computer Science',
-    semester: 'Fall 2024',
+    semester: 'Fall 2025',
     scholarship: false,
+    scholarshipPercentage: '',
     paymentMethod: 'Cash',
     deposit: '',
     terms: false,
@@ -292,13 +305,52 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
     { name: t.statusRejected[lang], value: stats.rejected, color: '#ef4444' },
   ];
 
-  const handleStatusChange = (id: string, newStatus: 'APPROVED' | 'REJECTED') => {
-    setApps(apps.map((app) => (app.id === id ? { ...app, status: newStatus } : app)));
+  const handleStatusChange = async (id: string, newStatus: 'APPROVED' | 'REJECTED') => {
+    try {
+      const { admissionsApi } = await import('../api/admissions');
+      if (newStatus === 'APPROVED') {
+        const result = await admissionsApi.approve(parseInt(id));
+        setApps(apps.map((app) => (app.id === id ? { ...app, status: 'APPROVED', student_id: result.student_id } : app)));
+        alert(lang === 'ar' ? 'تم قبول الطالب بنجاح! سيتم إرسال بريد إلكتروني له.' : 'Student approved successfully! An email will be sent.');
+      } else {
+        const reason = prompt(lang === 'ar' ? 'أدخل سبب الرفض:' : 'Enter rejection reason:');
+        if (reason) {
+          await admissionsApi.reject(parseInt(id), reason);
+          setApps(apps.map((app) => (app.id === id ? { ...app, status: 'REJECTED' } : app)));
+          alert(lang === 'ar' ? 'تم رفض الطلب.' : 'Application rejected.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      alert(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ أثناء تحديث الحالة' : 'Error updating status'));
+    }
   };
 
-  const handleBulkAction = (action: 'APPROVED' | 'REJECTED') => {
-    setApps(apps.map((app) => (selectedApps.includes(app.id) ? { ...app, status: action } : app)));
+  const handleBulkAction = async (action: 'APPROVED' | 'REJECTED') => {
+    const { admissionsApi } = await import('../api/admissions');
+    let reason = '';
+    if (action === 'REJECTED') {
+      reason = prompt(lang === 'ar' ? 'أدخل سبب الرفض للطلبات المحددة:' : 'Enter rejection reason for selected applications:') || '';
+      if (!reason) return;
+    }
+
+    for (const id of selectedApps) {
+      try {
+        if (action === 'APPROVED') {
+          await admissionsApi.approve(parseInt(id));
+        } else {
+          await admissionsApi.reject(parseInt(id), reason);
+        }
+      } catch (error) {
+        console.error(`Error updating application ${id}:`, error);
+      }
+    }
+
+    // Refresh the list
+    const response = await admissionsApi.getAll();
+    setApps(response.data || response || []);
     setSelectedApps([]);
+    alert(lang === 'ar' ? 'تم تحديث الطلبات المحددة' : 'Selected applications updated');
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -322,16 +374,22 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
       fullNameAr: '',
       email: '',
       phone: '',
+      whatsapp: '',
       passportNumber: '',
       dob: '',
       gender: 'male',
+      country: '',
       city: '',
+      residence: '',
       address: '',
       highSchool: '',
       score: '',
+      college: '',
+      degree: '',
       program: 'Computer Science',
-      semester: 'Fall 2024',
+      semester: 'Fall 2025',
       scholarship: false,
+      scholarshipPercentage: '',
       paymentMethod: 'Cash',
       deposit: '',
       terms: false,
@@ -534,63 +592,153 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
         </div>
 
         {/* Recent Applications */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="font-bold text-slate-800">{t.recentApplications[lang]}</h3>
-            <button onClick={() => setView('list')} className="text-sm text-blue-600 font-medium hover:underline">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">{t.recentApplications[lang]}</h3>
+                <p className="text-xs text-slate-500">{lang === 'ar' ? 'آخر 5 طلبات' : 'Last 5 applications'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setView('list')}
+              className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors flex items-center gap-2 text-sm"
+            >
               {t.viewAll[lang]}
+              <ArrowRight className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500">
-                <tr>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.applicant[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.program[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.score[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.actions[lang]}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {apps.slice(0, 5).map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50">
-                    <td className="p-4">
-                      <p className="font-medium text-slate-800">{app.fullName}</p>
-                      <p className="text-xs text-slate-500">{app.email}</p>
-                    </td>
-                    <td className="p-4 text-slate-600">{app.program}</td>
-                    <td className="p-4 font-bold text-slate-700">{app.highSchoolScore}%</td>
-                    <td className="p-4">
+
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="relative w-12 h-12 mx-auto mb-4">
+                <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+              </div>
+              <p className="text-slate-500">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>
+            </div>
+          ) : apps.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-slate-400" />
+              </div>
+              <p className="text-slate-500 font-medium">{t.noApplicationsFound[lang]}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {apps.slice(0, 5).map((app, index) => {
+                const initials = (app.fullName || app.full_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+                const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500'];
+                const bgColor = colors[index % colors.length];
+
+                return (
+                  <div
+                    key={app.id}
+                    className="px-6 py-4 hover:bg-slate-50/50 transition-colors flex items-center justify-between gap-4"
+                  >
+                    {/* Applicant Info */}
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className={`w-12 h-12 ${bgColor} rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0`}>
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-800 truncate">{app.fullName || app.full_name}</p>
+                        <p className="text-sm text-slate-500 truncate">{app.email}</p>
+                      </div>
+                    </div>
+
+                    {/* Program */}
+                    <div className="hidden md:block flex-shrink-0 w-32">
+                      <p className="text-xs text-slate-400 mb-0.5">{t.program[lang]}</p>
+                      <p className="text-sm font-medium text-slate-700 truncate">
+                        {app.program?.name_en || app.program?.name_ar || app.programName || '-'}
+                      </p>
+                    </div>
+
+                    {/* Score */}
+                    <div className="hidden sm:flex flex-col items-center flex-shrink-0">
+                      <div className="relative w-14 h-14">
+                        <svg className="w-14 h-14 transform -rotate-90">
+                          <circle cx="28" cy="28" r="24" stroke="#e2e8f0" strokeWidth="4" fill="none" />
+                          <circle
+                            cx="28" cy="28" r="24"
+                            stroke={app.highSchoolScore >= 90 ? '#22c55e' : app.highSchoolScore >= 70 ? '#3b82f6' : '#f59e0b'}
+                            strokeWidth="4"
+                            fill="none"
+                            strokeDasharray={`${(app.highSchoolScore || 0) * 1.51} 151`}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">
+                          {app.highSchoolScore || 0}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="flex-shrink-0">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
                           app.status === 'APPROVED'
                             ? 'bg-green-100 text-green-700'
                             : app.status === 'REJECTED'
                             ? 'bg-red-100 text-red-700'
+                            : app.status === 'UNDER_REVIEW'
+                            ? 'bg-blue-100 text-blue-700'
                             : 'bg-yellow-100 text-yellow-700'
                         }`}
                       >
+                        {app.status === 'APPROVED' ? (
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        ) : app.status === 'REJECTED' ? (
+                          <XCircle className="w-3.5 h-3.5" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5" />
+                        )}
                         {app.status === 'APPROVED'
                           ? t.statusApproved[lang]
                           : app.status === 'REJECTED'
                           ? t.statusRejected[lang]
                           : t.statusPending[lang]}
                       </span>
-                    </td>
-                    <td className="p-4">
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => setShowDetailModal(app)}
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        className="p-2.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-blue-100 hover:text-blue-600 transition-colors"
+                        title={t.viewDetails[lang]}
                       >
-                        {t.viewDetails[lang]}
+                        <Eye className="w-4 h-4" />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {app.status === 'PENDING' && (
+                        <>
+                          <button
+                            onClick={() => handleStatusChange(app.id, 'APPROVED')}
+                            className="p-2.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                            title={t.approve[lang]}
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(app.id, 'REJECTED')}
+                            className="p-2.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                            title={t.reject[lang]}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -627,13 +775,13 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t.searchApplicants[lang]}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="w-full ps-10 pe-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -727,13 +875,13 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                       className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                     />
                   </th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.applicant[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.passportNumber[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.score[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.program[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.applicationDate[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.actions[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.applicant[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.passportNumber[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.degree[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.program[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.applicationDate[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.status[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.actions[lang]}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -755,24 +903,12 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                         />
                       </td>
                       <td className="p-4">
-                        <p className="font-medium text-slate-800">{app.fullName}</p>
+                        <p className="font-medium text-slate-800">{app.fullName || app.full_name}</p>
                         <p className="text-xs text-slate-500">{app.email}</p>
                       </td>
-                      <td className="p-4 text-slate-600 font-mono">{app.passportNumber || app.nationalId}</td>
-                      <td className="p-4">
-                        <span
-                          className={`font-bold ${
-                            app.highSchoolScore >= 90
-                              ? 'text-green-600'
-                              : app.highSchoolScore >= 75
-                              ? 'text-blue-600'
-                              : 'text-yellow-600'
-                          }`}
-                        >
-                          {app.highSchoolScore}%
-                        </span>
-                      </td>
-                      <td className="p-4 text-slate-600">{app.program}</td>
+                      <td className="p-4 text-slate-600 font-mono">{app.passportNumber || app.nationalId || app.national_id || '-'}</td>
+                      <td className="p-4 text-slate-600">{app.degree || '-'}</td>
+                      <td className="p-4 text-slate-600">{app.program?.name_en || app.program?.name_ar || app.programName || app.program_name || '-'}</td>
                       <td className="p-4 text-slate-500 text-sm">{app.date}</td>
                       <td className="p-4">
                         <span
@@ -866,25 +1002,84 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-slate-500 uppercase">{t.fullName[lang]}</label>
-                    <p className="font-medium text-slate-800">{showDetailModal.fullName}</p>
+                    <p className="font-medium text-slate-800">{showDetailModal.fullName || showDetailModal.full_name || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 uppercase">{t.passportNumber[lang]}</label>
-                    <p className="font-medium text-slate-800 font-mono">{showDetailModal.passportNumber || showDetailModal.nationalId}</p>
+                    <p className="font-medium text-slate-800 font-mono">{showDetailModal.passportNumber || showDetailModal.nationalId || showDetailModal.national_id || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 uppercase">{t.email[lang]}</label>
-                    <p className="font-medium text-slate-800">{showDetailModal.email}</p>
+                    <p className="font-medium text-slate-800">{showDetailModal.email || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 uppercase">{t.program[lang]}</label>
-                    <p className="font-medium text-slate-800">{showDetailModal.program}</p>
+                    <p className="font-medium text-slate-800">{showDetailModal.program?.name_en || showDetailModal.program?.name_ar || showDetailModal.program_name || showDetailModal.programName || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">{t.degree[lang]}</label>
+                    <p className="font-medium text-slate-800">{showDetailModal.degree || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">{t.college[lang]}</label>
+                    <p className="font-medium text-slate-800">{showDetailModal.college || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 uppercase">{t.score[lang]}</label>
-                    <p className="font-bold text-2xl text-blue-600">{showDetailModal.highSchoolScore}%</p>
+                    <p className="font-bold text-2xl text-blue-600">{showDetailModal.highSchoolScore || showDetailModal.high_school_score || 0}%</p>
                   </div>
                 </div>
+
+                {/* Documents Section */}
+                {(showDetailModal.metadata?.attachments?.length > 0 || showDetailModal.metadata?.photo_url || showDetailModal.metadata?.passport_url || showDetailModal.metadata?.bachelor_cert_url || showDetailModal.metadata?.high_school_cert_url || showDetailModal.metadata?.master_cert_url) && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <label className="text-xs text-slate-500 uppercase mb-3 block">{lang === 'ar' ? 'المستندات' : 'Documents'}</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {showDetailModal.metadata?.photo_url && (
+                        <a href={showDetailModal.metadata.photo_url} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                          <span className="text-sm text-blue-700">{lang === 'ar' ? 'الصورة الشخصية' : 'Photo'}</span>
+                        </a>
+                      )}
+                      {showDetailModal.metadata?.passport_url && (
+                        <a href={showDetailModal.metadata.passport_url} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                          <FileText className="w-5 h-5 text-green-600" />
+                          <span className="text-sm text-green-700">{lang === 'ar' ? 'صورة الجواز' : 'Passport'}</span>
+                        </a>
+                      )}
+                      {showDetailModal.metadata?.high_school_cert_url && (
+                        <a href={showDetailModal.metadata.high_school_cert_url} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                          <FileText className="w-5 h-5 text-purple-600" />
+                          <span className="text-sm text-purple-700">{lang === 'ar' ? 'شهادة الثانوية' : 'High School Cert'}</span>
+                        </a>
+                      )}
+                      {showDetailModal.metadata?.bachelor_cert_url && (
+                        <a href={showDetailModal.metadata.bachelor_cert_url} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                          <FileText className="w-5 h-5 text-orange-600" />
+                          <span className="text-sm text-orange-700">{lang === 'ar' ? 'شهادة البكالوريوس' : 'Bachelor Cert'}</span>
+                        </a>
+                      )}
+                      {showDetailModal.metadata?.master_cert_url && (
+                        <a href={showDetailModal.metadata.master_cert_url} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                          <FileText className="w-5 h-5 text-red-600" />
+                          <span className="text-sm text-red-700">{lang === 'ar' ? 'شهادة الماجستير' : 'Master Cert'}</span>
+                        </a>
+                      )}
+                      {showDetailModal.metadata?.attachments?.map((url: string, idx: number) => (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                          <FileText className="w-5 h-5 text-slate-600" />
+                          <span className="text-sm text-slate-700">{lang === 'ar' ? `مرفق ${idx + 1}` : `Attachment ${idx + 1}`}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 {showDetailModal.status === 'PENDING' && (
@@ -957,13 +1152,13 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={lang === 'ar' ? 'بحث عن طالب...' : 'Search students...'}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="w-full ps-10 pe-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -983,12 +1178,12 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.studentId[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.fullName[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.email[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.program[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.status[lang]}</th>
-                  <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.enrollmentDate[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.studentId[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.fullName[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.email[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.program[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.status[lang]}</th>
+                  <th className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>{t.enrollmentDate[lang]}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1010,22 +1205,22 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     .filter(student =>
                       !searchQuery ||
                       student.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      student.full_name_en?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      student.full_name_ar?.includes(searchQuery) ||
-                      student.user?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                      student.name_en?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      student.name_ar?.includes(searchQuery) ||
+                      student.university_email?.toLowerCase().includes(searchQuery.toLowerCase())
                     )
                     .map((student) => (
                       <tr key={student.id} className="hover:bg-slate-50">
                         <td className="p-4 font-mono text-blue-600 font-medium">{student.student_id}</td>
                         <td className="p-4">
                           <p className="font-medium text-slate-800">
-                            {lang === 'ar' ? student.full_name_ar : student.full_name_en}
+                            {lang === 'ar' ? (student.name_ar || student.name_en) : (student.name_en || student.name_ar)}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {lang === 'ar' ? student.full_name_en : student.full_name_ar}
+                            {lang === 'ar' ? student.name_en : student.name_ar}
                           </p>
                         </td>
-                        <td className="p-4 text-slate-600">{student.user?.email || '-'}</td>
+                        <td className="p-4 text-slate-600">{student.university_email || student.personal_email || '-'}</td>
                         <td className="p-4 text-slate-600">
                           {student.program ? (lang === 'ar' ? student.program.name_ar : student.program.name_en) : '-'}
                         </td>
@@ -1045,7 +1240,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                           </span>
                         </td>
                         <td className="p-4 text-slate-500 text-sm">
-                          {student.enrollment_date ? new Date(student.enrollment_date).toLocaleDateString() : '-'}
+                          {student.admission_date ? new Date(student.admission_date).toLocaleDateString() : '-'}
                         </td>
                       </tr>
                     ))
@@ -1124,7 +1319,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
         {/* Form Content */}
         <div className="lg:col-span-3 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
           {step === 1 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-4 animate-in fade-in slide-in-from-end-4">
               <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-4">
                 {t.personalInfo[lang]}
               </h3>
@@ -1181,6 +1376,16 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.whatsapp[lang]}</label>
+                  <input
+                    name="whatsapp"
+                    value={formData.whatsapp}
+                    onChange={handleInputChange}
+                    placeholder="+966..."
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t.dob[lang]}</label>
                   <input
                     name="dob"
@@ -1203,10 +1408,28 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.country[lang]}</label>
+                  <input
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t.city[lang]}</label>
                   <input
                     name="city"
                     value={formData.city}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.residence[lang]}</label>
+                  <input
+                    name="residence"
+                    value={formData.residence}
                     onChange={handleInputChange}
                     className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1225,7 +1448,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
           )}
 
           {step === 2 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-4 animate-in fade-in slide-in-from-end-4">
               <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-4">
                 {t.academicDetails[lang]}
               </h3>
@@ -1250,6 +1473,30 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.college[lang]}</label>
+                  <input
+                    name="college"
+                    value={formData.college}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.degree[lang]}</label>
+                  <select
+                    name="degree"
+                    value={formData.degree}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  >
+                    <option value="">{lang === 'ar' ? 'اختر الدرجة' : 'Select Degree'}</option>
+                    <option value="Bachelor">{lang === 'ar' ? 'بكالوريوس' : 'Bachelor'}</option>
+                    <option value="Master">{lang === 'ar' ? 'ماجستير' : 'Master'}</option>
+                    <option value="PhD">{lang === 'ar' ? 'دكتوراه' : 'PhD'}</option>
+                    <option value="Diploma">{lang === 'ar' ? 'دبلوم' : 'Diploma'}</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t.program[lang]}</label>
                   <select
                     name="program"
@@ -1270,8 +1517,9 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     onChange={handleInputChange}
                     className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                   >
-                    <option value="Fall 2024">Fall 2024</option>
-                    <option value="Spring 2025">Spring 2025</option>
+                    <option value="Fall 2025">Fall 2025</option>
+                    <option value="Winter 2025">Winter 2025</option>
+                    <option value="Summer 2026">Summer 2026</option>
                   </select>
                 </div>
               </div>
@@ -1291,7 +1539,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
           )}
 
           {step === 3 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-4 animate-in fade-in slide-in-from-end-4">
               <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-4">
                 {t.financialPrereq[lang]}
               </h3>
@@ -1310,6 +1558,25 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                   </label>
                 </div>
 
+                {formData.scholarship && (
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">{t.scholarshipPercentage[lang]}</label>
+                    <div className="relative">
+                      <input
+                        name="scholarshipPercentage"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={formData.scholarshipPercentage}
+                        onChange={handleInputChange}
+                        placeholder="0 - 100"
+                        className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <span className="absolute end-3 top-2.5 text-slate-400">%</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{t.paymentMethod[lang]}</label>
@@ -1322,18 +1589,19 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                       <option value="Cash">{t.cash[lang]}</option>
                       <option value="Card">{t.card[lang]}</option>
                       <option value="Bank Transfer">{t.transfer[lang]}</option>
+                      <option value="Intermediary">{t.intermediary[lang]}</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{t.initialDeposit[lang]}</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-400">$</span>
+                      <span className="absolute start-3 top-2.5 text-slate-400">$</span>
                       <input
                         name="deposit"
                         type="number"
                         value={formData.deposit}
                         onChange={handleInputChange}
-                        className="w-full pl-7 p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full ps-7 p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
                   </div>
@@ -1343,7 +1611,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
           )}
 
           {step === 4 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-6 animate-in fade-in slide-in-from-end-4">
               <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-4">
                 {t.review[lang]}
               </h3>
@@ -1363,8 +1631,28 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     <p className="font-medium text-slate-800">{formData.phone || '-'}</p>
                   </div>
                   <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.whatsapp[lang]}</p>
+                    <p className="font-medium text-slate-800">{formData.whatsapp || '-'}</p>
+                  </div>
+                  <div>
                     <p className="text-slate-500 text-xs uppercase tracking-wide">{t.passportNumber[lang]}</p>
                     <p className="font-medium text-slate-800">{formData.passportNumber || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.country[lang]}</p>
+                    <p className="font-medium text-slate-800">{formData.country || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.residence[lang]}</p>
+                    <p className="font-medium text-slate-800">{formData.residence || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.college[lang]}</p>
+                    <p className="font-medium text-slate-800">{formData.college || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">{t.degree[lang]}</p>
+                    <p className="font-medium text-slate-800">{formData.degree || '-'}</p>
                   </div>
                   <div>
                     <p className="text-slate-500 text-xs uppercase tracking-wide">{t.program[lang]}</p>
@@ -1382,6 +1670,12 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     <p className="text-slate-500 text-xs uppercase tracking-wide">{t.initialDeposit[lang]}</p>
                     <p className="font-medium text-slate-800">${formData.deposit || '0'}</p>
                   </div>
+                  {formData.scholarship && (
+                    <div>
+                      <p className="text-slate-500 text-xs uppercase tracking-wide">{t.scholarshipPercentage[lang]}</p>
+                      <p className="font-medium text-green-600">{formData.scholarshipPercentage || '0'}%</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

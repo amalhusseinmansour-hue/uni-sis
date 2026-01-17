@@ -189,7 +189,7 @@ export const Banner: React.FC<BannerProps> = ({
     <div
       className={`
         ${bannerVariants[variant]}
-        ${sticky ? `fixed ${position}-0 left-0 right-0 z-50` : ''}
+        ${sticky ? `fixed ${position}-0 start-0 end-0 z-50` : ''}
         ${className}
       `}
     >

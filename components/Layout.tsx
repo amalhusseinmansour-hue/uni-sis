@@ -249,12 +249,12 @@ const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, onLogout }) => {
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full ${lang === 'en' ? 'bg-blue-100' : 'bg-slate-100'}`}>
                         <span className="text-sm font-bold">EN</span>
                       </div>
-                      <div className="text-left">
+                      <div className="text-start">
                         <p className="text-sm font-medium">English</p>
                         <p className="text-xs text-slate-500">Left to Right</p>
                       </div>
                       {lang === 'en' && (
-                        <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="ms-auto w-2 h-2 bg-blue-500 rounded-full"></div>
                       )}
                     </button>
 
@@ -265,12 +265,12 @@ const Layout: React.FC<LayoutProps> = ({ lang, setLang, user, onLogout }) => {
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full ${lang === 'ar' ? 'bg-green-100' : 'bg-slate-100'}`}>
                         <span className="text-sm font-bold">ع</span>
                       </div>
-                      <div className="text-left">
+                      <div className="text-start">
                         <p className="text-sm font-medium">العربية</p>
                         <p className="text-xs text-slate-500">من اليمين لليسار</p>
                       </div>
                       {lang === 'ar' && (
-                        <div className="ml-auto w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div className="ms-auto w-2 h-2 bg-green-500 rounded-full"></div>
                       )}
                     </button>
                   </div>

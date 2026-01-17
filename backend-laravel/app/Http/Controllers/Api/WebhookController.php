@@ -28,57 +28,94 @@ class WebhookController extends Controller
      */
     public function admissionApplication(Request $request): JsonResponse
     {
+        // Ensure UTF-8 encoding for all string inputs
+        $input = $request->all();
+        array_walk_recursive($input, function (&$value) {
+            if (is_string($value)) {
+                if (!mb_check_encoding($value, 'UTF-8')) {
+                    $value = mb_convert_encoding($value, 'UTF-8', 'auto');
+                }
+                $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+            }
+        });
+        $request->replace($input);
+
         // التحقق من مفتاح الـ API
         $apiKey = $request->header('X-API-Key') ?? $request->header('Authorization');
         if (!$this->validateApiKey($apiKey)) {
             Log::warning('Webhook: Invalid API key attempt', [
                 'ip' => $request->ip(),
-                'headers' => $request->headers->all(),
             ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 401);
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        // التحقق من البيانات
+        // Map WordPress field names to SIS field names
+        $fieldMapping = [
+            'passport_number' => 'national_id',
+            'residence_country' => 'country',
+            'degree_text' => 'degree',
+            'college_text' => 'college',
+            'major_text' => 'program_name',
+            'whatsapp_number' => 'whatsapp',
+        ];
+
+        foreach ($fieldMapping as $wpField => $sisField) {
+            if ($request->has($wpField) && !$request->has($sisField)) {
+                $request->merge([$sisField => $request->input($wpField)]);
+            }
+        }
+
+        // معالجة تاريخ الميلاد - تحويل من DD/MM/YYYY إلى YYYY-MM-DD
+        $dateOfBirth = $request->input('date_of_birth');
+        if ($dateOfBirth) {
+            // Convert DD/MM/YYYY or D/M/YYYY to YYYY-MM-DD
+            if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $dateOfBirth, $matches)) {
+                $dateOfBirth = sprintf('%04d-%02d-%02d', $matches[3], $matches[2], $matches[1]);
+                $request->merge(['date_of_birth' => $dateOfBirth]);
+            }
+            // Also handle DD-MM-YYYY format
+            elseif (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $dateOfBirth, $matches)) {
+                $dateOfBirth = sprintf('%04d-%02d-%02d', $matches[3], $matches[2], $matches[1]);
+                $request->merge(['date_of_birth' => $dateOfBirth]);
+            }
+        }
+
+        // التحقق من البيانات - مرونة أكثر
         $validator = Validator::make($request->all(), [
             'full_name' => 'required|string|max:255',
-            'full_name_ar' => 'nullable|string|max:255',
             'email' => 'required|email|max:255',
-            'phone' => 'required|string|max:20',
-            'national_id' => 'required|string|max:20|unique:admission_applications,national_id',
-            'date_of_birth' => 'required|date',
-            'gender' => 'required|in:male,female',
-            'nationality' => 'required|string|max:100',
-            'country' => 'nullable|string|max:100',
-            'city' => 'nullable|string|max:100',
-            'address' => 'nullable|string|max:500',
-            'program_id' => 'required|exists:programs,id',
-            'program_code' => 'nullable|string', // بديل للـ program_id
-            'high_school_name' => 'nullable|string|max:255',
-            'high_school_score' => 'nullable|numeric|min:0|max:100',
-            'high_school_year' => 'nullable|string|max:10',
-            'degree_type' => 'nullable|string|in:BACHELOR,MASTER,PHD',
-            'previous_university' => 'nullable|string|max:255',
-            'previous_degree' => 'nullable|string|max:255',
-            'previous_gpa' => 'nullable|numeric|min:0|max:4',
-            'documents' => 'nullable|array',
-            'source' => 'nullable|string|max:100',
-            'utm_source' => 'nullable|string|max:100',
-            'utm_campaign' => 'nullable|string|max:100',
-        ], [
-            'national_id.unique' => 'يوجد طلب سابق بنفس رقم الهوية',
-            'program_id.exists' => 'البرنامج المحدد غير موجود',
+            'phone' => 'required|string|max:30',
+            'national_id' => 'nullable|string|max:50',
+            'passport_number' => 'nullable|string|max:50',
+            'date_of_birth' => 'nullable|date',
+            'gender' => 'nullable|string|max:20',
+            'nationality' => 'nullable|string|max:100',
         ]);
+
+        // national_id أو passport_number مطلوب
+        $nationalId = $request->input('national_id') ?? $request->input('passport_number');
+        if (empty($nationalId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => ['national_id' => ['رقم الهوية أو جواز السفر مطلوب']],
+            ], 422);
+        }
+
+        // التحقق من عدم وجود طلب سابق
+        $existingApp = \App\Models\AdmissionApplication::where('national_id', $nationalId)->first();
+        if ($existingApp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => ['national_id' => ['يوجد طلب سابق بنفس رقم الهوية - ' . $nationalId]],
+            ], 422);
+        }
 
         if ($validator->fails()) {
             Log::info('Webhook: Validation failed', [
                 'errors' => $validator->errors()->toArray(),
-                'data' => $request->except(['documents']),
             ]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -87,49 +124,101 @@ class WebhookController extends Controller
         }
 
         try {
-            // إذا تم إرسال program_code بدلاً من program_id
-            $programId = $request->program_id;
-            if (!$programId && $request->program_code) {
-                $program = \App\Models\Program::where('code', $request->program_code)->first();
-                if ($program) {
-                    $programId = $program->id;
-                } else {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Program not found',
-                        'errors' => ['program_code' => ['البرنامج المحدد غير موجود']],
-                    ], 422);
+            // معالجة البرنامج
+            $programId = null;
+            $programName = $request->input('program_name') ?? $request->input('major_text');
+
+            // محاولة إيجاد البرنامج بالـ ID
+            if ($request->input('program_id')) {
+                $program = \App\Models\Program::find($request->input('program_id'));
+                $programId = $program?->id;
+            }
+
+            // محاولة إيجاد البرنامج بالـ code
+            if (!$programId && $request->input('program_code')) {
+                $program = \App\Models\Program::where('code', $request->input('program_code'))->first();
+                $programId = $program?->id;
+            }
+
+            // محاولة إيجاد البرنامج بالاسم
+            if (!$programId && $programName) {
+                $program = \App\Models\Program::where('name_en', 'like', '%' . $programName . '%')
+                    ->orWhere('name_ar', 'like', '%' . $programName . '%')
+                    ->first();
+                $programId = $program?->id;
+            }
+
+            // معالجة الجنس
+            $gender = $request->input('gender');
+            if ($gender) {
+                $gender = strtolower($gender);
+                if (in_array($gender, ['ذكر', 'male', 'm'])) {
+                    $gender = 'male';
+                } elseif (in_array($gender, ['أنثى', 'انثى', 'female', 'f'])) {
+                    $gender = 'female';
                 }
             }
 
+            // معالجة الدرجة
+            $degree = $request->input('degree') ?? $request->input('degree_text') ?? 'Bachelor';
+            $degreeMap = [
+                'بكالوريوس' => 'Bachelor',
+                'ماجستير' => 'Master',
+                'دكتوراه' => 'PhD',
+                'دبلوم' => 'Diploma',
+            ];
+            $degree = $degreeMap[$degree] ?? $degree;
+
+            // جمع روابط الملفات
+            $attachments = $request->input('attachments', []);
+            $photoUrl = $request->input('photo_url') ?? $request->input('field_35') ?? $request->input('field_33') ?? $request->input('field_38');
+            $passportUrl = $request->input('passport_url') ?? $request->input('field_36') ?? $request->input('field_32') ?? $request->input('field_39');
+            $bachelorCertUrl = $request->input('bachelor_cert_url') ?? $request->input('field_34') ?? $request->input('field_40');
+            $highSchoolCertUrl = $request->input('high_school_cert_url') ?? $request->input('field_37') ?? $request->input('field_41');
+
             // تجهيز البيانات
             $applicationData = [
-                'full_name' => $request->full_name,
-                'full_name_ar' => $request->full_name_ar ?? $request->full_name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'national_id' => $request->national_id,
-                'date_of_birth' => $request->date_of_birth,
-                'gender' => $request->gender,
-                'nationality' => $request->nationality,
-                'country' => $request->country,
-                'city' => $request->city,
-                'address' => $request->address,
+                'full_name' => $request->input('full_name'),
+                'full_name_ar' => $request->input('full_name_ar') ?? $request->input('full_name'),
+                'email' => $request->input('email'),
+                'phone' => $request->input('phone'),
+                'whatsapp' => $request->input('whatsapp') ?? $request->input('whatsapp_number') ?? $request->input('phone'),
+                'national_id' => $nationalId,
+                'date_of_birth' => $request->input('date_of_birth'),
+                'gender' => $gender ?? 'male',
+                'nationality' => $request->input('nationality'),
+                'country' => $request->input('country') ?? $request->input('residence_country'),
+                'city' => $request->input('city'),
+                'residence' => $request->input('residence'),
+                'address' => $request->input('address'),
                 'program_id' => $programId,
-                'high_school_name' => $request->high_school_name,
-                'high_school_score' => $request->high_school_score,
-                'high_school_year' => $request->high_school_year,
-                'degree_type' => $request->degree_type ?? 'BACHELOR',
-                'previous_university' => $request->previous_university,
-                'previous_degree' => $request->previous_degree,
-                'previous_gpa' => $request->previous_gpa,
-                'source' => $request->source ?? 'wordpress',
+                'program_name' => $programName,
+                'college' => $request->input('college') ?? $request->input('college_text'),
+                'degree' => $degree,
+                'high_school_name' => $request->input('high_school_name'),
+                'high_school_score' => $request->input('high_school_score'),
+                'high_school_year' => $request->input('high_school_year'),
+                'scholarship_percentage' => $request->input('scholarship_percentage', 0),
+                'payment_method' => $request->input('payment_method'),
+                'source' => $request->input('source', 'wordpress'),
                 'metadata' => [
-                    'utm_source' => $request->utm_source,
-                    'utm_campaign' => $request->utm_campaign,
+                    'form_id' => $request->input('form_id'),
+                    'entry_id' => $request->input('entry_id'),
+                    'site_url' => $request->input('site_url'),
+                    'submitted_at' => $request->input('submitted_at', now()->toIso8601String()),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                    'submitted_at' => now()->toIso8601String(),
+                    'utm_source' => $request->input('utm_source'),
+                    'utm_campaign' => $request->input('utm_campaign'),
+                    'attachments' => $attachments,
+                    'photo_url' => $photoUrl,
+                    'passport_url' => $passportUrl,
+                    'bachelor_cert_url' => $bachelorCertUrl,
+                    'high_school_cert_url' => $highSchoolCertUrl,
+                    'degree_id' => $request->input('degree_id'),
+                    'college_id' => $request->input('college_id'),
+                    'major_id' => $request->input('major_id'),
+                    'raw_data' => $request->except(['attachments']),
                 ],
             ];
 
@@ -139,6 +228,7 @@ class WebhookController extends Controller
             Log::info('Webhook: Application submitted successfully', [
                 'application_id' => $application->id,
                 'email' => $application->email,
+                'source' => $applicationData['source'],
             ]);
 
             return response()->json([
@@ -157,7 +247,6 @@ class WebhookController extends Controller
             Log::error('Webhook: Application submission failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'data' => $request->except(['documents']),
             ]);
 
             return response()->json([
@@ -181,9 +270,8 @@ class WebhookController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $programs = \App\Models\Program::where('is_active', true)
-            ->with('department:id,name_en,name_ar')
-            ->select('id', 'code', 'name_en', 'name_ar', 'degree_type', 'department_id', 'duration_years')
+        $programs = \App\Models\Program::with('department:id,name_en,name_ar')
+            ->select('id', 'code', 'name_en', 'name_ar', 'type', 'department_id')
             ->orderBy('name_en')
             ->get();
 

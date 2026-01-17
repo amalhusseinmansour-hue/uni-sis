@@ -45,7 +45,10 @@ class DynamicTableColumn extends Model
     ];
 
     protected $casts = [
+        'format' => 'array',
         'format_options' => 'array',
+        'cell_style' => 'array',
+        'conditional_styles' => 'array',
         'status_colors' => 'array',
         'filter_options' => 'array',
         'conditional_styling' => 'array',
