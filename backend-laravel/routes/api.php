@@ -178,6 +178,227 @@ Route::get('/seed-colleges-programs', function () {
     ]);
 });
 
+// Seed common first semester courses for Bachelor programs (one-time use)
+Route::get('/seed-common-courses', function () {
+    $stats = ['courses_created' => 0, 'courses_assigned' => 0];
+
+    // Get any department to assign courses to (using first department as university-wide)
+    $department = \App\Models\Department::first();
+    if (!$department) {
+        return response()->json(['error' => 'No departments found. Run seed-colleges-programs first.'], 400);
+    }
+
+    // Common first semester courses for Bachelor programs
+    $commonCourses = [
+        ['code' => 'BVTU1301', 'name_en' => 'English 1', 'name_ar' => 'اللغة الإنجليزية 1', 'credits' => 3, 'order' => 1],
+        ['code' => 'BVTU1302', 'name_en' => 'Computer Skills', 'name_ar' => 'مهارات الحاسوب', 'credits' => 3, 'order' => 2],
+        ['code' => 'BVTU1303', 'name_en' => 'Mathematics', 'name_ar' => 'الرياضيات', 'credits' => 3, 'order' => 3],
+        ['code' => 'BVTU1304', 'name_en' => 'Introduction to Management', 'name_ar' => 'مقدمة في الإدارة', 'credits' => 3, 'order' => 4],
+        ['code' => 'BVTU1305', 'name_en' => 'Communication Skills', 'name_ar' => 'مهارات الاتصال', 'credits' => 3, 'order' => 5],
+    ];
+
+    // Create courses if they don't exist
+    $courseIds = [];
+    foreach ($commonCourses as $courseData) {
+        $course = \App\Models\Course::firstOrCreate(
+            ['code' => $courseData['code']],
+            [
+                'department_id' => $department->id,
+                'name_en' => $courseData['name_en'],
+                'name_ar' => $courseData['name_ar'],
+                'credits' => $courseData['credits'],
+                'capacity' => 100,
+                'enrolled' => 0,
+                'is_active' => true,
+            ]
+        );
+        if ($course->wasRecentlyCreated) {
+            $stats['courses_created']++;
+        }
+        $courseIds[$courseData['code']] = [
+            'id' => $course->id,
+            'order' => $courseData['order'],
+        ];
+    }
+
+    // Add courses to all Bachelor programs
+    $bachelorPrograms = \App\Models\Program::where('type', 'BACHELOR')->get();
+
+    foreach ($bachelorPrograms as $program) {
+        foreach ($courseIds as $code => $data) {
+            // Check if course already exists in program
+            if (!$program->courses()->where('course_id', $data['id'])->exists()) {
+                $program->courses()->attach($data['id'], [
+                    'semester' => 1,
+                    'type' => 'UNIVERSITY',
+                    'is_common' => true,
+                    'order' => $data['order'],
+                ]);
+                $stats['courses_assigned']++;
+            }
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Common first semester courses seeded successfully',
+        'stats' => $stats,
+        'programs_updated' => $bachelorPrograms->count(),
+        'courses' => array_keys($courseIds),
+    ]);
+});
+
+// Seed AI Engineering Major Requirements (19 courses - 57 credits)
+Route::get('/seed-ai-major-courses', function () {
+    // Find the AI Engineering program
+    $program = \App\Models\Program::where('code', 'BAIT')
+        ->orWhere('code', 'AIE')
+        ->orWhere('code', 'AI')
+        ->orWhere('name_en', 'like', '%artificial%intelligence%')
+        ->orWhere('name_ar', 'like', '%ذكاء اصطناعي%')
+        ->first();
+
+    if (!$program) {
+        $allPrograms = \App\Models\Program::all(['id', 'code', 'name_en', 'name_ar'])->toArray();
+        return response()->json([
+            'success' => false,
+            'message' => 'AI Engineering program not found',
+            'available_programs' => $allPrograms
+        ], 404);
+    }
+
+    // Find department for AI courses
+    $aiDepartment = \App\Models\Department::where('code', 'AI')
+        ->orWhere('code', 'AIE')
+        ->orWhere('code', 'IT')
+        ->orWhere('code', 'ENG')
+        ->first();
+
+    // AI Engineering Major Requirements (19 courses - 57 credits)
+    $majorRequirements = [
+        ['code' => 'BAIT4304', 'name_en' => 'Computer Networks', 'name_ar' => 'شبكات الكمبيوتر', 'credits' => 3, 'description_ar' => 'مفاهيم وهندسة شبكات الكمبيوتر باستخدام نماذج OSI وTCP/IP مع فهم عميق لهندسة شبكات الكمبيوتر.'],
+        ['code' => 'BAIT4303', 'name_en' => 'Database Systems', 'name_ar' => 'أنظمة قواعد البيانات', 'credits' => 3, 'description_ar' => 'المعرفة الأساسية بأنظمة قواعد البيانات وأنواعها وكيفية إنشائها والتعامل معها والأسس النظرية والرياضية (SQL).'],
+        ['code' => 'BAIT5303', 'name_en' => 'Python Programming', 'name_ar' => 'برمجة Python', 'credits' => 3, 'description_ar' => 'مقدمة إلى Python، لغة برمجة قوية وسهلة التعلم. وهو يغطي أساسيات بناء الجملة، وأنواع البيانات، وهياكل التحكم، والوظائف، والبرمجة الموجهة للكائنات وإمكانية تطبيقها على الذكاء الاصطناعي.'],
+        ['code' => 'BAIT7304', 'name_en' => 'Software Engineering', 'name_ar' => 'هندسة البرمجيات', 'credits' => 3, 'description_ar' => 'المفاهيم الأساسية لهندسة البرمجيات ووظائفها وأهدافها والمنهجيات المستخدمة عادة في تطوير البرمجيات.'],
+        ['code' => 'BAIT3302', 'name_en' => 'Introduction to Artificial Intelligence', 'name_ar' => 'مقدمة في الذكاء الاصطناعي', 'credits' => 3, 'description_ar' => 'يغطي التاريخ واستراتيجيات البحث وطرق حل المشكلات في الذكاء الاصطناعي.'],
+        ['code' => 'BAIT5301', 'name_en' => 'Data Structures and Algorithms', 'name_ar' => 'هياكل البيانات والخوارزميات', 'credits' => 3, 'description_ar' => 'يغطي تنظيم البيانات وخوارزميات الفرز/البحث وتحليل التعقيد.'],
+        ['code' => 'BAIT6301', 'name_en' => 'Image Processing', 'name_ar' => 'معالجة الصور', 'credits' => 3, 'description_ar' => 'معالجة الإشارات الرقمية، رقمنة الصور، النظام البصري بين الإنسان والآلة، الألوان، العملية والخوارزميات على الصور، تحسين الصورة وتنقيحها، تحويل الصورة، ضغط الصورة.'],
+        ['code' => 'BAIT4302', 'name_en' => 'Machine Learning Fundamentals', 'name_ar' => 'أساسيات تعلم الآلة', 'credits' => 3, 'description_ar' => 'يقدم تقنيات الانحدار والتصنيف وتقييم النماذج.'],
+        ['code' => 'BAIT7302', 'name_en' => 'Deep Learning and Neural Networks', 'name_ar' => 'التعلم العميق والشبكات العصبية', 'credits' => 3, 'description_ar' => 'يغطي شبكات CNN وRNN والتدريب على النماذج باستخدام الأطر الحديثة.'],
+        ['code' => 'BAIT7301', 'name_en' => 'Computer Vision', 'name_ar' => 'رؤية الكمبيوتر', 'credits' => 3, 'description_ar' => 'يستكشف تقنيات معالجة الصور والتعرف عليها والكشف عن الأجسام.'],
+        ['code' => 'BAIT6305', 'name_en' => 'Natural Language Processing', 'name_ar' => 'معالجة اللغات الطبيعية', 'credits' => 3, 'description_ar' => 'يقدم المعالجة اللغوية وتحليل المشاعر وبرامج الدردشة.'],
+        ['code' => 'BAIT6302', 'name_en' => 'Data Mining and Big Data', 'name_ar' => 'استخراج البيانات والبيانات الضخمة', 'credits' => 3, 'description_ar' => 'يغطي تحليل البيانات على نطاق واسع واكتشاف الأنماط والأدوات المستندة إلى Hadoop.'],
+        ['code' => 'BAIT8303', 'name_en' => 'Robotics and Autonomous Systems', 'name_ar' => 'الروبوتات والأنظمة المستقلة', 'credits' => 3, 'description_ar' => 'يقدم تصميم الروبوت، وأنظمة التحكم، وتكامل أجهزة الاستشعار.'],
+        ['code' => 'BAIT8304', 'name_en' => 'Reinforcement Learning', 'name_ar' => 'التعلم المعزز', 'credits' => 3, 'description_ar' => 'يشرح التعلم القائم على المكافآت، والتعلم Q-learning، وعمليات اتخاذ القرار في ماركوف.'],
+        ['code' => 'BAIT6304', 'name_en' => 'Web Application Development', 'name_ar' => 'تطوير تطبيقات الويب', 'credits' => 3, 'description_ar' => 'تصميم واجهات مستخدم جذابة باستخدام HTML وCSS وJavaScript وإنشاء أنظمة خلفية ديناميكية باستخدام لغات مثل PHP أو Python.'],
+        ['code' => 'BAIT7303', 'name_en' => 'AI Systems Development', 'name_ar' => 'تطوير أنظمة الذكاء الاصطناعي', 'credits' => 3, 'description_ar' => 'يركز على تصميم حلول الذكاء الاصطناعي المتكاملة ونشرها.'],
+        ['code' => 'BAIT5304', 'name_en' => 'Embedded Systems for AI Applications', 'name_ar' => 'الأنظمة المدمجة لتطبيقات الذكاء الاصطناعي', 'credits' => 3, 'description_ar' => 'يدمج وحدات التحكم الدقيقة ونماذج الذكاء الاصطناعي في الأجهزة المضمنة في الوقت الفعلي.'],
+        ['code' => 'BAIT5302', 'name_en' => 'Cloud Computing for AI', 'name_ar' => 'الحوسبة السحابية للذكاء الاصطناعي', 'credits' => 3, 'description_ar' => 'تعلم الأنظمة الأساسية السحابية وواجهات برمجة التطبيقات ونشر تطبيقات الذكاء الاصطناعي الموزعة.'],
+        ['code' => 'BAIT6303', 'name_en' => 'Information Security', 'name_ar' => 'أمن المعلومات', 'credits' => 3, 'description_ar' => 'المفاهيم الأساسية ذات الصلة بأمن الكمبيوتر وحماية أنظمة الكمبيوتر والبيانات من التهديدات التي قد تعرض السلامة أو التوفر أو السرية للخطر.'],
+    ];
+
+    $addedCount = 0;
+    $updatedCount = 0;
+    $order = 1;
+    $totalCredits = 0;
+    $coursesAdded = [];
+
+    foreach ($majorRequirements as $courseData) {
+        // Determine semester from course code
+        $numericPart = preg_replace('/[^0-9]/', '', substr($courseData['code'], 4));
+        $semester = !empty($numericPart) ? (int)$numericPart[0] : 1;
+
+        // Check if course exists
+        $existingCourse = \App\Models\Course::where('code', $courseData['code'])->first();
+
+        if ($existingCourse) {
+            $existingCourse->update([
+                'name_en' => $courseData['name_en'],
+                'name_ar' => $courseData['name_ar'],
+                'credits' => $courseData['credits'],
+                'description' => $courseData['description_ar'],
+                'department_id' => $aiDepartment?->id,
+                'capacity' => 40,
+                'is_active' => true,
+            ]);
+            $course = $existingCourse;
+            $status = 'updated';
+            $updatedCount++;
+        } else {
+            $course = \App\Models\Course::create([
+                'code' => $courseData['code'],
+                'name_en' => $courseData['name_en'],
+                'name_ar' => $courseData['name_ar'],
+                'credits' => $courseData['credits'],
+                'description' => $courseData['description_ar'],
+                'department_id' => $aiDepartment?->id,
+                'capacity' => 40,
+                'enrolled' => 0,
+                'is_active' => true,
+            ]);
+            $status = 'added';
+            $addedCount++;
+        }
+
+        // Link to program
+        $existingLink = \Illuminate\Support\Facades\DB::table('program_courses')
+            ->where('program_id', $program->id)
+            ->where('course_id', $course->id)
+            ->first();
+
+        if (!$existingLink) {
+            \Illuminate\Support\Facades\DB::table('program_courses')->insert([
+                'program_id' => $program->id,
+                'course_id' => $course->id,
+                'semester' => $semester,
+                'type' => 'MAJOR',
+                'is_common' => false,
+                'order' => $order,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $status .= ' + linked';
+        } else {
+            \Illuminate\Support\Facades\DB::table('program_courses')
+                ->where('program_id', $program->id)
+                ->where('course_id', $course->id)
+                ->update([
+                    'semester' => $semester,
+                    'type' => 'MAJOR',
+                    'updated_at' => now(),
+                ]);
+        }
+
+        $totalCredits += $courseData['credits'];
+        $coursesAdded[] = [
+            'code' => $courseData['code'],
+            'name_ar' => $courseData['name_ar'],
+            'credits' => $courseData['credits'],
+            'semester' => $semester,
+            'status' => $status
+        ];
+        $order++;
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم إضافة متطلبات التخصص بنجاح',
+        'program' => [
+            'id' => $program->id,
+            'code' => $program->code,
+            'name_en' => $program->name_en,
+            'name_ar' => $program->name_ar
+        ],
+        'courses' => $coursesAdded,
+        'summary' => [
+            'total_courses' => count($majorRequirements),
+            'total_credits' => $totalCredits,
+            'added' => $addedCount,
+            'updated' => $updatedCount
+        ]
+    ]);
+});
+
 // Current semester (public)
 Route::get('/semesters/current', [SemesterController::class, 'current']);
 
@@ -196,6 +417,11 @@ Route::post('/verify/student', [StudentIdCardController::class, 'verify']);
 // Document Verification (public endpoint)
 Route::get('/verify/document/{code}', [DocumentVerificationController::class, 'verifyByCode']);
 Route::post('/verify/certificate', [DocumentVerificationController::class, 'verifyCertificate']);
+
+// Programs and Courses (public endpoint for study plan display)
+Route::get('/programs', [ProgramController::class, 'index']);
+Route::get('/programs/{program}', [ProgramController::class, 'show']);
+Route::get('/programs/{program}/courses', [ProgramController::class, 'courses']);
 
 // ==========================================
 // WEBHOOK ENDPOINTS (for WordPress integration)
@@ -298,6 +524,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Programs - Read access for all
     Route::get('/programs', [ProgramController::class, 'index']);
     Route::get('/programs/{program}', [ProgramController::class, 'show']);
+    Route::get('/programs/{program}/courses', [ProgramController::class, 'courses']);
 
     // Semesters - Read access for all
     Route::get('/semesters', [SemesterController::class, 'index']);
@@ -465,6 +692,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/students/{student}/open-registration', [StudentController::class, 'openRegistration']);
         Route::post('/students/{student}/close-registration', [StudentController::class, 'closeRegistration']);
 
+        // Student File Uploads - رفع الملفات
+        Route::post('/students/{student}/upload-photo', [StudentController::class, 'uploadProfilePicture']);
+        Route::post('/students/{student}/upload-document', [StudentController::class, 'uploadDocument']);
+        Route::get('/students/{student}/documents', [StudentController::class, 'documents']);
+        Route::delete('/students/{student}/documents/{documentId}', [StudentController::class, 'deleteDocument']);
+
         // Study Plans - الخطط الدراسية
         Route::get('/students/{student}/study-plan', [StudentController::class, 'studyPlan']);
         Route::post('/students/{student}/assign-study-plan', [StudentController::class, 'assignStudyPlan']);
@@ -541,6 +774,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/programs/{program}', [ProgramController::class, 'update']);
         Route::delete('/programs/{program}', [ProgramController::class, 'destroy']);
         Route::get('/programs/{program}/students', [ProgramController::class, 'students']);
+
+        // Program Courses management
+        Route::get('/programs/{program}/courses', [ProgramController::class, 'courses']);
+        Route::post('/programs/{program}/courses', [ProgramController::class, 'addCourse']);
+        Route::put('/programs/{program}/courses/{courseId}', [ProgramController::class, 'updateCourse']);
+        Route::delete('/programs/{program}/courses/{courseId}', [ProgramController::class, 'removeCourse']);
+        Route::post('/programs/bachelor/common-courses', [ProgramController::class, 'addCommonCoursesToBachelor']);
 
         // Enrollments - Admin only operations (STUDENT_AFFAIRS has CRUD in their section)
         Route::delete('/enrollments/{enrollment}', [EnrollmentController::class, 'destroy']);
@@ -936,12 +1176,21 @@ Route::middleware(['auth:sanctum'])->prefix('moodle')->group(function () {
     Route::get('/sync/status', [MoodleSyncController::class, 'getSyncStatus']);
     Route::post('/test-connection', [MoodleSyncController::class, 'testConnection']);
 
+    // عرض الطلاب من LMS
+    Route::get('/students', [MoodleSyncController::class, 'getLmsStudents']);
+
     // مزامنة البيانات إلى Moodle (Admin only)
     Route::middleware('role:ADMIN')->group(function () {
         Route::post('/sync/students', [MoodleSyncController::class, 'syncStudents']);
         Route::post('/sync/lecturers', [MoodleSyncController::class, 'syncLecturers']);
         Route::post('/sync/courses', [MoodleSyncController::class, 'syncCourses']);
         Route::post('/sync/enrollments', [MoodleSyncController::class, 'syncEnrollments']);
+
+        // استيراد الطلاب من Moodle إلى SIS
+        Route::post('/import/students', [MoodleSyncController::class, 'importStudentsFromLms']);
+
+        // مزامنة الصور الشخصية من Moodle
+        Route::post('/sync/profile-pictures', [MoodleSyncController::class, 'syncProfilePictures']);
 
         // استيراد العلامات من Moodle
         Route::post('/import/grades', [MoodleSyncController::class, 'importGrades']);
