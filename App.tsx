@@ -73,6 +73,9 @@ import {
   UserManagement,
   BrandingSettings,
   RolesPermissions,
+  ProgramsManagement,
+  SemesterManagement,
+  CoursesManagement,
 } from './pages/admin';
 import AiAssistant from './components/AiAssistant';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -715,6 +718,30 @@ const App: React.FC = () => {
              element={
                (currentUser.role === UserRole.ADMIN)
                ? <RolesPermissions lang={lang} />
+               : <Navigate to="/" />
+             }
+          />
+          <Route
+             path="admin/programs"
+             element={
+               (currentUser.role === UserRole.ADMIN)
+               ? <ProgramsManagement lang={lang} />
+               : <Navigate to="/" />
+             }
+          />
+          <Route
+             path="admin/semesters"
+             element={
+               (currentUser.role === UserRole.ADMIN)
+               ? <SemesterManagement lang={lang} />
+               : <Navigate to="/" />
+             }
+          />
+          <Route
+             path="admin/courses"
+             element={
+               (currentUser.role === UserRole.ADMIN)
+               ? <CoursesManagement lang={lang} />
                : <Navigate to="/" />
              }
           />

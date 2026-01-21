@@ -654,8 +654,8 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang, role }) =
         </div>
       )}
 
-      {/* Prerequisites Modal */}
-      {showPrerequisiteModal && selectedCoursePrerequisites && (
+      {/* Prerequisites Modal - Only for staff */}
+      {isStaff && showPrerequisiteModal && selectedCoursePrerequisites && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="flex items-center gap-3 mb-4">
@@ -692,44 +692,46 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang, role }) =
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
-        <button
-          onClick={() => setActiveTab('enrolled')}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'enrolled'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4" />
-            {t.myEnrollments[lang]}
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-              {enrollments.length}
+      {/* Tabs - Show both tabs only for staff, students see only enrolled courses */}
+      {isStaff && (
+        <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setActiveTab('enrolled')}
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              activeTab === 'enrolled'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              {t.myEnrollments[lang]}
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                {enrollments.length}
+              </span>
             </span>
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('available')}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'available'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            {t.availableCourses[lang]}
-            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-              {availableCourses.length}
+          </button>
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              activeTab === 'available'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              {t.availableCourses[lang]}
+              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                {availableCourses.length}
+              </span>
             </span>
-          </span>
-        </button>
-      </div>
+          </button>
+        </div>
+      )}
 
-      {/* Cart (if has items) */}
-      {cart.length > 0 && (
+      {/* Cart (if has items) - Only for staff */}
+      {isStaff && cart.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2">
@@ -774,8 +776,8 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang, role }) =
         </div>
       )}
 
-      {/* Content */}
-      {activeTab === 'enrolled' ? (
+      {/* Content - Students always see enrolled, staff sees based on activeTab */}
+      {(!isStaff || activeTab === 'enrolled') ? (
         /* Enrolled Courses */
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
@@ -793,14 +795,22 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang, role }) =
             <div className="p-12 text-center">
               <Calendar className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
               <p className="text-lg font-medium text-slate-600 dark:text-slate-400">{t.noEnrollments[lang]}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">{t.startRegistering[lang]}</p>
-              <button
-                onClick={() => setActiveTab('available')}
-                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-4 h-4" />
-                {t.addCourse[lang]}
-              </button>
+              {isStaff ? (
+                <>
+                  <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">{t.startRegistering[lang]}</p>
+                  <button
+                    onClick={() => setActiveTab('available')}
+                    className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {t.addCourse[lang]}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+                  {lang === 'ar' ? 'لم يتم تسجيل أي مقررات لك حتى الآن. يرجى التواصل مع شؤون الطلاب.' : 'No courses have been registered for you yet. Please contact Student Affairs.'}
+                </p>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -882,18 +892,21 @@ const CourseRegistration: React.FC<CourseRegistrationProps> = ({ lang, role }) =
                               <CheckCircle className="w-4 h-4" />
                               {t.pending[lang]}
                             </span>
-                            <button
-                              onClick={() => dropCourse(enrollment.id)}
-                              disabled={dropping === enrollment.id}
-                              className="px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-sm flex items-center gap-1.5 disabled:opacity-50"
-                            >
-                              {dropping === enrollment.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                              {t.drop[lang]}
-                            </button>
+                            {/* Drop button only for staff */}
+                            {isStaff && (
+                              <button
+                                onClick={() => dropCourse(enrollment.id)}
+                                disabled={dropping === enrollment.id}
+                                className="px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-sm flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                {dropping === enrollment.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                                {t.drop[lang]}
+                              </button>
+                            )}
                           </>
                         )}
                       </div>

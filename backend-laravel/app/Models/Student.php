@@ -24,6 +24,15 @@ class Student extends Model
         'user', // Prevent circular reference when loaded via User relationship
     ];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<string>
+     */
+    protected $appends = [
+        'profile_picture_url',
+    ];
+
     protected $fillable = [
         // User & Program Relations
         'user_id',

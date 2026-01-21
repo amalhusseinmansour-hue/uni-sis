@@ -229,7 +229,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
           <span className={notification.type === 'success' ? 'text-green-800' : 'text-red-800'}>
             {notification.message}
           </span>
-          <button onClick={() => setNotification(null)} className="ml-auto">
+          <button onClick={() => setNotification(null)} className="ms-auto">
             <XCircle className="w-4 h-4 text-slate-400 hover:text-slate-600" />
           </button>
         </div>
@@ -314,20 +314,13 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
 
               {/* University Logo */}
               <div className="text-center flex-shrink-0">
-                <div className="w-[55px] h-[55px] sm:w-[72px] sm:h-[72px] mx-auto mb-1 relative">
-                  <div className="w-full h-full rounded-full border-[2px] sm:border-[3px] border-[#1e3a5f] flex items-center justify-center bg-white relative">
-                    <div className="absolute inset-[2px] sm:inset-[3px] rounded-full border sm:border-2 border-[#c9a227]" />
-                    <div className="text-center z-10">
-                      <div className="text-[4px] sm:text-[5px] text-[#1e3a5f] font-bold tracking-wider" style={{ marginTop: '-3px' }}>VERTEX UNIVERSITY</div>
-                      <div className="text-base sm:text-xl font-bold text-[#1e3a5f] leading-none my-0.5">V</div>
-                      <div className="text-[4px] sm:text-[5px] text-[#1e3a5f] font-bold tracking-wider" style={{ marginBottom: '-3px' }}>INTERNATIONAL</div>
-                    </div>
-                    <div className="absolute top-0.5 right-1 sm:right-1.5 text-[#c9a227] text-[6px] sm:text-[8px]">★</div>
-                    <div className="absolute top-0.5 left-1 sm:left-1.5 text-[#c9a227] text-[6px] sm:text-[8px]">★</div>
-                  </div>
-                </div>
-                <div className="text-[#1e3a5f] font-bold text-[10px] sm:text-sm tracking-wide whitespace-nowrap">
-                  <span className="text-[#c9a227]">V</span>ERTEX <span className="text-[#c9a227]">U</span>NIVERSITY
+                <div className="w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] mx-auto mb-1">
+                  <img
+                    src="/logo-color.png"
+                    alt="Vertex University Logo"
+                    className="w-full h-full object-contain"
+                    crossOrigin="anonymous"
+                  />
                 </div>
               </div>
             </div>
@@ -349,7 +342,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                 </div>
                 <div className="flex">
                   <span className="font-bold text-[#1e3a5f]">NATIONALITY</span>
-                  <span className="text-slate-800 ml-1">: {card.student.nationality || 'N/A'}</span>
+                  <span className="text-slate-800 ms-1">: {card.student.nationality || 'N/A'}</span>
                 </div>
               </div>
               <div className="flex flex-wrap">
@@ -367,7 +360,7 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
                 </div>
                 <div className="flex">
                   <span className="font-bold text-[#1e3a5f]">ACADEMIC YEAR</span>
-                  <span className="text-slate-800 ml-1">: {card.academic?.academic_year || '2025/2026'}</span>
+                  <span className="text-slate-800 ms-1">: {card.academic?.academic_year || '2025/2026'}</span>
                 </div>
               </div>
             </div>
@@ -395,18 +388,13 @@ const IDCardPage: React.FC<IDCardPageProps> = ({ lang }) => {
             <div className="flex justify-between items-start mb-2 sm:mb-3">
               {/* University Logo */}
               <div className="text-center flex-shrink-0">
-                <div className="w-[45px] h-[45px] sm:w-[60px] sm:h-[60px] mx-auto mb-1 relative">
-                  <div className="w-full h-full rounded-full border-[2px] border-[#1e3a5f] flex items-center justify-center bg-white relative">
-                    <div className="absolute inset-[2px] rounded-full border border-[#c9a227]" />
-                    <div className="text-center z-10">
-                      <div className="text-[3px] sm:text-[4px] text-[#1e3a5f] font-bold">VERTEX UNIVERSITY</div>
-                      <div className="text-sm sm:text-base font-bold text-[#1e3a5f] leading-none">V</div>
-                      <div className="text-[3px] sm:text-[4px] text-[#1e3a5f] font-bold">INTERNATIONAL</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-[#1e3a5f] font-bold text-[8px] sm:text-xs tracking-wide whitespace-nowrap">
-                  <span className="text-[#c9a227]">V</span>ERTEX <span className="text-[#c9a227]">U</span>NIVERSITY
+                <div className="w-[50px] h-[50px] sm:w-[65px] sm:h-[65px] mx-auto mb-1">
+                  <img
+                    src="/logo-color.png"
+                    alt="Vertex University Logo"
+                    className="w-full h-full object-contain"
+                    crossOrigin="anonymous"
+                  />
                 </div>
               </div>
 

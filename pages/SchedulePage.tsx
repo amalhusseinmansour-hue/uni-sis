@@ -373,7 +373,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ lang, role }) => {
 
             {/* Search Input */}
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
                 placeholder={staffT.searchStudent[lang]}
@@ -382,10 +382,10 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ lang, role }) => {
                   setStudentSearchQuery(e.target.value);
                   searchStudents(e.target.value);
                 }}
-                className="w-full pl-10 pr-4 py-3 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full ps-10 pe-4 py-3 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
               {searchingStudents && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 animate-spin" />
+                <Loader2 className="absolute end-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 animate-spin" />
               )}
             </div>
 

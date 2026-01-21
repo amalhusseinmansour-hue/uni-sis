@@ -58,7 +58,36 @@ export interface SyncLog {
   created_at: string;
 }
 
+export interface LmsStudent {
+  id: number;
+  moodle_id: number;
+  student_id: string | null;
+  username: string;
+  name_en: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  country: string;
+  city: string;
+  department: string;
+  profile_url: string | null;
+  last_access: string | null;
+  exists_in_sis: boolean;
+  source: 'LMS';
+}
+
 export const lmsAPI = {
+  // Get all students from LMS (view only)
+  getLmsStudents: async (): Promise<{
+    success: boolean;
+    total: number;
+    students: LmsStudent[];
+    error?: string;
+  }> => {
+    const response = await apiClient.get('/moodle/students');
+    return response.data;
+  },
+
   // Get LMS connection status and statistics
   getStatus: async (): Promise<LmsStatus> => {
     const response = await apiClient.get('/moodle/status');
@@ -121,6 +150,33 @@ export const lmsAPI = {
     errors: string[];
   }> => {
     const response = await apiClient.post('/moodle/sync/enrollments', { enrollment_ids: enrollmentIds });
+    return response.data;
+  },
+
+  // Import students from LMS to SIS
+  importStudentsFromLms: async (): Promise<{
+    success: boolean;
+    message: string;
+    message_ar: string;
+    data: {
+      imported: number;
+      updated: number;
+      skipped: number;
+      failed: number;
+      students: Array<{
+        id: number;
+        student_id: string;
+        name: string;
+        email: string;
+        status: 'imported' | 'updated';
+      }>;
+      errors: string[];
+    };
+  }> => {
+    // Use longer timeout (3 minutes) for importing many students
+    const response = await apiClient.post('/moodle/import/students', {}, {
+      timeout: 180000 // 3 minutes
+    });
     return response.data;
   },
 
@@ -191,6 +247,25 @@ export const lmsAPI = {
     errors: string[];
   }> => {
     const response = await apiClient.post('/moodle/sync/all');
+    return response.data;
+  },
+
+  // Sync profile pictures from LMS
+  syncProfilePictures: async (studentId?: number): Promise<{
+    success: boolean;
+    message: string;
+    message_ar: string;
+    data?: {
+      success: number;
+      failed: number;
+      skipped: number;
+      errors: Array<{ student: string; error: string }>;
+    };
+  }> => {
+    const response = await apiClient.post('/moodle/sync/profile-pictures',
+      studentId ? { student_id: studentId } : {},
+      { timeout: 300000 } // 5 minutes for syncing all photos
+    );
     return response.data;
   },
 };

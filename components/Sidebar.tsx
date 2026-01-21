@@ -152,6 +152,9 @@ const t = {
   userManagement: { en: 'User Management', ar: 'إدارة المستخدمين' },
   branding: { en: 'Branding & Templates', ar: 'العلامة التجارية والقوالب' },
   rolesPermissions: { en: 'Roles & Permissions', ar: 'الأدوار والصلاحيات' },
+  programs: { en: 'Programs', ar: 'البرامج الأكاديمية' },
+  semesters: { en: 'Semesters', ar: 'الفصول الدراسية' },
+  courses: { en: 'Courses', ar: 'المواد الدراسية' },
 };
 
 // Convert API menu items to NavItems
@@ -258,14 +261,14 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
     if (role === UserRole.ADMIN) {
       return [
         ...baseNav,
+        { to: '/students', icon: Users, label: t.students[lang] },
         {
           to: '/admissions',
-          icon: Users,
+          icon: UserCheck,
           label: t.admissions[lang],
           badge: 5,
           children: [
             { to: '/admissions?tab=applications', icon: FileText, label: t.applications[lang], badge: 5 },
-            { to: '/admissions?tab=students', icon: Users, label: t.students[lang] },
           ],
         },
         {
@@ -279,12 +282,16 @@ const Sidebar: React.FC<SidebarProps> = ({ lang, role, isOpen, onClose, onLogout
         },
         { to: '/reports', icon: BarChart3, label: t.reports[lang] },
         { to: '/schedule', icon: Calendar, label: t.schedule[lang] },
+        // Standalone management items (moved out of admin panel)
+        { to: '/admin/users', icon: Users, label: t.userManagement[lang] },
+        { to: '/admin/programs', icon: GraduationCap, label: t.programs[lang] },
+        { to: '/admin/semesters', icon: Calendar, label: t.semesters[lang] },
+        { to: '/admin/courses', icon: BookOpen, label: t.courses[lang] },
         {
           to: '/admin/tables',
           icon: Cog,
           label: t.adminPanel[lang],
           children: [
-            { to: '/admin/users', icon: Users, label: t.userManagement[lang] },
             { to: '/admin/roles', icon: Shield, label: t.rolesPermissions[lang] },
             { to: '/admin/branding', icon: Palette, label: t.branding[lang] },
             { to: '/admin/tables', icon: Table, label: t.tableBuilder[lang] },

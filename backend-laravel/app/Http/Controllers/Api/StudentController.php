@@ -59,7 +59,9 @@ class StudentController extends Controller
             'admission_date' => 'nullable|date',
             'phone' => 'nullable',
             'personal_email' => 'required|email',
+            'college_id' => 'nullable|exists:colleges,id',
             'program_id' => 'nullable|exists:programs,id',
+            'degree' => 'nullable|in:BACHELOR,MASTER,PHD,DIPLOMA',
             'password' => 'required|min:6',
         ]);
 
@@ -104,6 +106,7 @@ class StudentController extends Controller
             'personal_email' => $validated['personal_email'],
             'university_email' => $universityEmail,
             'program_id' => $validated['program_id'],
+            'degree' => $validated['degree'] ?? 'BACHELOR',
             'status' => 'ACTIVE',
         ]);
 
@@ -124,16 +127,22 @@ class StudentController extends Controller
             'name_en' => 'sometimes|required',
             'status' => 'sometimes|in:ACTIVE,SUSPENDED,GRADUATED,WITHDRAWN',
             'admission_type' => 'sometimes|in:DIRECT,TRANSFER,POSTGRADUATE,SCHOLARSHIP,BRIDGE,READMISSION,VISITING',
-            'phone' => 'sometimes|required',
+            'phone' => 'sometimes|nullable',
             'nationality' => 'sometimes|string',
             'date_of_birth' => 'sometimes|date',
             'gender' => 'sometimes|in:MALE,FEMALE',
             'marital_status' => 'sometimes|in:SINGLE,MARRIED,DIVORCED,WIDOWED',
+            'program_id' => 'sometimes|nullable|exists:programs,id',
+            'current_level' => 'sometimes|integer|min:1|max:10',
+            'personal_email' => 'sometimes|nullable|email',
+            'address' => 'sometimes|nullable|string',
+            'college' => 'sometimes|nullable|string',
         ]);
 
         $student->update($validated);
 
-        return response()->json($student);
+        // Return student with program relationship loaded
+        return response()->json($student->load('program'));
     }
 
     public function destroy(Request $request, Student $student): JsonResponse
@@ -301,6 +310,121 @@ class StudentController extends Controller
         return response()->json([
             'message' => 'تم إغلاق التسجيل للطالب',
             'student' => $student,
+        ]);
+    }
+
+    /**
+     * Upload profile picture for a student
+     */
+    public function uploadProfilePicture(Request $request, Student $student): JsonResponse
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
+        ]);
+
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+            $filename = 'profile_pictures/' . $student->student_id . '_' . time() . '.' . $file->getClientOriginalExtension();
+
+            // Delete old profile picture if exists
+            if ($student->profile_picture && \Illuminate\Support\Facades\Storage::disk('public')->exists($student->profile_picture)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($student->profile_picture);
+            }
+
+            // Store new picture using public disk
+            \Illuminate\Support\Facades\Storage::disk('public')->putFileAs(dirname($filename), $file, basename($filename));
+
+            // Update student record
+            $student->update(['profile_picture' => $filename]);
+
+            return response()->json([
+                'message' => 'تم رفع الصورة الشخصية بنجاح',
+                'message_en' => 'Profile picture uploaded successfully',
+                'profile_picture_url' => asset('storage/' . $filename),
+                'student' => $student->fresh(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'لم يتم تحديد صورة',
+            'message_en' => 'No photo provided',
+        ], 400);
+    }
+
+    /**
+     * Upload document for a student
+     */
+    public function uploadDocument(Request $request, Student $student): JsonResponse
+    {
+        $request->validate([
+            'document' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240', // 10MB max
+            'document_type' => 'required|in:HIGH_SCHOOL_CERTIFICATE,ID_PASSPORT,PHOTO,OTHER',
+            'title' => 'required|string|max:255',
+        ]);
+
+        if ($request->hasFile('document')) {
+            $file = $request->file('document');
+            $filename = 'documents/' . $student->student_id . '/' . time() . '_' . $file->getClientOriginalName();
+
+            // Store document using public disk
+            \Illuminate\Support\Facades\Storage::disk('public')->putFileAs(dirname($filename), $file, basename($filename));
+
+            // Create document record using StudentDocument model
+            $document = \App\Models\StudentDocument::create([
+                'student_id' => $student->id,
+                'name' => $request->title,
+                'type' => $request->document_type,
+                'file_path' => $filename,
+                'upload_date' => now()->toDateString(),
+                'status' => 'UNDER_REVIEW',
+            ]);
+
+            return response()->json([
+                'message' => 'تم رفع المستند بنجاح',
+                'message_en' => 'Document uploaded successfully',
+                'document' => $document,
+                'file_url' => asset('storage/' . $filename),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'لم يتم تحديد مستند',
+            'message_en' => 'No document provided',
+        ], 400);
+    }
+
+    /**
+     * Get student documents
+     */
+    public function documents(Student $student): JsonResponse
+    {
+        $documents = $student->documents()->orderBy('created_at', 'desc')->get();
+
+        // Add file_url to each document
+        $documents->each(function ($doc) {
+            $doc->file_url = asset('storage/' . $doc->file_path);
+        });
+
+        return response()->json($documents);
+    }
+
+    /**
+     * Delete student document
+     */
+    public function deleteDocument(Student $student, $documentId): JsonResponse
+    {
+        $document = $student->documents()->findOrFail($documentId);
+
+        // Delete file from storage
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($document->file_path)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        return response()->json([
+            'message' => 'تم حذف المستند بنجاح',
+            'message_en' => 'Document deleted successfully',
         ]);
     }
 }

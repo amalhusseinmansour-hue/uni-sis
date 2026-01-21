@@ -124,4 +124,58 @@ export const studentsAPI = {
     const response = await apiClient.get('/my-timetable');
     return response.data;
   },
+
+  // Upload profile picture
+  uploadProfilePicture: async (studentId: string | number, file: File) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    const response = await apiClient.post(`/students/${studentId}/upload-photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Upload document
+  uploadDocument: async (studentId: string | number, file: File, documentType: string, title: string) => {
+    const formData = new FormData();
+    formData.append('document', file);
+    formData.append('document_type', documentType);
+    formData.append('title', title);
+    const response = await apiClient.post(`/students/${studentId}/upload-document`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Delete document
+  deleteDocument: async (studentId: string | number, documentId: number) => {
+    const response = await apiClient.delete(`/students/${studentId}/documents/${documentId}`);
+    return response.data;
+  },
+
+  // Download document
+  downloadDocument: async (filePath: string, fileName: string) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+    const url = `${baseUrl}/storage/${filePath}`;
+
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+    } catch (error) {
+      // Fallback: open in new tab if download fails
+      window.open(url, '_blank');
+    }
+  },
 };

@@ -52,6 +52,17 @@ class MoodleSyncController extends Controller
     }
 
     /**
+     * Get all students from LMS (view only)
+     * GET /api/moodle/students
+     */
+    public function getLmsStudents(): JsonResponse
+    {
+        $result = $this->moodleService->getLmsStudents();
+
+        return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    /**
      * Sync all students to Moodle
      * POST /api/moodle/sync/students
      */
@@ -288,6 +299,77 @@ class MoodleSyncController extends Controller
             'success' => $result['success'],
             'data' => $result,
         ], $result['success'] ? 200 : 400);
+    }
+
+    /**
+     * Import students from LMS (Moodle) to SIS
+     * POST /api/moodle/import/students
+     */
+    public function importStudentsFromLms(): JsonResponse
+    {
+        try {
+            $results = $this->moodleService->importStudentsFromMoodle();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Imported {$results['imported']} students, updated {$results['updated']}, skipped {$results['skipped']}, failed {$results['failed']}",
+                'message_ar' => "تم استيراد {$results['imported']} طالب، تحديث {$results['updated']}، تخطي {$results['skipped']}، فشل {$results['failed']}",
+                'data' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Failed to import students from LMS',
+                'message_ar' => 'فشل استيراد الطلاب من نظام إدارة التعلم',
+            ], 422);
+        }
+    }
+
+    /**
+     * Sync profile pictures from LMS to SIS
+     * POST /api/moodle/sync/profile-pictures
+     */
+    public function syncProfilePictures(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'student_id' => 'nullable|integer|exists:students,id',
+        ]);
+
+        try {
+            if (!empty($validated['student_id'])) {
+                // Sync single student
+                $student = Student::findOrFail($validated['student_id']);
+                $success = $this->moodleService->syncStudentProfilePicture($student);
+
+                return response()->json([
+                    'success' => $success,
+                    'message' => $success
+                        ? 'Profile picture synced successfully'
+                        : 'No profile picture found in LMS',
+                    'message_ar' => $success
+                        ? 'تم مزامنة الصورة الشخصية بنجاح'
+                        : 'لم يتم العثور على صورة شخصية في نظام إدارة التعلم',
+                ]);
+            }
+
+            // Sync all students
+            $results = $this->moodleService->syncProfilePictures();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Synced {$results['success']} profile pictures, {$results['failed']} failed, {$results['skipped']} skipped",
+                'message_ar' => "تم مزامنة {$results['success']} صورة، فشل {$results['failed']}، تم تخطي {$results['skipped']}",
+                'data' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Failed to sync profile pictures',
+                'message_ar' => 'فشل مزامنة الصور الشخصية',
+            ], 422);
+        }
     }
 
     /**

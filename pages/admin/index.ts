@@ -8,3 +8,6 @@ export { default as MenuDashboardManager } from './MenuDashboardManager';
 export { default as UserManagement } from './UserManagement';
 export { default as BrandingSettings } from './BrandingSettings';
 export { default as RolesPermissions } from './RolesPermissions';
+export { default as ProgramsManagement } from './ProgramsManagement';
+export { default as SemesterManagement } from './SemesterManagement';
+export { default as CoursesManagement } from './CoursesManagement';

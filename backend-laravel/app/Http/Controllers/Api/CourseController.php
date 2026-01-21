@@ -11,9 +11,10 @@ class CourseController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $courses = Course::with('department')
+        $courses = Course::with(['department', 'college'])
             ->when($request->active, fn($q) => $q->where('is_active', true))
             ->when($request->department_id, fn($q) => $q->where('department_id', $request->department_id))
+            ->when($request->college_id, fn($q) => $q->where('college_id', $request->college_id))
             ->when($request->search, fn($q) => $q->where(function($query) use ($request) {
                 $query->where('name_en', 'like', "%{$request->search}%")
                     ->orWhere('name_ar', 'like', "%{$request->search}%")
@@ -26,7 +27,7 @@ class CourseController extends Controller
 
     public function show(Course $course): JsonResponse
     {
-        $course->load(['department', 'enrollments.student']);
+        $course->load(['department', 'college', 'enrollments.student']);
 
         return response()->json($course);
     }
@@ -41,13 +42,14 @@ class CourseController extends Controller
             'description_ar' => 'nullable|string',
             'credits' => 'required|integer|min:1|max:6',
             'capacity' => 'required|integer|min:1',
+            'college_id' => 'nullable|exists:colleges,id',
             'department_id' => 'nullable|exists:departments,id',
             'is_active' => 'boolean',
         ]);
 
         $course = Course::create($validated);
 
-        return response()->json($course->load('department'), 201);
+        return response()->json($course->load(['department', 'college']), 201);
     }
 
     public function update(Request $request, Course $course): JsonResponse
@@ -60,13 +62,14 @@ class CourseController extends Controller
             'description_ar' => 'nullable|string',
             'credits' => 'sometimes|integer|min:1|max:6',
             'capacity' => 'sometimes|integer|min:1',
+            'college_id' => 'nullable|exists:colleges,id',
             'department_id' => 'nullable|exists:departments,id',
             'is_active' => 'sometimes|boolean',
         ]);
 
         $course->update($validated);
 
-        return response()->json($course->load('department'));
+        return response()->json($course->load(['department', 'college']));
     }
 
     public function destroy(Course $course): JsonResponse

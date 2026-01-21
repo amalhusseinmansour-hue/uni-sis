@@ -82,4 +82,150 @@ class ProgramController extends Controller
     {
         return response()->json($program->students);
     }
+
+    /**
+     * Get courses for a program grouped by semester
+     */
+    public function courses(Program $program): JsonResponse
+    {
+        $courses = $program->courses()
+            ->select('courses.*')
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'id' => $course->id,
+                    'code' => $course->code,
+                    'name_en' => $course->name_en,
+                    'name_ar' => $course->name_ar,
+                    'credits' => $course->credits,
+                    'semester' => $course->pivot->semester,
+                    'type' => $course->pivot->type,
+                    'is_common' => $course->pivot->is_common,
+                    'order' => $course->pivot->order,
+                ];
+            })->values(); // Ensure proper array indexing for JSON
+
+        // Group by semester with proper array indexing
+        $bySemester = $courses->groupBy('semester')->map(function ($items) {
+            return $items->values();
+        })->sortKeys();
+
+        return response()->json([
+            'program' => [
+                'id' => $program->id,
+                'code' => $program->code,
+                'name_en' => $program->name_en,
+                'name_ar' => $program->name_ar,
+                'type' => $program->type,
+                'total_credits' => $program->total_credits,
+            ],
+            'courses' => $courses,
+            'by_semester' => $bySemester,
+            'total_courses' => $courses->count(),
+            'total_credits' => $courses->sum('credits'),
+        ]);
+    }
+
+    /**
+     * Add a course to a program
+     */
+    public function addCourse(Request $request, Program $program): JsonResponse
+    {
+        $validated = $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'semester' => 'required|integer|min:1|max:12',
+            'type' => 'required|in:REQUIRED,ELECTIVE,UNIVERSITY,COLLEGE,MAJOR',
+            'is_common' => 'boolean',
+            'order' => 'integer|min:0',
+        ]);
+
+        // Check if course already exists in program
+        if ($program->courses()->where('course_id', $validated['course_id'])->exists()) {
+            return response()->json([
+                'error' => 'Course already exists in this program',
+            ], 422);
+        }
+
+        $program->courses()->attach($validated['course_id'], [
+            'semester' => $validated['semester'],
+            'type' => $validated['type'],
+            'is_common' => $validated['is_common'] ?? false,
+            'order' => $validated['order'] ?? 0,
+        ]);
+
+        return response()->json([
+            'message' => 'Course added to program successfully',
+        ], 201);
+    }
+
+    /**
+     * Update a course in a program
+     */
+    public function updateCourse(Request $request, Program $program, int $courseId): JsonResponse
+    {
+        $validated = $request->validate([
+            'semester' => 'sometimes|integer|min:1|max:12',
+            'type' => 'sometimes|in:REQUIRED,ELECTIVE,UNIVERSITY,COLLEGE,MAJOR',
+            'is_common' => 'boolean',
+            'order' => 'integer|min:0',
+        ]);
+
+        $program->courses()->updateExistingPivot($courseId, $validated);
+
+        return response()->json([
+            'message' => 'Course updated successfully',
+        ]);
+    }
+
+    /**
+     * Remove a course from a program
+     */
+    public function removeCourse(Program $program, int $courseId): JsonResponse
+    {
+        $program->courses()->detach($courseId);
+
+        return response()->json([
+            'message' => 'Course removed from program successfully',
+        ]);
+    }
+
+    /**
+     * Add common courses to all bachelor programs
+     */
+    public function addCommonCoursesToBachelor(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'courses' => 'required|array|min:1',
+            'courses.*.course_id' => 'required|exists:courses,id',
+            'courses.*.semester' => 'required|integer|min:1|max:12',
+            'courses.*.type' => 'required|in:REQUIRED,ELECTIVE,UNIVERSITY,COLLEGE,MAJOR',
+            'courses.*.order' => 'integer|min:0',
+        ]);
+
+        $bachelorPrograms = Program::where('type', 'BACHELOR')->get();
+        $addedCount = 0;
+
+        foreach ($bachelorPrograms as $program) {
+            foreach ($validated['courses'] as $courseData) {
+                // Skip if course already exists in program
+                if ($program->courses()->where('course_id', $courseData['course_id'])->exists()) {
+                    continue;
+                }
+
+                $program->courses()->attach($courseData['course_id'], [
+                    'semester' => $courseData['semester'],
+                    'type' => $courseData['type'],
+                    'is_common' => true,
+                    'order' => $courseData['order'] ?? 0,
+                ]);
+                $addedCount++;
+            }
+        }
+
+        return response()->json([
+            'message' => "Common courses added to {$bachelorPrograms->count()} bachelor programs",
+            'programs_count' => $bachelorPrograms->count(),
+            'courses_added' => $addedCount,
+        ]);
+    }
 }

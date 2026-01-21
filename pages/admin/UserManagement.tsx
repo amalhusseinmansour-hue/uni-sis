@@ -99,6 +99,12 @@ const translations = {
   uploadPhoto: { en: 'Upload Photo', ar: 'رفع صورة' },
   changePhoto: { en: 'Change Photo', ar: 'تغيير الصورة' },
   photoHint: { en: 'This photo will be used for the student ID card', ar: 'سيتم استخدام هذه الصورة في البطاقة الجامعية' },
+  selected: { en: 'selected', ar: 'محدد' },
+  bulkDelete: { en: 'Delete Selected', ar: 'حذف المحدد' },
+  bulkDeleteConfirm: { en: 'Are you sure you want to delete the selected users?', ar: 'هل أنت متأكد من حذف المستخدمين المحددين؟' },
+  bulkDeleteSuccess: { en: 'Users deleted successfully', ar: 'تم حذف المستخدمين بنجاح' },
+  selectAll: { en: 'Select All', ar: 'تحديد الكل' },
+  deselectAll: { en: 'Deselect All', ar: 'إلغاء التحديد' },
 };
 
 const t = (key: keyof typeof translations, lang: 'en' | 'ar') => translations[key][lang];
@@ -135,6 +141,9 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
   const [stats, setStats] = useState({ total: 0, byRole: {} as Record<string, number>, byStatus: {} as Record<string, number> });
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -321,6 +330,45 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     setDeleteConfirm(null);
   };
 
+  // Toggle single user selection
+  const toggleUserSelection = (userId: number) => {
+    setSelectedUsers(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // Toggle all users selection
+  const toggleAllSelection = () => {
+    if (selectedUsers.length === filteredUsers.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(filteredUsers.map(u => u.id));
+    }
+  };
+
+  // Bulk delete handler
+  const handleBulkDelete = async () => {
+    if (selectedUsers.length === 0) return;
+
+    setBulkDeleting(true);
+    try {
+      // Delete users one by one
+      for (const userId of selectedUsers) {
+        await usersAPI.delete(userId);
+      }
+      showNotification('success', t('bulkDeleteSuccess', lang));
+      setSelectedUsers([]);
+      loadData();
+    } catch (error) {
+      showNotification('error', 'Error deleting users');
+    } finally {
+      setBulkDeleting(false);
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       email: '',
@@ -465,7 +513,7 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
     <div className="p-6 space-y-6">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 ${lang === 'ar' ? 'start-4' : 'end-4'} z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 ${
+        <div className={`fixed top-4 end-4 z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 ${
           notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {notification.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -483,6 +531,15 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
           <p className="text-gray-600 dark:text-gray-400">{t('subtitle', lang)}</p>
         </div>
         <div className="flex items-center gap-2">
+          {selectedUsers.length > 0 && (
+            <button
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              {t('bulkDelete', lang)} ({selectedUsers.length})
+            </button>
+          )}
           <button
             onClick={exportUsers}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
@@ -537,13 +594,13 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder={t('search', lang)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
+              className="w-full ps-10 pe-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
             />
           </div>
           <select
@@ -580,22 +637,30 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-slate-700">
               <tr>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className="px-4 py-3 w-12">
+                  <input
+                    type="checkbox"
+                    checked={filteredUsers.length > 0 && selectedUsers.length === filteredUsers.length}
+                    onChange={toggleAllSelection}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-600 dark:text-gray-300">
                   {t('email', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-600 dark:text-gray-300">
                   {lang === 'ar' ? 'الاسم' : 'Name'}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-600 dark:text-gray-300">
                   {t('role', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-600 dark:text-gray-300">
                   {t('status', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-600 dark:text-gray-300">
                   {t('createdAt', lang)}
                 </th>
-                <th className={`px-4 py-3 ${lang === 'ar' ? 'text-end' : 'text-start'} text-sm font-medium text-gray-600 dark:text-gray-300`}>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-600 dark:text-gray-300">
                   {t('actions', lang)}
                 </th>
               </tr>
@@ -603,13 +668,21 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
             <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     {t('noUsers', lang)}
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <tr key={user.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${selectedUsers.includes(user.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
@@ -744,12 +817,12 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                     {t('email', lang)} *
                   </label>
                   <div className="relative">
-                    <Mail className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                    <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
+                      className={`w-full ps-10 pe-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                         errors.email ? 'border-red-500' : ''
                       }`}
                     />
@@ -763,20 +836,20 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                   </label>
                   <div className="relative flex gap-2">
                     <div className="relative flex-1">
-                      <Lock className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                      <Lock className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         placeholder={editingUser ? (lang === 'ar' ? 'اتركه فارغاً للإبقاء' : 'Leave empty to keep') : ''}
-                        className={`w-full ${lang === 'ar' ? 'pe-10 ps-10' : 'ps-10 pe-10'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
+                        className={`w-full ps-10 pe-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
                           errors.password ? 'border-red-500' : ''
                         }`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className={`absolute ${lang === 'ar' ? 'start-3' : 'end-3'} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600`}
+                        className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -878,12 +951,12 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                   {t('phone', lang)}
                 </label>
                 <div className="relative">
-                  <Phone className={`absolute ${lang === 'ar' ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400`} />
+                  <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className={`w-full ${lang === 'ar' ? 'pe-10 ps-4' : 'ps-10 pe-4'} py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white`}
+                    className="w-full ps-10 pe-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                   />
                 </div>
               </div>
@@ -1035,6 +1108,55 @@ const UserManagement: React.FC<Props> = ({ lang }) => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {t('save', lang)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('bulkDelete', lang)}
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {t('bulkDeleteConfirm', lang)}
+              <br />
+              <span className="font-semibold text-red-600">
+                {selectedUsers.length} {t('selected', lang)}
+              </span>
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                {t('cancel', lang)}
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {bulkDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {lang === 'ar' ? 'جاري الحذف...' : 'Deleting...'}
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    {t('delete', lang)}
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -14,6 +14,7 @@ class Course extends Model
     use HasFactory;
 
     protected $fillable = [
+        'college_id',
         'department_id',
         'code',
         'name_en',
@@ -34,6 +35,11 @@ class Course extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function college(): BelongsTo
+    {
+        return $this->belongsTo(College::class);
     }
 
     public function department(): BelongsTo
@@ -59,6 +65,16 @@ class Course extends Model
     public function moodleCourse(): HasOne
     {
         return $this->hasOne(MoodleCourse::class);
+    }
+
+    /**
+     * Programs that include this course in their study plan
+     */
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'program_courses')
+            ->withPivot('semester', 'type', 'is_common', 'order')
+            ->withTimestamps();
     }
 
     // Prerequisites: courses that must be taken before this course

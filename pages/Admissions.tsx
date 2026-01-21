@@ -902,15 +902,15 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                           className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                         />
                       </td>
-                      <td className="p-4">
+                      <td className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>
                         <p className="font-medium text-slate-800">{app.fullName || app.full_name}</p>
                         <p className="text-xs text-slate-500">{app.email}</p>
                       </td>
-                      <td className="p-4 text-slate-600 font-mono">{app.passportNumber || app.nationalId || app.national_id || '-'}</td>
-                      <td className="p-4 text-slate-600">{app.degree || '-'}</td>
-                      <td className="p-4 text-slate-600">{app.program?.name_en || app.program?.name_ar || app.programName || app.program_name || '-'}</td>
-                      <td className="p-4 text-slate-500 text-sm">{app.date}</td>
-                      <td className="p-4">
+                      <td className={`p-4 text-slate-600 font-mono ${isRTL ? 'text-end' : 'text-start'}`}>{app.passportNumber || app.nationalId || app.national_id || '-'}</td>
+                      <td className={`p-4 text-slate-600 ${isRTL ? 'text-end' : 'text-start'}`}>{app.degree || '-'}</td>
+                      <td className={`p-4 text-slate-600 ${isRTL ? 'text-end' : 'text-start'}`}>{app.program?.name_en || app.program?.name_ar || app.programName || app.program_name || '-'}</td>
+                      <td className={`p-4 text-slate-500 text-sm ${isRTL ? 'text-end' : 'text-start'}`}>{app.date}</td>
+                      <td className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>
                         <span
                           className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                             app.status === 'APPROVED'
@@ -927,8 +927,8 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                             : t.statusPending[lang]}
                         </span>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
+                      <td className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>
+                        <div className={`flex items-center gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                           <button
                             onClick={() => setShowDetailModal(app)}
                             className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
@@ -967,8 +967,8 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
         {/* Detail Modal */}
         {showDetailModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className={`bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+              <div className={`p-6 border-b border-slate-100 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <h3 className="text-xl font-bold text-slate-800">{t.applicantDetails[lang]}</h3>
                 <button
                   onClick={() => setShowDetailModal(null)}
@@ -1211,8 +1211,8 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                     )
                     .map((student) => (
                       <tr key={student.id} className="hover:bg-slate-50">
-                        <td className="p-4 font-mono text-blue-600 font-medium">{student.student_id}</td>
-                        <td className="p-4">
+                        <td className={`p-4 font-mono text-blue-600 font-medium ${isRTL ? 'text-end' : 'text-start'}`}>{student.student_id}</td>
+                        <td className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>
                           <p className="font-medium text-slate-800">
                             {lang === 'ar' ? (student.name_ar || student.name_en) : (student.name_en || student.name_ar)}
                           </p>
@@ -1220,11 +1220,11 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                             {lang === 'ar' ? student.name_en : student.name_ar}
                           </p>
                         </td>
-                        <td className="p-4 text-slate-600">{student.university_email || student.personal_email || '-'}</td>
-                        <td className="p-4 text-slate-600">
+                        <td className={`p-4 text-slate-600 ${isRTL ? 'text-end' : 'text-start'}`}>{student.university_email || student.personal_email || '-'}</td>
+                        <td className={`p-4 text-slate-600 ${isRTL ? 'text-end' : 'text-start'}`}>
                           {student.program ? (lang === 'ar' ? student.program.name_ar : student.program.name_en) : '-'}
                         </td>
-                        <td className="p-4">
+                        <td className={`p-4 ${isRTL ? 'text-end' : 'text-start'}`}>
                           <span
                             className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                               student.status === 'ACTIVE'
@@ -1239,7 +1239,7 @@ const Admissions: React.FC<AdmissionsProps> = ({ lang }) => {
                             {student.status}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-500 text-sm">
+                        <td className={`p-4 text-slate-500 text-sm ${isRTL ? 'text-end' : 'text-start'}`}>
                           {student.admission_date ? new Date(student.admission_date).toLocaleDateString() : '-'}
                         </td>
                       </tr>

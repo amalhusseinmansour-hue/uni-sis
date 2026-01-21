@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Program extends Model
 {
@@ -24,6 +23,7 @@ class Program extends Model
     ];
 
     protected $fillable = [
+        'college_id',
         'department_id',
         'name_en',
         'name_ar',
@@ -49,16 +49,9 @@ class Program extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function college(): HasOneThrough
+    public function college(): BelongsTo
     {
-        return $this->hasOneThrough(
-            College::class,
-            Department::class,
-            'id',           // Foreign key on departments table
-            'id',           // Foreign key on colleges table
-            'department_id', // Local key on programs table
-            'college_id'    // Local key on departments table
-        );
+        return $this->belongsTo(College::class);
     }
 
     public function students(): HasMany
@@ -74,8 +67,30 @@ class Program extends Model
     public function courses(): BelongsToMany
     {
         return $this->belongsToMany(Course::class, 'program_courses')
-            ->withPivot('semester', 'is_required', 'is_elective')
+            ->withPivot('semester', 'type', 'is_common', 'order')
+            ->orderByPivot('semester')
+            ->orderByPivot('order')
             ->withTimestamps();
+    }
+
+    /**
+     * Get courses grouped by semester
+     */
+    public function getCoursesBySemester(): array
+    {
+        $courses = $this->courses()->get();
+        $bySemester = [];
+
+        foreach ($courses as $course) {
+            $semester = $course->pivot->semester;
+            if (!isset($bySemester[$semester])) {
+                $bySemester[$semester] = [];
+            }
+            $bySemester[$semester][] = $course;
+        }
+
+        ksort($bySemester);
+        return $bySemester;
     }
 
     public function scopeActive($query)

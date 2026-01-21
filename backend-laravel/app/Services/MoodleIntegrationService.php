@@ -773,6 +773,476 @@ class MoodleIntegrationService
     }
 
     // ==========================================
+    // Fetch Students FROM LMS (View Only)
+    // ==========================================
+
+    /**
+     * Fetch all students from Moodle (view only, no import)
+     */
+    public function getLmsStudents(): array
+    {
+        try {
+            // Fetch all users from Moodle
+            $moodleUsers = $this->callMoodleApi('core_user_get_users', [
+                'criteria' => [[
+                    'key' => 'suspended',
+                    'value' => '0',
+                ]],
+            ]);
+
+            $users = $moodleUsers['users'] ?? [];
+            $students = [];
+
+            // List of non-student usernames to exclude
+            $excludedUsernames = ['admin', 'guest', 'system', 'manager', 'teacher', 'instructor', 'lecturer', 'coordinator', 'staff', 'support', 'helpdesk'];
+
+            foreach ($users as $moodleUser) {
+                // Skip admin, guest, manager, and other non-student users
+                if (in_array(strtolower($moodleUser['username'] ?? ''), $excludedUsernames)) {
+                    continue;
+                }
+
+                // Check if already exists in SIS
+                $existsInSis = Student::where('university_email', $moodleUser['email'] ?? '')
+                    ->orWhere('personal_email', $moodleUser['email'] ?? '')
+                    ->orWhere('student_id', $moodleUser['idnumber'] ?? 'NONE')
+                    ->exists();
+
+                $students[] = [
+                    'id' => $moodleUser['id'],
+                    'moodle_id' => $moodleUser['id'],
+                    'student_id' => $moodleUser['idnumber'] ?? null,
+                    'username' => $moodleUser['username'] ?? '',
+                    'name_en' => trim(($moodleUser['firstname'] ?? '') . ' ' . ($moodleUser['lastname'] ?? '')),
+                    'first_name' => $moodleUser['firstname'] ?? '',
+                    'last_name' => $moodleUser['lastname'] ?? '',
+                    'email' => $moodleUser['email'] ?? '',
+                    'country' => $moodleUser['country'] ?? '',
+                    'city' => $moodleUser['city'] ?? '',
+                    'department' => $moodleUser['department'] ?? '',
+                    'profile_url' => $moodleUser['profileimageurl'] ?? null,
+                    'last_access' => isset($moodleUser['lastaccess']) && $moodleUser['lastaccess'] > 0
+                        ? date('Y-m-d H:i:s', $moodleUser['lastaccess'])
+                        : null,
+                    'exists_in_sis' => $existsInSis,
+                    'source' => 'LMS',
+                ];
+            }
+
+            return [
+                'success' => true,
+                'total' => count($students),
+                'students' => $students,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch students from Moodle', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'students' => [],
+            ];
+        }
+    }
+
+    // ==========================================
+    // Import Students FROM LMS to SIS
+    // ==========================================
+
+    /**
+     * Fetch all students from Moodle and import them into SIS
+     */
+    public function importStudentsFromMoodle(): array
+    {
+        $results = ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => [], 'students' => []];
+
+        try {
+            // Fetch all users from Moodle
+            $moodleUsers = $this->callMoodleApi('core_user_get_users', [
+                'criteria' => [[
+                    'key' => 'suspended',
+                    'value' => '0',
+                ]],
+            ]);
+
+            $users = $moodleUsers['users'] ?? [];
+
+            // List of non-student usernames to exclude
+            $excludedUsernames = ['admin', 'guest', 'system', 'manager', 'teacher', 'instructor', 'lecturer', 'coordinator', 'staff', 'support', 'helpdesk'];
+
+            foreach ($users as $moodleUser) {
+                try {
+                    // Skip admin, guest, manager, and other non-student users
+                    if (in_array(strtolower($moodleUser['username'] ?? ''), $excludedUsernames)) {
+                        $results['skipped']++;
+                        continue;
+                    }
+
+                    // Check if student already exists in SIS by email or username
+                    $existingStudent = Student::where('university_email', $moodleUser['email'])
+                        ->orWhere('personal_email', $moodleUser['email'])
+                        ->orWhere('student_id', $moodleUser['idnumber'] ?? null)
+                        ->first();
+
+                    if ($existingStudent) {
+                        // Update existing student if needed
+                        $existingStudent->update([
+                            'name_en' => trim($moodleUser['firstname'] . ' ' . $moodleUser['lastname']),
+                            'first_name_en' => $moodleUser['firstname'],
+                            'last_name_en' => $moodleUser['lastname'],
+                        ]);
+
+                        // Update MoodleUser record
+                        MoodleUser::updateOrCreate(
+                            ['student_id' => $existingStudent->id],
+                            [
+                                'moodle_user_id' => $moodleUser['id'],
+                                'user_type' => MoodleUser::TYPE_STUDENT,
+                                'username' => $moodleUser['username'],
+                                'sync_status' => MoodleUser::STATUS_SYNCED,
+                                'last_synced_at' => now(),
+                            ]
+                        );
+
+                        $results['updated']++;
+                        $results['students'][] = [
+                            'id' => $existingStudent->id,
+                            'student_id' => $existingStudent->student_id,
+                            'name' => $existingStudent->name_en,
+                            'email' => $existingStudent->university_email,
+                            'status' => 'updated',
+                        ];
+                        continue;
+                    }
+
+                    // Create new student
+                    $studentId = $moodleUser['idnumber'] ?: $this->generateStudentId();
+                    $email = $moodleUser['email'];
+
+                    // Create user account
+                    $user = User::create([
+                        'name' => trim($moodleUser['firstname'] . ' ' . $moodleUser['lastname']),
+                        'email' => $email,
+                        'password' => \Illuminate\Support\Facades\Hash::make('LMS' . date('Ymd') . '!'),
+                        'role' => 'STUDENT',
+                    ]);
+
+                    // Create student record
+                    $student = Student::create([
+                        'user_id' => $user->id,
+                        'student_id' => $studentId,
+                        'name_en' => trim($moodleUser['firstname'] . ' ' . $moodleUser['lastname']),
+                        'name_ar' => null,
+                        'first_name_en' => $moodleUser['firstname'],
+                        'last_name_en' => $moodleUser['lastname'],
+                        'university_email' => $email,
+                        'personal_email' => $email,
+                        'status' => 'ACTIVE',
+                        'admission_type' => 'DIRECT',
+                        'admission_date' => now(),
+                        'national_id' => $moodleUser['idnumber'] ?: 'LMS-' . $moodleUser['id'],
+                        'gender' => 'MALE', // Default, can be updated later
+                        'nationality' => $moodleUser['country'] ?? 'Unknown',
+                    ]);
+
+                    // Create MoodleUser record
+                    MoodleUser::create([
+                        'student_id' => $student->id,
+                        'moodle_user_id' => $moodleUser['id'],
+                        'user_type' => MoodleUser::TYPE_STUDENT,
+                        'username' => $moodleUser['username'],
+                        'sync_status' => MoodleUser::STATUS_SYNCED,
+                        'last_synced_at' => now(),
+                    ]);
+
+                    $results['imported']++;
+                    $results['students'][] = [
+                        'id' => $student->id,
+                        'student_id' => $student->student_id,
+                        'name' => $student->name_en,
+                        'email' => $student->university_email,
+                        'status' => 'imported',
+                    ];
+
+                    MoodleSyncLog::logSuccess(
+                        $student,
+                        MoodleSyncLog::TYPE_USER,
+                        MoodleSyncLog::DIRECTION_FROM_MOODLE,
+                        $moodleUser
+                    );
+
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = [
+                        'moodle_user_id' => $moodleUser['id'],
+                        'username' => $moodleUser['username'],
+                        'error' => $e->getMessage(),
+                    ];
+
+                    Log::error('Failed to import student from Moodle', [
+                        'moodle_user' => $moodleUser,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch users from Moodle', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Generate a unique student ID
+     */
+    protected function generateStudentId(): string
+    {
+        $year = date('Y');
+        $lastStudent = Student::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
+        $sequence = $lastStudent ? ((int)substr($lastStudent->student_id ?? '0', -4) + 1) : 1;
+        return $year . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+    }
+
+    // ==========================================
+    // Profile Pictures Sync (LMS → SIS)
+    // ==========================================
+
+    /**
+     * Sync profile pictures from Moodle to SIS for all students
+     */
+    public function syncProfilePictures(): array
+    {
+        $results = ['success' => 0, 'failed' => 0, 'skipped' => 0, 'errors' => []];
+
+        try {
+            // Get all students from LMS
+            $lmsData = $this->getLmsStudents();
+
+            if (!$lmsData['success']) {
+                throw new \Exception($lmsData['error'] ?? 'Failed to fetch LMS students');
+            }
+
+            foreach ($lmsData['students'] as $lmsStudent) {
+                try {
+                    // Skip if no profile image URL
+                    if (empty($lmsStudent['profile_url'])) {
+                        $results['skipped']++;
+                        continue;
+                    }
+
+                    // Skip default Moodle avatar (theme/image.php is the default, pluginfile.php is uploaded)
+                    if (str_contains($lmsStudent['profile_url'], 'theme/image.php')) {
+                        $results['skipped']++;
+                        continue;
+                    }
+
+                    // Find student in SIS by email or student_id
+                    $student = Student::where('university_email', $lmsStudent['email'])
+                        ->orWhere('personal_email', $lmsStudent['email'])
+                        ->orWhere('student_id', $lmsStudent['student_id'] ?? 'NONE')
+                        ->first();
+
+                    if (!$student) {
+                        $results['skipped']++;
+                        continue;
+                    }
+
+                    // Download and save profile picture
+                    $saved = $this->downloadAndSaveProfilePicture($student, $lmsStudent['profile_url']);
+
+                    if ($saved) {
+                        $results['success']++;
+                    } else {
+                        $results['failed']++;
+                    }
+
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = [
+                        'student' => $lmsStudent['email'] ?? $lmsStudent['username'],
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to sync profile pictures', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Sync profile picture for a single student by their email or student_id
+     */
+    public function syncStudentProfilePicture(Student $student): bool
+    {
+        try {
+            // Find student in Moodle
+            $moodleUser = $this->findMoodleUserByEmail($student->university_email ?? $student->personal_email);
+
+            if (!$moodleUser || empty($moodleUser['profileimageurl'])) {
+                return false;
+            }
+
+            // Skip default avatar (theme/image.php is the default, pluginfile.php is uploaded)
+            if (str_contains($moodleUser['profileimageurl'], 'theme/image.php')) {
+                return false;
+            }
+
+            return $this->downloadAndSaveProfilePicture($student, $moodleUser['profileimageurl']);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to sync profile picture for student', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Download profile picture from URL and save it locally
+     */
+    protected function downloadAndSaveProfilePicture(Student $student, string $imageUrl): bool
+    {
+        try {
+            // Remove any existing token from URL and add our token
+            $cleanUrl = preg_replace('/[?&]token=[^&]*/', '', $imageUrl);
+
+            // Try to get larger version (f3 = full size, f2 = medium, f1 = small)
+            // Replace f1 with f3 in the URL for full-size image
+            $largeImageUrl = str_replace('/f1', '/f3', $cleanUrl);
+
+            // Add token for authentication
+            $separator = str_contains($largeImageUrl, '?') ? '&' : '?';
+            $largeImageUrl .= $separator . 'token=' . $this->token;
+
+            Log::info('Attempting to download profile picture', [
+                'student_id' => $student->id,
+                'original_url' => $imageUrl,
+                'download_url' => $largeImageUrl,
+            ]);
+
+            // Download the large image first
+            $response = Http::timeout(30)->get($largeImageUrl);
+
+            // If large image fails or is too small, try f2 (medium)
+            if (!$response->successful() || strlen($response->body()) < 1500) {
+                $mediumImageUrl = str_replace('/f1', '/f2', $cleanUrl);
+                $separator = str_contains($mediumImageUrl, '?') ? '&' : '?';
+                $mediumImageUrl .= $separator . 'token=' . $this->token;
+
+                Log::info('Trying medium size image', ['url' => $mediumImageUrl]);
+                $response = Http::timeout(30)->get($mediumImageUrl);
+            }
+
+            // If medium fails, try original URL with token
+            if (!$response->successful() || strlen($response->body()) < 1500) {
+                $separator = str_contains($cleanUrl, '?') ? '&' : '?';
+                $originalWithToken = $cleanUrl . $separator . 'token=' . $this->token;
+
+                Log::info('Trying original size image', ['url' => $originalWithToken]);
+                $response = Http::timeout(30)->get($originalWithToken);
+            }
+
+            if (!$response->successful()) {
+                Log::warning('Failed to download profile picture - HTTP error', [
+                    'student_id' => $student->id,
+                    'status' => $response->status(),
+                ]);
+                return false;
+            }
+
+            // Check if response is actually an image (not HTML login page)
+            $contentType = $response->header('Content-Type');
+            if ($contentType && !str_contains($contentType, 'image/')) {
+                Log::warning('Profile picture URL returned non-image content', [
+                    'student_id' => $student->id,
+                    'content_type' => $contentType,
+                    'body_preview' => substr($response->body(), 0, 200),
+                ]);
+                return false;
+            }
+
+            $imageContent = $response->body();
+
+            // Additional check: if size is too small, it's likely a default avatar
+            // Moodle profile pictures are typically 2-3KB for uploaded images
+            if (strlen($imageContent) < 1500) {
+                Log::warning('Profile picture is too small, likely default avatar', [
+                    'student_id' => $student->id,
+                    'size' => strlen($imageContent),
+                ]);
+                return false;
+            }
+
+            // Detect image type
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->buffer($imageContent);
+
+            $extension = match($mimeType) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/gif' => 'gif',
+                'image/webp' => 'webp',
+                default => 'jpg',
+            };
+
+            // Generate filename
+            $filename = 'profile_pictures/' . $student->student_id . '_' . time() . '.' . $extension;
+
+            // Save to storage
+            \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $imageContent);
+
+            // Delete old profile picture if exists
+            if ($student->profile_picture && \Illuminate\Support\Facades\Storage::disk('public')->exists($student->profile_picture)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($student->profile_picture);
+            }
+
+            // Update student record
+            $student->update(['profile_picture' => $filename]);
+
+            Log::info('Profile picture synced from LMS', [
+                'student_id' => $student->id,
+                'filename' => $filename,
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to download profile picture', [
+                'student_id' => $student->id,
+                'url' => $imageUrl,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Find Moodle user by email
+     */
+    protected function findMoodleUserByEmail(string $email): ?array
+    {
+        try {
+            $response = $this->callMoodleApi('core_user_get_users', [
+                'criteria' => [[
+                    'key' => 'email',
+                    'value' => $email,
+                ]],
+            ]);
+
+            return $response['users'][0] ?? null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    // ==========================================
     // Sync Statistics
     // ==========================================
 

@@ -1,6 +1,6 @@
-const CACHE_NAME = 'vertex-sis-v7';
-const STATIC_CACHE = 'vertex-static-v7';
-const DYNAMIC_CACHE = 'vertex-dynamic-v7';
+const CACHE_NAME = 'vertex-sis-v9';
+const STATIC_CACHE = 'vertex-static-v9';
+const DYNAMIC_CACHE = 'vertex-dynamic-v9';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
