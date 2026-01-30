@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import custom styles from public folder */
+@import url('/index.css');
+
+/* Additional Tailwind layer customizations */
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+    transition: direction 0.3s ease;
+  }
+
+  /* Apply Cairo font when RTL */
+  [dir="rtl"] body,
+  [dir="rtl"] * {
+    font-family: 'Cairo', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* RTL-specific adjustments */
+  [dir="rtl"] .text-left {
+    text-align: right;
+  }
+  [dir="rtl"] .text-right {
+    text-align: left;
+  }
+
+  /* Smooth transitions for RTL/LTR switch */
+  .transition-rtl {
+    transition-property: margin, padding, border, transform;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-out;
+  }
+
+  /* Animation for language switch */
+  .animate-fade-slide {
+    animation: fadeSlide 0.2s ease-out;
+  }
+
+  @keyframes fadeSlide {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Shrink width animation for notification toast */
+  .animate-shrink-width {
+    animation: shrinkWidth linear forwards;
+  }
+
+  @keyframes shrinkWidth {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+}

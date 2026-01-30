@@ -1,0 +1,66 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Compressed files
+*.tar.gz
+*.zip
+*.rar
+
+# Private keys
+*.pem
+*.ppk
+id_rsa*
+
+# Claude local files
+.claude/
+
+# Temporary files
+nul
+*.tmp
+*.temp
+
+# Backend Laravel specific
+backend-laravel/vendor/
+backend-laravel/node_modules/
+backend-laravel/.env
+backend-laravel/storage/*.key
+backend-laravel/storage/logs/*
+backend-laravel/bootstrap/cache/*
+
+# Windows specific
+C:*
+Thumbs.db
+
+# Deployment scripts with credentials
+deploy.js
+clear-cache.js
+check-server.js
+security-test.js
+*.output

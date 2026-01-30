@@ -1,0 +1,28 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Route /api requests to Laravel backend via Alias
+RewriteCond %{REQUEST_URI} ^/api
+RewriteRule ^(.*)$ /home/vertexun/sis-backend/public/index.php [L,QSA]
+
+# Handle Authorization Header
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Redirect Trailing Slashes If Not A Folder
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} (.+)/$
+RewriteRule ^ %1 [L,R=301]
+
+# Send Requests To Front Controller (SPA) - except /api
+RewriteCond %{REQUEST_URI} !^/api
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.html [L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

@@ -1,0 +1,29 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Force index.html as default (not index.php)
+    DirectoryIndex index.html
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # API requests go to Laravel backend
+    RewriteCond %{REQUEST_URI} ^/api
+    RewriteRule ^ index.php [L]
+
+    # Serve static files directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Serve directories
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # SPA fallback - all other routes to index.html
+    RewriteRule ^ index.html [L]
+</IfModule>
