@@ -491,25 +491,40 @@ class MoodleIntegrationService
         $results = ['success' => 0, 'failed' => 0, 'errors' => []];
 
         try {
-            $grades = $this->callMoodleApi('gradereport_user_get_grade_items', [
-                'courseid' => $moodleCourseId,
-            ]);
+            // First, get all enrolled users in this course
+            $enrolledUsers = $this->getEnrolledUsersInCourse($moodleCourseId);
 
-            foreach ($grades['usergrades'] ?? [] as $userGrade) {
+            foreach ($enrolledUsers as $user) {
                 try {
-                    $this->processGradeWebhook([
-                        'user_id' => $userGrade['userid'],
-                        'course_id' => $moodleCourseId,
-                        'grade' => $userGrade['gradeitems'][0]['graderaw'] ?? null,
-                        'grade_max' => $userGrade['gradeitems'][0]['grademax'] ?? 100,
-                        'status' => $this->determineMoodleStatus($userGrade),
-                        'grade_items' => $userGrade['gradeitems'] ?? null,
+                    // Use gradereport_overview_get_course_grades for each user
+                    $gradesResponse = $this->callMoodleApi('gradereport_overview_get_course_grades', [
+                        'userid' => $user['id'],
                     ]);
-                    $results['success']++;
+
+                    // Find the grade for this specific course
+                    $courseGrade = null;
+                    foreach ($gradesResponse['grades'] ?? [] as $grade) {
+                        if (($grade['courseid'] ?? null) == $moodleCourseId) {
+                            $courseGrade = $grade;
+                            break;
+                        }
+                    }
+
+                    if ($courseGrade) {
+                        $this->processGradeWebhook([
+                            'user_id' => $user['id'],
+                            'course_id' => $moodleCourseId,
+                            'grade' => $courseGrade['grade'] ?? null,
+                            'grade_max' => 100,
+                            'status' => $this->determineGradeStatus($courseGrade),
+                            'grade_items' => null,
+                        ]);
+                        $results['success']++;
+                    }
                 } catch (\Exception $e) {
                     $results['failed']++;
                     $results['errors'][] = [
-                        'user_id' => $userGrade['userid'],
+                        'user_id' => $user['id'],
                         'error' => $e->getMessage(),
                     ];
                 }
@@ -523,6 +538,69 @@ class MoodleIntegrationService
         }
 
         return $results;
+    }
+
+    /**
+     * Get enrolled users in a Moodle course
+     */
+    protected function getEnrolledUsersInCourse(int $courseId): array
+    {
+        try {
+            // Get all users and filter by course enrollment
+            $courses = $this->callMoodleApi('core_course_get_courses', []);
+            $users = [];
+
+            // Get users enrolled in this course by checking their courses
+            $allUsers = $this->callMoodleApi('core_user_get_users', [
+                'criteria' => [[
+                    'key' => 'suspended',
+                    'value' => '0',
+                ]],
+            ]);
+
+            foreach ($allUsers['users'] ?? [] as $user) {
+                // Skip admin/system users
+                if (in_array(strtolower($user['username'] ?? ''), ['admin', 'guest', 'system'])) {
+                    continue;
+                }
+
+                // Check if user is enrolled in this course
+                $userCourses = $this->callMoodleApi('core_enrol_get_users_courses', [
+                    'userid' => $user['id'],
+                ]);
+
+                foreach ($userCourses as $course) {
+                    if ($course['id'] == $courseId) {
+                        $users[] = $user;
+                        break;
+                    }
+                }
+            }
+
+            return $users;
+        } catch (\Exception $e) {
+            Log::error('Failed to get enrolled users', ['course_id' => $courseId, 'error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Determine grade status from overview grade data
+     */
+    protected function determineGradeStatus(array $gradeData): string
+    {
+        $grade = $gradeData['grade'] ?? null;
+
+        if ($grade === null || $grade === '-') {
+            return 'in_progress';
+        }
+
+        // Parse percentage if it's a string like "85.00 %"
+        if (is_string($grade)) {
+            $grade = (float) str_replace(['%', ' '], '', $grade);
+        }
+
+        return $grade >= 50 ? 'completed' : 'failed';
     }
 
     /**
