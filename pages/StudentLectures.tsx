@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../hooks/useToast';
+import apiClient from '../api/client';
 import {
   Calendar,
   Clock,
@@ -72,7 +73,7 @@ interface AttendanceRecord {
   lecture?: Lecture;
 }
 
-const API_BASE = '/api';
+// Using apiClient for proper API URL
 
 interface StudentLecturesProps {
   lang: 'en' | 'ar';
@@ -151,37 +152,21 @@ const StudentLectures: React.FC<StudentLecturesProps> = ({ lang }) => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('auth_token');
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
-
       // Fetch today's lectures
-      const todayParams = new URLSearchParams();
-      if (selectedCourse) todayParams.append('course_id', selectedCourse.toString());
-      const todayResponse = await fetch(`${API_BASE}/lectures/today?${todayParams}`, { headers });
-      if (todayResponse.ok) {
-        const data = await todayResponse.json();
-        setTodayLectures(data);
-      }
+      const todayParams: Record<string, string> = {};
+      if (selectedCourse) todayParams.course_id = selectedCourse.toString();
+      const todayResponse = await apiClient.get('/lectures/today', { params: todayParams });
+      setTodayLectures(todayResponse.data || []);
 
       // Fetch upcoming lectures
-      const upcomingParams = new URLSearchParams();
-      upcomingParams.append('limit', '10');
-      if (selectedCourse) upcomingParams.append('course_id', selectedCourse.toString());
-      const upcomingResponse = await fetch(`${API_BASE}/lectures/upcoming?${upcomingParams}`, { headers });
-      if (upcomingResponse.ok) {
-        const data = await upcomingResponse.json();
-        setUpcomingLectures(data);
-      }
+      const upcomingParams: Record<string, string> = { limit: '10' };
+      if (selectedCourse) upcomingParams.course_id = selectedCourse.toString();
+      const upcomingResponse = await apiClient.get('/lectures/upcoming', { params: upcomingParams });
+      setUpcomingLectures(upcomingResponse.data || []);
 
       // Fetch my attendance
-      const attendanceResponse = await fetch(`${API_BASE}/my-attendance?per_page=20`, { headers });
-      if (attendanceResponse.ok) {
-        const data = await attendanceResponse.json();
-        setMyAttendance(data.attendance?.data || data.attendance || []);
-      }
+      const attendanceResponse = await apiClient.get('/my-attendance', { params: { per_page: 20 } });
+      setMyAttendance(attendanceResponse.data?.attendance?.data || attendanceResponse.data?.attendance || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -191,18 +176,10 @@ const StudentLectures: React.FC<StudentLecturesProps> = ({ lang }) => {
 
   const fetchCourses = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/my-enrollments`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const enrolledCourses = (data.data || data || []).map((e: any) => e.course).filter(Boolean);
-        setCourses(enrolledCourses);
-      }
+      const response = await apiClient.get('/my-enrollments');
+      const data = response.data;
+      const enrolledCourses = (data.data || data || []).map((e: any) => e.course).filter(Boolean);
+      setCourses(enrolledCourses);
     } catch {
       // Courses fetch failed - handled gracefully
     }
@@ -211,17 +188,8 @@ const StudentLectures: React.FC<StudentLecturesProps> = ({ lang }) => {
   const fetchLectureMaterials = async (lectureId: number) => {
     setMaterialsLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/lectures/${lectureId}/materials`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setLectureMaterials(data);
-      }
+      const response = await apiClient.get(`/lectures/${lectureId}/materials`);
+      setLectureMaterials(response.data || []);
     } catch {
       // Materials fetch failed - handled gracefully
     } finally {
@@ -231,22 +199,12 @@ const StudentLectures: React.FC<StudentLecturesProps> = ({ lang }) => {
 
   const handleCheckIn = async (lectureId: number) => {
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/lectures/${lectureId}/check-in`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to check in');
-      }
+      await apiClient.post(`/lectures/${lectureId}/check-in`);
       toast.success(language === 'ar' ? 'تم تسجيل حضورك بنجاح!' : 'Check-in successful!');
       fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+    } catch (err: any) {
+      const message = err.response?.data?.message || err.message || 'An error occurred';
+      setError(message);
     }
   };
 

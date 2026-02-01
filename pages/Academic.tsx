@@ -137,11 +137,18 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
 
           // Fetch study plan if student has a program
           const studentData = profile.student || profile;
-          if (studentData.program_id) {
+          const programId = studentData.program_id || studentData.program?.id;
+          if (programId) {
             setStudyPlanLoading(true);
             try {
-              const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000';
-              const response = await fetch(`${baseUrl}/programs-courses-public.php?program_id=${studentData.program_id}`);
+              const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+              const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+              const response = await fetch(`${baseUrl}/programs-courses.php?program_id=${programId}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
               const data = await response.json();
               if (data.success) {
                 // Store program info
@@ -182,8 +189,14 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
 
           // Fetch current semester from admin module
           try {
-            const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000';
-            const semestersResponse = await fetch(`${baseUrl}/semesters-public.php`);
+            const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+            const semestersResponse = await fetch(`${baseUrl}/semesters.php`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
             const semestersData = await semestersResponse.json();
             if (semestersData.success && semestersData.semesters) {
               // Filter to only the current semester (is_current = true)
@@ -549,6 +562,79 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
               </Card>
             ));
           })()}
+
+          {/* LMS Enrolled Courses Section */}
+          {lmsCourses.length > 0 && (
+            <Card>
+              <CardHeader
+                title={lang === 'ar' ? 'المساقات المسجلة في نظام إدارة التعلم (LMS)' : 'LMS Enrolled Courses'}
+                subtitle={coursesSource === 'LMS' ? (lang === 'ar' ? 'من منصة موودل' : 'From Moodle Platform') : ''}
+                icon={BookOpen}
+                iconColor="text-green-600 bg-green-50"
+              />
+              <CardBody noPadding>
+                {lmsCoursesLoading ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-slate-500">{lang === 'ar' ? 'جاري تحميل المساقات...' : 'Loading courses...'}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5">
+                    {lmsCourses.map((course, idx) => (
+                      <div
+                        key={course.moodle_course_id || idx}
+                        className="bg-gradient-to-br from-green-50 to-white p-4 rounded-xl border border-green-200 hover:border-green-400 hover:shadow-md transition-all group"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <Badge variant="success">{course.course_code || course.shortname}</Badge>
+                          <Badge variant="default">{course.credits || 3} {t.cr[lang]}</Badge>
+                        </div>
+                        <h3 className="font-bold text-slate-800 mb-2 group-hover:text-green-600 transition-colors">
+                          {lang === 'en' ? (course.course_name_en || course.fullname) : (course.course_name_ar || course.fullname)}
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          {course.semester_name && (
+                            <div className="flex items-center gap-2 text-slate-500">
+                              <Calendar className="w-4 h-4" />
+                              <span>{course.semester_name} {course.academic_year || ''}</span>
+                            </div>
+                          )}
+                          {course.startdate && (
+                            <div className="flex items-center gap-2 text-slate-500">
+                              <Clock className="w-4 h-4" />
+                              <span>
+                                {lang === 'ar' ? 'بداية: ' : 'Start: '}
+                                {new Date(course.startdate).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-green-100 flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <div className={`w-2 h-2 rounded-full ${course.completed ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                            <span className={`text-xs font-medium ${course.completed ? 'text-green-600' : 'text-blue-600'}`}>
+                              {course.completed ? (lang === 'ar' ? 'مكتمل' : 'Completed') : (lang === 'ar' ? 'قيد الدراسة' : 'In Progress')}
+                            </span>
+                          </div>
+                          {course.progress !== null && course.progress !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-green-500 rounded-full transition-all"
+                                  style={{ width: `${course.progress}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-medium text-green-600">{course.progress}%</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          )}
         </div>
       )}
 
@@ -988,7 +1074,7 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
           )}
 
           {/* No Program Assigned Message */}
-          {!studyPlanLoading && !student?.program_id && (
+          {!studyPlanLoading && !(student?.program_id || student?.program?.id) && (
             <Card className="border-amber-200 bg-amber-50">
               <CardBody>
                 <div className="text-center py-8">
@@ -1007,7 +1093,7 @@ const Academic: React.FC<AcademicProps> = ({ lang }) => {
           )}
 
           {/* No Courses in Study Plan Message */}
-          {!studyPlanLoading && student?.program_id && studyPlan.length === 0 && (
+          {!studyPlanLoading && (student?.program_id || student?.program?.id) && studyPlan.length === 0 && (
             <Card className="border-blue-200 bg-blue-50">
               <CardBody>
                 <div className="text-center py-8">

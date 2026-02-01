@@ -555,6 +555,125 @@ class StudentController extends Controller
     }
 
     /**
+     * Update student's own profile (personal data only)
+     * Students can only update their own personal information
+     * Academic/financial/system fields are protected
+     */
+    public function updateMyProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'STUDENT') {
+            return response()->json([
+                'message' => 'هذه الخدمة متاحة للطلاب فقط',
+                'message_en' => 'This service is only available for students',
+            ], 403);
+        }
+
+        $student = $user->student;
+
+        if (!$student) {
+            return response()->json([
+                'message' => 'لم يتم العثور على ملف الطالب',
+                'message_en' => 'Student profile not found',
+            ], 404);
+        }
+
+        // Only allow personal data fields - NOT academic/financial/system fields
+        $validated = $request->validate([
+            // Contact Information
+            'phone' => 'sometimes|nullable|string|max:20',
+            'alternative_phone' => 'sometimes|nullable|string|max:20',
+            'landline_phone' => 'sometimes|nullable|string|max:20',
+            'personal_email' => 'sometimes|nullable|email|max:255',
+            'linkedin_profile' => 'sometimes|nullable|string|max:255',
+            'telegram_username' => 'sometimes|nullable|string|max:100',
+
+            // Personal Details
+            'marital_status' => 'sometimes|nullable|in:SINGLE,MARRIED,DIVORCED,WIDOWED',
+            'religion' => 'sometimes|nullable|string|max:50',
+            'primary_language' => 'sometimes|nullable|string|max:50',
+
+            // Current Address
+            'current_address_country' => 'sometimes|nullable|string|max:100',
+            'current_address_region' => 'sometimes|nullable|string|max:100',
+            'current_address_city' => 'sometimes|nullable|string|max:100',
+            'current_address_street' => 'sometimes|nullable|string|max:255',
+            'current_address_neighborhood' => 'sometimes|nullable|string|max:100',
+            'current_address_description' => 'sometimes|nullable|string|max:500',
+            'current_postal_code' => 'sometimes|nullable|string|max:20',
+
+            // Permanent Address
+            'address_country' => 'sometimes|nullable|string|max:100',
+            'address_region' => 'sometimes|nullable|string|max:100',
+            'address_city' => 'sometimes|nullable|string|max:100',
+            'address_street' => 'sometimes|nullable|string|max:255',
+            'address_neighborhood' => 'sometimes|nullable|string|max:100',
+            'address_description' => 'sometimes|nullable|string|max:500',
+            'postal_code' => 'sometimes|nullable|string|max:20',
+
+            // Guardian Information
+            'guardian_name' => 'sometimes|nullable|string|max:255',
+            'guardian_relationship' => 'sometimes|nullable|in:FATHER,MOTHER,BROTHER,SISTER,SPOUSE,GUARDIAN,OTHER',
+            'guardian_phone' => 'sometimes|nullable|string|max:20',
+            'guardian_alternative_phone' => 'sometimes|nullable|string|max:20',
+            'guardian_email' => 'sometimes|nullable|email|max:255',
+            'guardian_address' => 'sometimes|nullable|string|max:500',
+            'guardian_occupation' => 'sometimes|nullable|string|max:100',
+            'guardian_workplace' => 'sometimes|nullable|string|max:255',
+            'mother_name' => 'sometimes|nullable|string|max:255',
+            'mother_phone' => 'sometimes|nullable|string|max:20',
+
+            // Emergency Contacts
+            'emergency_name' => 'sometimes|nullable|string|max:255',
+            'emergency_phone' => 'sometimes|nullable|string|max:20',
+            'emergency_relationship' => 'sometimes|nullable|string|max:100',
+            'emergency_notes' => 'sometimes|nullable|string|max:500',
+            'emergency2_name' => 'sometimes|nullable|string|max:255',
+            'emergency2_phone' => 'sometimes|nullable|string|max:20',
+            'emergency2_relationship' => 'sometimes|nullable|string|max:100',
+            'emergency2_notes' => 'sometimes|nullable|string|max:500',
+        ]);
+
+        // Update only the validated personal data fields
+        $student->update($validated);
+
+        return response()->json([
+            'message' => 'تم تحديث البيانات الشخصية بنجاح',
+            'message_en' => 'Personal information updated successfully',
+            'student' => $student->fresh(['user', 'program']),
+        ]);
+    }
+
+    /**
+     * Get student's own profile data
+     */
+    public function getMyProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'STUDENT') {
+            return response()->json([
+                'message' => 'هذه الخدمة متاحة للطلاب فقط',
+                'message_en' => 'This service is only available for students',
+            ], 403);
+        }
+
+        $student = $user->student;
+
+        if (!$student) {
+            return response()->json([
+                'message' => 'لم يتم العثور على ملف الطالب',
+                'message_en' => 'Student profile not found',
+            ], 404);
+        }
+
+        $student->load(['user', 'program.college', 'program.department', 'advisor']);
+
+        return response()->json($student);
+    }
+
+    /**
      * Delete student document
      * SECURITY: Only admin can delete documents
      */

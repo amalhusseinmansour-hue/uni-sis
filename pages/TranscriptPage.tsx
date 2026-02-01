@@ -315,10 +315,10 @@ const TranscriptPage: React.FC<TranscriptPageProps> = ({ lang, role }) => {
               name_en: studentData.program?.name_en || apiData.program?.name_en || studentData.program_name || '',
               name_ar: studentData.program?.name_ar || apiData.program?.name_ar || studentData.program_name_ar || '',
               degree: studentData.program?.degree || apiData.program?.degree || studentData.degree || 'Bachelor',
-              department: studentData.department?.name_en || apiData.department?.name_en || studentData.department_name || '',
-              department_ar: studentData.department?.name_ar || apiData.department?.name_ar || studentData.department_name_ar || '',
-              college: studentData.college?.name_en || studentData.faculty?.name_en || apiData.college?.name_en || studentData.college_name || '',
-              college_ar: studentData.college?.name_ar || studentData.faculty?.name_ar || apiData.college?.name_ar || studentData.college_name_ar || '',
+              department: studentData.program?.department?.nameEn || studentData.program?.department?.name_en || studentData.department?.name_en || apiData.department?.name_en || studentData.department_name || studentData.department || '',
+              department_ar: studentData.program?.department?.nameAr || studentData.program?.department?.name_ar || studentData.department?.name_ar || apiData.department?.name_ar || studentData.department_name_ar || '',
+              college: studentData.program?.department?.college?.nameEn || studentData.program?.department?.college?.name_en || studentData.college?.name_en || studentData.faculty?.name_en || apiData.college?.name_en || studentData.college_name || studentData.college || '',
+              college_ar: studentData.program?.department?.college?.nameAr || studentData.program?.department?.college?.name_ar || studentData.college?.name_ar || studentData.faculty?.name_ar || apiData.college?.name_ar || studentData.college_name_ar || '',
             },
             semesters: semestersArray.map((sem: any) => {
               const semesterInfo = sem.semester || sem;

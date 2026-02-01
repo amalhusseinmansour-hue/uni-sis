@@ -266,6 +266,7 @@ class AuthController extends Controller
                         'guardianEmail' => $student->guardian_email,
 
                         // Academic Data
+                        'program_id' => $student->program_id,
                         'status' => $student->status,
                         'level' => $student->level,
                         'currentSemester' => $student->current_semester,

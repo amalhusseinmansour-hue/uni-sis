@@ -27,12 +27,30 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Handle response errors - suppress all console logging
+// Handle response errors - redirect to login on 401 only if no valid token exists
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Don't auto-logout on any error - let the app handle it gracefully
-    // All console logging is suppressed to keep console clean
+    // Only redirect to login on 401 if user is not on login page already
+    // Don't clear storage - let the app handle re-authentication
+    if (error.response?.status === 401) {
+      const currentPath = window.location.hash || '';
+      const isOnLoginPage = currentPath.includes('login');
+      const hasToken = !!(sessionStorage.getItem('token') || localStorage.getItem('token'));
+
+      // Only redirect if not already on login page and there's no token
+      // If there IS a token but we got 401, the token might be expired - clear it
+      if (!isOnLoginPage) {
+        if (hasToken) {
+          // Token exists but is invalid/expired - clear and redirect
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+        window.location.href = '/#/login';
+      }
+    }
     return Promise.reject(error);
   }
 );

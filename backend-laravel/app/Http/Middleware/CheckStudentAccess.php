@@ -31,14 +31,19 @@ class CheckStudentAccess
         // Students can only access their own data
         if ($user->role === 'STUDENT') {
             // Get the student_id from the route parameter
-            $studentId = $request->route('student');
+            $routeStudent = $request->route('student');
 
             // If there's a student_id in the route, check if it matches the user's student
-            if ($studentId) {
+            if ($routeStudent) {
                 $student = $user->student;
 
+                // Handle both route model binding (Student object) and raw ID
+                $requestedStudentId = $routeStudent instanceof \App\Models\Student
+                    ? $routeStudent->id
+                    : (int)$routeStudent;
+
                 // SECURITY: Use strict integer comparison to prevent type juggling
-                if (!$student || (int)$student->id !== (int)$studentId) {
+                if (!$student || (int)$student->id !== $requestedStudentId) {
                     return response()->json([
                         'message' => 'Unauthorized. You can only access your own data.'
                     ], 403);

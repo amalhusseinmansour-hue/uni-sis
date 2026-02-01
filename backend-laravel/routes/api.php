@@ -807,6 +807,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // Student timetable
         Route::get('/my-timetable', [ScheduleController::class, 'studentTimetable']);
 
+        // Student self-update profile (personal data only)
+        Route::get('/my-student-profile', [StudentController::class, 'getMyProfile']);
+        Route::put('/my-student-profile', [StudentController::class, 'updateMyProfile']);
+
         // Student reports (own reports)
         Route::get('/my-transcript', function (Request $request) {
             $student = $request->user()->student;
@@ -970,6 +974,126 @@ Route::middleware('auth:sanctum')->group(function () {
                 return response()->json(['message' => 'Student profile not found'], 404);
             }
             return app(ReportController::class)->academicSummary($student);
+        });
+
+        // Get student's exams based on enrolled courses
+        Route::get('/my-exams', function (Request $request) {
+            $student = $request->user()->student;
+            if (!$student) {
+                return response()->json(['message' => 'Student profile not found'], 404);
+            }
+
+            // Get student's enrolled course names
+            $enrolledCourses = \App\Models\Enrollment::where('student_id', $student->id)
+                ->where('status', 'ENROLLED')
+                ->with('course')
+                ->get()
+                ->pluck('course')
+                ->filter();
+
+            $courseNames = $enrolledCourses->map(function($course) {
+                return [
+                    'name_en' => $course->name_en,
+                    'name_ar' => $course->name_ar,
+                    'code' => $course->code,
+                ];
+            })->toArray();
+
+            // Get current semester
+            $semester = \App\Models\Semester::where('is_current', true)->first();
+
+            // Get all exams for the current semester
+            $examsQuery = \App\Models\AcademicEvent::where('type', 'EXAM')
+                ->where('is_published', true);
+
+            if ($semester) {
+                $examsQuery->where('semester_id', $semester->id);
+            }
+
+            $allExams = $examsQuery->orderBy('start_date')->get();
+
+            // Filter exams that match student's enrolled courses
+            $studentExams = $allExams->filter(function($exam) use ($courseNames) {
+                foreach ($courseNames as $course) {
+                    // Check if exam title contains course name
+                    if (stripos($exam->title_en, $course['name_en']) !== false ||
+                        stripos($exam->title_ar ?? '', $course['name_ar'] ?? '') !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            })->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $studentExams,
+                'count' => $studentExams->count(),
+                'enrolled_courses' => count($courseNames),
+            ]);
+        });
+
+        // Get student's lectures for today
+        Route::get('/lectures/today', function (Request $request) {
+            $student = $request->user()->student;
+            if (!$student) {
+                return response()->json(['message' => 'Student profile not found'], 404);
+            }
+
+            $today = now()->format('Y-m-d');
+
+            // Get student's enrolled course IDs
+            $courseIds = \App\Models\Enrollment::where('student_id', $student->id)
+                ->where('status', 'ENROLLED')
+                ->pluck('course_id');
+
+            $lectures = \App\Models\Lecture::whereIn('course_id', $courseIds)
+                ->where('lecture_date', $today)
+                ->with('course')
+                ->orderBy('start_time')
+                ->get();
+
+            return response()->json($lectures);
+        });
+
+        // Get student's upcoming lectures
+        Route::get('/lectures/upcoming', function (Request $request) {
+            $student = $request->user()->student;
+            if (!$student) {
+                return response()->json(['message' => 'Student profile not found'], 404);
+            }
+
+            $today = now()->format('Y-m-d');
+            $limit = $request->input('limit', 10);
+
+            // Get student's enrolled course IDs
+            $courseIds = \App\Models\Enrollment::where('student_id', $student->id)
+                ->where('status', 'ENROLLED')
+                ->pluck('course_id');
+
+            $lectures = \App\Models\Lecture::whereIn('course_id', $courseIds)
+                ->where('lecture_date', '>=', $today)
+                ->with('course')
+                ->orderBy('lecture_date')
+                ->orderBy('start_time')
+                ->limit($limit)
+                ->get();
+
+            return response()->json($lectures);
+        });
+
+        // Get student's attendance records
+        Route::get('/my-attendance', function (Request $request) {
+            $student = $request->user()->student;
+            if (!$student) {
+                return response()->json(['message' => 'Student profile not found'], 404);
+            }
+
+            $attendance = \App\Models\LectureAttendance::where('student_id', $student->id)
+                ->with(['lecture.course'])
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->input('per_page', 20));
+
+            return response()->json(['attendance' => $attendance]);
         });
 
         // Get student's LMS profile data
@@ -1872,6 +1996,8 @@ Route::middleware(['auth:sanctum'])->prefix('moodle')->group(function () {
 
         // استيراد العلامات من Moodle
         Route::post('/import/grades', [MoodleSyncController::class, 'importGrades']);
+        Route::post('/import/all-grades', [MoodleSyncController::class, 'importAllGrades']);
+        Route::get('/grades/by-semester', [MoodleSyncController::class, 'getGradesBySemester']);
         Route::post('/sync/grades-to-sis', [MoodleSyncController::class, 'syncGradesToSis']);
 
         // إدارة درجات LMS يدوياً

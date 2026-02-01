@@ -423,11 +423,17 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
   const [academicData, setAcademicData] = useState<any>(null);
   const [attendanceData, setAttendanceData] = useState<any>(null);
   const [documentsData, setDocumentsData] = useState<any[]>([]);
+  const [transcriptData, setTranscriptData] = useState<any>(null);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Profile editing state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [savingProfile, setSavingProfile] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     personal: true,
     legal: false,
@@ -504,6 +510,80 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
     }
   };
 
+  // Profile editing handlers
+  const openEditModal = () => {
+    // Initialize form with current student data
+    setEditFormData({
+      phone: student?.phone || '',
+      alternative_phone: student?.alternative_phone || '',
+      landline_phone: student?.landline_phone || '',
+      personal_email: student?.personal_email || '',
+      linkedin_profile: student?.linkedin_profile || '',
+      telegram_username: student?.telegram_username || '',
+      marital_status: student?.marital_status || '',
+      religion: student?.religion || '',
+      primary_language: student?.primary_language || '',
+      current_address_country: student?.current_address_country || '',
+      current_address_region: student?.current_address_region || '',
+      current_address_city: student?.current_address_city || '',
+      current_address_street: student?.current_address_street || '',
+      current_address_neighborhood: student?.current_address_neighborhood || '',
+      current_address_description: student?.current_address_description || '',
+      current_postal_code: student?.current_postal_code || '',
+      address_country: student?.address_country || '',
+      address_region: student?.address_region || '',
+      address_city: student?.address_city || '',
+      address_street: student?.address_street || '',
+      address_neighborhood: student?.address_neighborhood || '',
+      address_description: student?.address_description || '',
+      postal_code: student?.postal_code || '',
+      guardian_name: student?.guardian_name || '',
+      guardian_relationship: student?.guardian_relationship || '',
+      guardian_phone: student?.guardian_phone || '',
+      guardian_alternative_phone: student?.guardian_alternative_phone || '',
+      guardian_email: student?.guardian_email || '',
+      guardian_address: student?.guardian_address || '',
+      guardian_occupation: student?.guardian_occupation || '',
+      guardian_workplace: student?.guardian_workplace || '',
+      mother_name: student?.mother_name || '',
+      mother_phone: student?.mother_phone || '',
+      emergency_name: student?.emergency_name || '',
+      emergency_phone: student?.emergency_phone || '',
+      emergency_relationship: student?.emergency_relationship || '',
+      emergency_notes: student?.emergency_notes || '',
+      emergency2_name: student?.emergency2_name || '',
+      emergency2_phone: student?.emergency2_phone || '',
+      emergency2_relationship: student?.emergency2_relationship || '',
+      emergency2_notes: student?.emergency2_notes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditFormChange = (field: string, value: string) => {
+    setEditFormData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const result = await studentsAPI.updateMyProfile(editFormData);
+      toast.success(lang === 'ar' ? 'تم حفظ البيانات بنجاح' : 'Profile updated successfully');
+      // Update local profile data
+      if (result.student) {
+        setProfileData((prev: any) => ({
+          ...prev,
+          student: { ...prev?.student, ...result.student },
+          ...result.student,
+        }));
+      }
+      setShowEditModal(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || (lang === 'ar' ? 'حدث خطأ أثناء الحفظ' : 'Error saving profile'));
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   // Print handler
   const handlePrint = () => {
     printPage(undefined, 'Student Profile', 'الملف الشخصي للطالب', lang);
@@ -522,15 +602,18 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
 
         if (studentId) {
           // Fetch additional data in parallel
-          const [financial, academic, documents] = await Promise.all([
+          const [financial, academic, documents, transcript] = await Promise.all([
             financeAPI.getMyBalance().catch(() => null),
             studentsAPI.getMyAcademicSummary().catch(() => null),
             studentsAPI.getDocuments(studentId).catch(() => []),
+            studentsAPI.getMyTranscript().catch(() => null),
           ]);
 
+          console.log('Profile API Response:', { financial, academic, documents, transcript });
           setFinancialData(financial);
           setAcademicData(academic);
           setDocumentsData(documents?.data || documents || []);
+          setTranscriptData(transcript);
         }
       } catch (error) {
         // Error fetching profile data
@@ -543,7 +626,91 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
   }, []);
 
   // Use API data with fallback to props
-  const student = profileData?.student || profileData || propStudent;
+  const rawStudent = profileData?.student || profileData || propStudent;
+
+  // Helper to parse full name into parts
+  const parseNameParts = (fullName: string) => {
+    if (!fullName) return { first: '', middle: '', last: '' };
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return { first: parts[0], middle: '', last: '' };
+    if (parts.length === 2) return { first: parts[0], middle: '', last: parts[1] };
+    if (parts.length === 3) return { first: parts[0], middle: parts[1], last: parts[2] };
+    // 4+ parts: first, middle (2nd+3rd), last (rest)
+    return { first: parts[0], middle: parts.slice(1, -1).join(' '), last: parts[parts.length - 1] };
+  };
+
+  const namePartsEn = parseNameParts(rawStudent?.name_en || rawStudent?.nameEn || rawStudent?.name || '');
+  const namePartsAr = parseNameParts(rawStudent?.name_ar || rawStudent?.nameAr || '');
+
+  // Normalize student data from API (API uses camelCase like program.department.college.nameEn)
+  const student = rawStudent ? {
+    ...rawStudent,
+    // ID and basic info
+    studentId: rawStudent.student_id || rawStudent.studentId,
+    nameEn: rawStudent.name_en || rawStudent.nameEn || rawStudent.name,
+    nameAr: rawStudent.name_ar || rawStudent.nameAr,
+    // Name parts - use API values or parse from full name
+    firstNameEn: rawStudent.firstNameEn || rawStudent.first_name_en || namePartsEn.first,
+    middleNameEn: rawStudent.middleNameEn || rawStudent.middle_name_en || namePartsEn.middle,
+    lastNameEn: rawStudent.lastNameEn || rawStudent.last_name_en || namePartsEn.last,
+    firstNameAr: rawStudent.firstNameAr || rawStudent.first_name_ar || namePartsAr.first,
+    middleNameAr: rawStudent.middleNameAr || rawStudent.middle_name_ar || namePartsAr.middle,
+    lastNameAr: rawStudent.lastNameAr || rawStudent.last_name_ar || namePartsAr.last,
+    // Academic - API structure: program.department.college.nameEn (camelCase!)
+    college: rawStudent.program?.department?.college?.nameEn || rawStudent.program?.department?.college?.name_en || rawStudent.college,
+    department: rawStudent.program?.department?.nameEn || rawStudent.program?.department?.name_en || rawStudent.department,
+    major: rawStudent.program?.nameEn || rawStudent.program?.name_en || rawStudent.major,
+    gpa: rawStudent.gpa || rawStudent.cumulative_gpa || 0,
+    completedCredits: rawStudent.completedCredits || rawStudent.completed_credits || 0,
+    totalRequiredCredits: rawStudent.totalRequiredCredits || rawStudent.program?.required_credits || rawStudent.total_required_credits || 130,
+    registeredCredits: rawStudent.registeredCredits || rawStudent.registered_credits || 0,
+    remainingCredits: rawStudent.remainingCredits || rawStudent.remaining_credits || 0,
+    level: rawStudent.level,
+    currentSemester: rawStudent.currentSemester || rawStudent.current_semester,
+    academicStatus: rawStudent.academicStatus || rawStudent.academic_status,
+    termGpa: rawStudent.termGpa || rawStudent.term_gpa,
+    // Personal info (API uses camelCase)
+    dateOfBirth: rawStudent.dateOfBirth || rawStudent.date_of_birth,
+    placeOfBirth: rawStudent.birthCity ? `${rawStudent.birthCity}, ${rawStudent.birthCountry}` : rawStudent.placeOfBirth,
+    birthCity: rawStudent.birthCity || rawStudent.birth_city,
+    birthCountry: rawStudent.birthCountry || rawStudent.birth_country,
+    gender: rawStudent.gender,
+    nationality: rawStudent.nationality,
+    secondaryNationality: rawStudent.secondaryNationality || rawStudent.secondary_nationality,
+    nationalId: rawStudent.nationalId || rawStudent.national_id,
+    idType: rawStudent.idType || rawStudent.id_type,
+    maritalStatus: rawStudent.maritalStatus || rawStudent.marital_status,
+    religion: rawStudent.religion,
+    primaryLanguage: rawStudent.primaryLanguage || rawStudent.primary_language,
+    // Contact
+    phone: rawStudent.phone,
+    alternativePhone: rawStudent.alternativePhone || rawStudent.alternative_phone,
+    personalEmail: rawStudent.personalEmail || rawStudent.personal_email,
+    universityEmail: rawStudent.universityEmail || rawStudent.university_email,
+    // Address
+    country: rawStudent.country,
+    region: rawStudent.region,
+    city: rawStudent.city,
+    street: rawStudent.street,
+    postalCode: rawStudent.postalCode || rawStudent.postal_code,
+    // Guardian
+    guardianName: rawStudent.guardianName || rawStudent.guardian_name,
+    guardianRelationship: rawStudent.guardianRelationship || rawStudent.guardian_relationship,
+    guardianPhone: rawStudent.guardianPhone || rawStudent.guardian_phone,
+    guardianEmail: rawStudent.guardianEmail || rawStudent.guardian_email,
+    // Financial
+    totalFees: rawStudent.totalFees || rawStudent.total_fees,
+    paidAmount: rawStudent.paidAmount || rawStudent.paid_amount,
+    currentBalance: rawStudent.currentBalance || rawStudent.current_balance,
+    financialStatus: rawStudent.financialStatus || rawStudent.financial_status,
+    // System accounts
+    sisUsername: rawStudent.sisUsername || rawStudent.sis_username || rawStudent.student_id || rawStudent.studentId,
+    lmsUsername: rawStudent.lmsUsername || rawStudent.lms_username || rawStudent.student_id || rawStudent.studentId,
+    lastLogin: rawStudent.lastLogin || rawStudent.last_login,
+    // Status
+    status: rawStudent.status,
+    admissionDate: rawStudent.admissionDate || rawStudent.admission_date,
+  } : propStudent;
 
   // Safe access helper
   const safeGet = (obj: any, path: string, defaultValue: any = '-') => {
@@ -699,11 +866,24 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
   // GPA History Data for Chart (API data only)
   const gpaHistoryData = academicData?.gpaHistory || [];
 
+  // Academic data from API - prioritize API data over student object
+  const academicRecord = academicData?.academic_record || {};
+  const enrollmentStats = academicData?.enrollment_statistics || {};
+
+  // Use API academic data with fallback to student data
+  const cumulativeGPA = academicRecord?.cumulative_gpa ?? safeGet(student, 'gpa', 0);
+  const totalCreditsEarned = academicRecord?.total_credits_earned ?? safeGet(student, 'completedCredits', 0);
+  const creditsRequired = academicRecord?.credits_required ?? safeGet(student, 'totalRequiredCredits', 130);
+  const creditsRemaining = academicRecord?.credits_remaining ?? (creditsRequired - totalCreditsEarned);
+  const completionPercentage = academicRecord?.completion_percentage ?? Math.round((totalCreditsEarned / creditsRequired) * 100);
+  const academicStanding = academicRecord?.academic_standing ?? safeGet(student, 'academicStanding', 'Good Standing');
+  const currentSemesterCourses = enrollmentStats?.current_semester_courses ?? safeGet(student, 'registeredCredits', 0);
+
   // Credit distribution for Pie Chart
   const creditDistribution = [
-    { name: lang === 'ar' ? 'مكتمل' : 'Completed', value: safeGet(student, 'completedCredits', 45), color: '#22c55e' },
-    { name: lang === 'ar' ? 'قيد الدراسة' : 'In Progress', value: safeGet(student, 'registeredCredits', 15), color: '#6366f1' },
-    { name: lang === 'ar' ? 'متبقي' : 'Remaining', value: safeGet(student, 'remainingCredits', 70), color: '#e5e7eb' },
+    { name: lang === 'ar' ? 'مكتمل' : 'Completed', value: totalCreditsEarned, color: '#22c55e' },
+    { name: lang === 'ar' ? 'قيد الدراسة' : 'In Progress', value: currentSemesterCourses * 3, color: '#6366f1' },
+    { name: lang === 'ar' ? 'متبقي' : 'Remaining', value: creditsRemaining, color: '#e5e7eb' },
   ];
 
   // Tabs
@@ -1003,14 +1183,285 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
         </div>
       )}
 
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto py-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Edit className="w-5 h-5 text-blue-600" />
+                {lang === 'ar' ? 'تعديل البيانات الشخصية' : 'Edit Personal Information'}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {lang === 'ar' ? 'يمكنك تعديل بيانات التواصل والعنوان وولي الأمر وجهات الطوارئ' : 'You can edit contact info, address, guardian, and emergency contacts'}
+              </p>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-6">
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-500" />
+                  {lang === 'ar' ? 'بيانات التواصل' : 'Contact Information'}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'رقم الجوال' : 'Phone'}
+                    </label>
+                    <input
+                      type="tel"
+                      value={editFormData.phone || ''}
+                      onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'رقم جوال ثانوي' : 'Alternative Phone'}
+                    </label>
+                    <input
+                      type="tel"
+                      value={editFormData.alternative_phone || ''}
+                      onChange={(e) => handleEditFormChange('alternative_phone', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'البريد الإلكتروني الشخصي' : 'Personal Email'}
+                    </label>
+                    <input
+                      type="email"
+                      value={editFormData.personal_email || ''}
+                      onChange={(e) => handleEditFormChange('personal_email', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'تيليجرام' : 'Telegram'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.telegram_username || ''}
+                      onChange={(e) => handleEditFormChange('telegram_username', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Address */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-green-500" />
+                  {lang === 'ar' ? 'العنوان الحالي' : 'Current Address'}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'الدولة' : 'Country'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.current_address_country || ''}
+                      onChange={(e) => handleEditFormChange('current_address_country', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'المدينة' : 'City'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.current_address_city || ''}
+                      onChange={(e) => handleEditFormChange('current_address_city', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'الشارع / الحي' : 'Street / Neighborhood'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.current_address_street || ''}
+                      onChange={(e) => handleEditFormChange('current_address_street', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Guardian Information */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-purple-500" />
+                  {lang === 'ar' ? 'ولي الأمر' : 'Guardian'}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'اسم ولي الأمر' : 'Guardian Name'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.guardian_name || ''}
+                      onChange={(e) => handleEditFormChange('guardian_name', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'صلة القرابة' : 'Relationship'}
+                    </label>
+                    <select
+                      value={editFormData.guardian_relationship || ''}
+                      onChange={(e) => handleEditFormChange('guardian_relationship', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
+                      <option value="FATHER">{lang === 'ar' ? 'الأب' : 'Father'}</option>
+                      <option value="MOTHER">{lang === 'ar' ? 'الأم' : 'Mother'}</option>
+                      <option value="BROTHER">{lang === 'ar' ? 'الأخ' : 'Brother'}</option>
+                      <option value="SISTER">{lang === 'ar' ? 'الأخت' : 'Sister'}</option>
+                      <option value="SPOUSE">{lang === 'ar' ? 'الزوج/الزوجة' : 'Spouse'}</option>
+                      <option value="GUARDIAN">{lang === 'ar' ? 'الوصي' : 'Guardian'}</option>
+                      <option value="OTHER">{lang === 'ar' ? 'آخر' : 'Other'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'رقم جوال ولي الأمر' : 'Guardian Phone'}
+                    </label>
+                    <input
+                      type="tel"
+                      value={editFormData.guardian_phone || ''}
+                      onChange={(e) => handleEditFormChange('guardian_phone', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'بريد ولي الأمر' : 'Guardian Email'}
+                    </label>
+                    <input
+                      type="email"
+                      value={editFormData.guardian_email || ''}
+                      onChange={(e) => handleEditFormChange('guardian_email', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Contact */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  {lang === 'ar' ? 'جهة الاتصال للطوارئ' : 'Emergency Contact'}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'الاسم' : 'Name'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.emergency_name || ''}
+                      onChange={(e) => handleEditFormChange('emergency_name', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'رقم الهاتف' : 'Phone'}
+                    </label>
+                    <input
+                      type="tel"
+                      value={editFormData.emergency_phone || ''}
+                      onChange={(e) => handleEditFormChange('emergency_phone', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'صلة القرابة' : 'Relationship'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.emergency_relationship || ''}
+                      onChange={(e) => handleEditFormChange('emergency_relationship', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'ar' ? 'ملاحظات' : 'Notes'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.emergency_notes || ''}
+                      onChange={(e) => handleEditFormChange('emergency_notes', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 border-t border-slate-200 dark:border-slate-600">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-500 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors font-medium"
+              >
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {savingProfile ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {lang === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    {lang === 'ar' ? 'حفظ التغييرات' : 'Save Changes'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ========== STUDENT HEADER CARD ========== */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden print:shadow-none print:border-slate-300">
         <div className="h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative print:bg-blue-600">
           <div className="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml,...')]"></div>
           <div className="absolute top-4 end-4 flex gap-2 print:hidden">
-            <button className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors">
-              <Edit className="w-4 h-4" />
-            </button>
+            {role === 'STUDENT' && (
+              <button
+                onClick={openEditModal}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
+                title={lang === 'ar' ? 'تعديل البيانات الشخصية' : 'Edit Personal Data'}
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
@@ -1079,21 +1530,21 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
               <Hash className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.studentIdNumber[lang]}</p>
-                <p className="font-mono font-bold text-slate-800 dark:text-slate-200">{safeGet(student, 'studentId', 'STU-2024-001')}</p>
+                <p className="font-mono font-bold text-slate-800 dark:text-slate-200">{safeGet(student, 'studentId', '-')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Building className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.college[lang]}</p>
-                <p className="font-medium text-slate-800 dark:text-slate-200">{safeGet(student, 'college', 'Engineering')}</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{safeGet(student, 'college', '-')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <GraduationCap className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.program[lang]}</p>
-                <p className="font-medium text-slate-800 dark:text-slate-200">{safeGet(student, 'major', 'Computer Science')}</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{safeGet(student, 'major', '-')}</p>
               </div>
             </div>
           </div>
@@ -1129,11 +1580,11 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
             {expandedSections.personal && (
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 <InfoItem label={t.firstNameAr[lang]} value={safeGet(student, 'firstNameAr', safeGet(student, 'firstNameAr', 'أحمد'))} />
-                <InfoItem label={t.firstNameEn[lang]} value={safeGet(student, 'firstNameEn', safeGet(student, 'firstName', 'Ahmed'))} />
+                <InfoItem label={t.firstNameEn[lang]} value={safeGet(student, 'firstNameEn', safeGet(student, 'firstName', '-'))} />
                 <InfoItem label={t.middleNameAr[lang]} value={safeGet(student, 'middleNameAr', 'محمد')} />
-                <InfoItem label={t.middleNameEn[lang]} value={safeGet(student, 'middleNameEn', 'Mohammed')} />
+                <InfoItem label={t.middleNameEn[lang]} value={safeGet(student, 'middleNameEn', '-')} />
                 <InfoItem label={t.lastNameAr[lang]} value={safeGet(student, 'lastNameAr', 'منصور')} />
-                <InfoItem label={t.lastNameEn[lang]} value={safeGet(student, 'lastNameEn', safeGet(student, 'lastName', 'Mansour'))} />
+                <InfoItem label={t.lastNameEn[lang]} value={safeGet(student, 'lastNameEn', safeGet(student, 'lastName', '-'))} />
                 <InfoItem label={t.nationalId[lang]} value={safeGet(student, 'nationalId', '4XXXXXXXXX')} icon={CreditCard} />
                 <InfoItem label={t.idType[lang]} value={t.nationalIdCard[lang]} icon={FileText} />
                 <InfoItem label={t.dateOfBirth[lang]} value={safeGet(student, 'dateOfBirth', '2000-05-15')} icon={Calendar} />
@@ -1349,7 +1800,7 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
                   <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                     <div>
                       <p className="text-xs text-slate-500 mb-1">{t.sisUsername[lang]}</p>
-                      <p className="font-mono font-bold text-slate-800">{safeGet(student, 'studentId', 'STU-2024-001')}</p>
+                      <p className="font-mono font-bold text-slate-800">{safeGet(student, 'studentId', '-')}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium flex items-center gap-1">
@@ -1432,12 +1883,12 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
             {expandedSections.gpaStatus && (
               <div className="p-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                  <StatCard label={t.totalRequiredCredits[lang]} value={safeGet(student, 'totalRequiredCredits', 130)} color="bg-blue-50 text-blue-700" icon={BookOpen} />
-                  <StatCard label={t.earnedCredits[lang]} value={safeGet(student, 'completedCredits', 45)} color="bg-green-50 text-green-700" icon={CheckCircle} />
-                  <StatCard label={t.currentCredits[lang]} value={safeGet(student, 'registeredCredits', 15)} color="bg-purple-50 text-purple-700" icon={Play} />
-                  <StatCard label={t.remainingCredits[lang]} value={safeGet(student, 'remainingCredits', 70)} color="bg-orange-50 text-orange-700" icon={Target} />
-                  <StatCard label={t.cumulativeGpa[lang]} value={Number(safeGet(student, 'gpa', 3.55)).toFixed(2)} color="bg-indigo-50 text-indigo-700" icon={Award} />
-                  <StatCard label={t.lastTermGpa[lang]} value={Number(safeGet(student, 'termGpa', 3.70)).toFixed(2)} color="bg-cyan-50 text-cyan-700" icon={TrendingUp} />
+                  <StatCard label={t.totalRequiredCredits[lang]} value={creditsRequired} color="bg-blue-50 text-blue-700" icon={BookOpen} />
+                  <StatCard label={t.earnedCredits[lang]} value={totalCreditsEarned} color="bg-green-50 text-green-700" icon={CheckCircle} />
+                  <StatCard label={t.currentCredits[lang]} value={currentSemesterCourses * 3} color="bg-purple-50 text-purple-700" icon={Play} />
+                  <StatCard label={t.remainingCredits[lang]} value={creditsRemaining} color="bg-orange-50 text-orange-700" icon={Target} />
+                  <StatCard label={t.cumulativeGpa[lang]} value={Number(cumulativeGPA).toFixed(2)} color="bg-indigo-50 text-indigo-700" icon={Award} />
+                  <StatCard label={t.lastTermGpa[lang]} value={Number(safeGet(student, 'termGpa', cumulativeGPA)).toFixed(2)} color="bg-cyan-50 text-cyan-700" icon={TrendingUp} />
                 </div>
 
                 {/* Progress Bar */}
@@ -1445,13 +1896,13 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-slate-600 font-medium">{t.earnedCredits[lang]}</span>
                     <span className="font-bold text-slate-800">
-                      {safeGet(student, 'completedCredits', 45)} / {safeGet(student, 'totalRequiredCredits', 130)}
+                      {totalCreditsEarned} / {creditsRequired}
                     </span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-1000"
-                      style={{ width: `${Math.min((safeGet(student, 'completedCredits', 45) / safeGet(student, 'totalRequiredCredits', 130)) * 100, 100)}%` }}
+                      style={{ width: `${Math.min(completionPercentage, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -1460,7 +1911,13 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4">
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t.academicStatus[lang]}</p>
-                    <span className="px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full text-sm font-bold">{t.goodStanding[lang]}</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                      academicStanding === 'Good Standing' || academicStanding === 'Excellent'
+                        ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+                        : academicStanding === 'Probation'
+                        ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300'
+                        : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'
+                    }`}>{academicStanding}</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4">
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t.academicWarnings[lang]}</p>
@@ -1558,9 +2015,9 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
             <SectionHeader title={t.programRegistration[lang]} icon={GraduationCap} section="program" colorClass="bg-indigo-100 text-indigo-600" />
             {expandedSections.program && (
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6">
-                <InfoItem label={t.college[lang]} value={safeGet(student, 'college', 'Faculty of Engineering')} icon={Building} />
-                <InfoItem label={t.department[lang]} value={safeGet(student, 'department', 'Computer Engineering')} icon={Briefcase} />
-                <InfoItem label={t.program[lang]} value={safeGet(student, 'major', 'Computer Science')} icon={BookOpen} />
+                <InfoItem label={t.college[lang]} value={safeGet(student, 'college', '-')} icon={Building} />
+                <InfoItem label={t.department[lang]} value={safeGet(student, 'department', '-')} icon={Briefcase} />
+                <InfoItem label={t.program[lang]} value={safeGet(student, 'major', '-')} icon={BookOpen} />
                 <InfoItem label={t.degree[lang]} value={t.bachelor[lang]} icon={Award} />
                 <InfoItem label={t.studyType[lang]} value={t.regular[lang]} icon={Clock} />
                 <InfoItem label={t.studyPlanId[lang]} value={safeGet(student, 'studyPlanName', 'CS-2022')} icon={ClipboardList} />
@@ -1782,55 +2239,86 @@ const Profile: React.FC<ProfileProps> = ({ lang, student: propStudent, role }) =
 
           {/* Academic Record */}
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <SectionHeader title={t.academicRecord[lang]} icon={History} section="academicRecord" colorClass="bg-purple-100 text-purple-600" />
+            <SectionHeader title={t.academicRecord[lang]} icon={History} section="academicRecord" colorClass="bg-purple-100 text-purple-600" badge={transcriptData?.semesters?.length ? `${transcriptData.semesters.length} ${lang === 'ar' ? 'فصول' : 'Semesters'}` : undefined} />
             {expandedSections.academicRecord && (
               <div className="p-6">
-                {/* Term Example */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-bold text-slate-800">2023/2024 - {lang === 'ar' ? 'الفصل الأول' : 'Fall Semester'}</h4>
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">{t.regularStatus[lang]}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-slate-500">{t.termGpa[lang]}: <span className="font-bold text-slate-800">3.70</span></span>
-                      <span className="text-slate-500">{t.cumulativeGpa[lang]}: <span className="font-bold text-slate-800">3.55</span></span>
-                    </div>
-                  </div>
+                {transcriptData?.semesters?.length > 0 ? (
+                  <div className="space-y-6">
+                    {transcriptData.semesters.map((semesterData: any, semIndex: number) => (
+                      <div key={semIndex} className="border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-bold text-slate-800 dark:text-slate-100">
+                              {lang === 'ar' ? semesterData.semester?.name_ar : semesterData.semester?.name_en}
+                              {semesterData.semester?.year && ` (${semesterData.semester.year})`}
+                            </h4>
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">
+                              {semesterData.semester_credits} {lang === 'ar' ? 'ساعة' : 'Credits'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-slate-500 dark:text-slate-400">{t.termGpa[lang]}: <span className="font-bold text-slate-800 dark:text-slate-100">{Number(semesterData.semester_gpa).toFixed(2)}</span></span>
+                          </div>
+                        </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50">
-                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseCode[lang]}</th>
-                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseName[lang]}</th>
-                          <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.credits[lang]}</th>
-                          <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.finalGrade[lang]}</th>
-                          <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-center">{t.letterGrade[lang]}</th>
-                          <th className={`py-3 px-4 text-xs font-semibold text-slate-500 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.notes[lang]}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {displayStudyPlanCourses.filter(c => c.status === 'completed').map((course, index) => (
-                          <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-3 px-4"><span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-mono font-bold">{course.code}</span></td>
-                            <td className="py-3 px-4 font-medium text-slate-800">{course.name}</td>
-                            <td className="py-3 px-4 text-center text-slate-600">{course.credits}</td>
-                            <td className="py-3 px-4 text-center font-bold text-slate-800">88</td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
-                                course.grade.startsWith('A') ? 'bg-green-100 text-green-700' :
-                                course.grade.startsWith('B') ? 'bg-blue-100 text-blue-700' :
-                                'bg-yellow-100 text-yellow-700'
-                              }`}>{course.grade}</span>
-                            </td>
-                            <td className="py-3 px-4 text-slate-500">-</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-700/30">
+                                <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseCode[lang]}</th>
+                                <th className={`py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase ${isRTL ? 'text-end' : 'text-start'}`}>{t.courseName[lang]}</th>
+                                <th className="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.credits[lang]}</th>
+                                <th className="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{t.letterGrade[lang]}</th>
+                                <th className="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-center">{lang === 'ar' ? 'النقاط' : 'Points'}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {semesterData.courses?.map((course: any, cIndex: number) => (
+                                <tr key={cIndex} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                  <td className="py-3 px-4"><span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded text-sm font-mono font-bold">{course.code}</span></td>
+                                  <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">{lang === 'ar' ? course.name_ar : course.name_en}</td>
+                                  <td className="py-3 px-4 text-center text-slate-600 dark:text-slate-300">{course.credits}</td>
+                                  <td className="py-3 px-4 text-center">
+                                    <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
+                                      course.grade?.startsWith('A') ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' :
+                                      course.grade?.startsWith('B') ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' :
+                                      course.grade?.startsWith('C') ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' :
+                                      course.grade?.startsWith('D') ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300' :
+                                      'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'
+                                    }`}>{course.grade || '-'}</span>
+                                  </td>
+                                  <td className="py-3 px-4 text-center font-medium text-slate-600 dark:text-slate-300">{Number(course.points || 0).toFixed(1)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Overall Summary */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <Award className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                          <div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{t.cumulativeGpa[lang]}</p>
+                            <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{Number(transcriptData.summary?.cumulative_gpa || cumulativeGPA).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="text-end">
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{t.earnedCredits[lang]}</p>
+                          <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{transcriptData.summary?.total_credits || totalCreditsEarned}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                    <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>{lang === 'ar' ? 'لا يوجد سجل أكاديمي متاح' : 'No academic record available'}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -74,11 +74,17 @@ const AdvisingPage: React.FC<AdvisingPageProps> = ({ lang }) => {
         }
 
         // Fetch study plan / remaining courses
-        if (profile?.program_id || profile?.student?.program_id) {
-          const programId = profile.program_id || profile.student?.program_id;
+        if (profile?.program_id || profile?.student?.program_id || profile?.student?.program?.id) {
+          const programId = profile.program_id || profile.student?.program_id || profile.student?.program?.id;
           try {
-            const apiBase = (window as any).API_BASE_URL || import.meta.env.VITE_API_URL || 'https://sis.vertexuniversity.ac/api';
-            const res = await fetch(`${apiBase}/programs-courses-public.php?program_id=${programId}`);
+            const apiBase = (window as any).API_BASE_URL || import.meta.env.VITE_API_URL || 'https://sis.vertexuniversity.edu.eu/api';
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+            const res = await fetch(`${apiBase.replace('/api', '')}/programs-courses.php?program_id=${programId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
             const data = await res.json();
 
             if (data.courses) {

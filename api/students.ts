@@ -23,6 +23,22 @@ export const studentsAPI = {
     }
   },
 
+  // Get my student profile with full details
+  getMyStudentProfile: async () => {
+    try {
+      const response = await apiClient.get('/my-student-profile');
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  // Update my profile (students can only update personal data)
+  updateMyProfile: async (data: any) => {
+    const response = await apiClient.put('/my-student-profile', data);
+    return response.data;
+  },
+
   // Update student (admin only)
   update: async (id: string, data: any) => {
     const response = await apiClient.put(`/students/${id}`, data);
@@ -82,10 +98,13 @@ export const studentsAPI = {
   },
 
   // Get my transcript (for students)
-  // API disabled - endpoint doesn't exist on server (returns 500)
   getMyTranscript: async () => {
-    // Return null - data will be fetched from other sources
-    return null;
+    try {
+      const response = await apiClient.get('/my-transcript');
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   // Get student transcript (for staff/admin)

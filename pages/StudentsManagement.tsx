@@ -624,11 +624,12 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ lang }) => {
       setLoadingProgramCourses(true);
       try {
         console.log('[StudyPlan] Fetching courses for program:', selectedStudent.program_id);
-        // Use the public endpoint that doesn't require authentication
         const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
-        const response = await fetch(`${baseUrl}/programs-courses-public.php?program_id=${selectedStudent.program_id}`, {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const response = await fetch(`${baseUrl}/programs-courses.php?program_id=${selectedStudent.program_id}`, {
           headers: {
             'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
         });
         const data = await response.json();
@@ -746,13 +747,15 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ lang }) => {
     }
   };
 
-  // Fetch semesters from public endpoint
+  // Fetch semesters from protected endpoint
   const fetchSemesters = async () => {
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
-      const response = await fetch(`${baseUrl}/semesters-public.php`, {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const response = await fetch(`${baseUrl}/semesters.php`, {
         headers: {
           'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
       const data = await response.json();
@@ -768,13 +771,14 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ lang }) => {
   const fetchAvailableCourses = async (programId?: number) => {
     setLoadingModalCourses(true);
     try {
-      // If student has a program, fetch program courses using public endpoint
+      // If student has a program, fetch program courses using protected endpoint
       if (programId) {
-        // Use the public endpoint that doesn't require authentication (same as Study Plan)
         const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
-        const response = await fetch(`${baseUrl}/programs-courses-public.php?program_id=${programId}`, {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const response = await fetch(`${baseUrl}/programs-courses.php?program_id=${programId}`, {
           headers: {
             'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
         });
         const data = await response.json();

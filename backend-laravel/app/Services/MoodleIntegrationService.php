@@ -1381,6 +1381,293 @@ class MoodleIntegrationService
     // Sync Statistics
     // ==========================================
 
+    // ==========================================
+    // Import ALL Grades from Moodle for ALL Students
+    // ==========================================
+
+    /**
+     * Import all grades from Moodle for all students with semester association
+     */
+    public function importAllGradesFromMoodle(): array
+    {
+        $results = [
+            'success' => 0,
+            'failed' => 0,
+            'skipped' => 0,
+            'errors' => [],
+            'grades' => [],
+            'semesters' => [],
+        ];
+
+        try {
+            // Get all courses from Moodle with their start dates
+            $moodleCourses = $this->callMoodleApi('core_course_get_courses', []);
+            $courseMap = [];
+            foreach ($moodleCourses as $course) {
+                $courseMap[$course['id']] = [
+                    'shortname' => $course['shortname'] ?? '',
+                    'fullname' => $course['fullname'] ?? '',
+                    'startdate' => $course['startdate'] ?? 0,
+                    'categoryid' => $course['categoryid'] ?? 0,
+                ];
+            }
+
+            // Get all semesters from database
+            $semesters = \App\Models\Semester::orderBy('start_date', 'desc')->get();
+            $results['semesters'] = $semesters->map(fn($s) => ['id' => $s->id, 'name' => $s->name_en])->toArray();
+
+            // Get all students from Moodle
+            $moodleUsers = $this->callMoodleApi('core_user_get_users', [
+                'criteria' => [[
+                    'key' => 'suspended',
+                    'value' => '0',
+                ]],
+            ]);
+
+            $excludedUsernames = ['admin', 'guest', 'system', 'manager', 'teacher', 'instructor', 'lecturer', 'coordinator', 'staff', 'support', 'helpdesk'];
+
+            foreach ($moodleUsers['users'] ?? [] as $moodleUser) {
+                // Skip non-student users
+                if (in_array(strtolower($moodleUser['username'] ?? ''), $excludedUsernames)) {
+                    continue;
+                }
+
+                try {
+                    // Find student in SIS
+                    $student = Student::where('university_email', $moodleUser['email'])
+                        ->orWhere('personal_email', $moodleUser['email'])
+                        ->orWhere('student_id', $moodleUser['idnumber'] ?? 'NONE')
+                        ->orWhere('student_id', $moodleUser['username'] ?? 'NONE')
+                        ->first();
+
+                    if (!$student) {
+                        $results['skipped']++;
+                        continue;
+                    }
+
+                    // Get all grades for this user
+                    $gradesResponse = $this->callMoodleApi('gradereport_overview_get_course_grades', [
+                        'userid' => $moodleUser['id'],
+                    ]);
+
+                    foreach ($gradesResponse['grades'] ?? [] as $gradeData) {
+                        $courseId = $gradeData['courseid'] ?? null;
+                        $grade = $gradeData['grade'] ?? null;
+                        $rawGrade = $gradeData['rawgrade'] ?? null;
+
+                        // Skip if no grade or no course
+                        if (!$courseId || $grade === null || $grade === '-') {
+                            continue;
+                        }
+
+                        // Parse grade value
+                        $gradeValue = is_string($rawGrade) ? (float) str_replace(['%', ' '], '', $rawGrade) : $rawGrade;
+                        if ($gradeValue === null) {
+                            $gradeValue = is_string($grade) ? (float) str_replace(['%', ' '], '', $grade) : $grade;
+                        }
+
+                        // Get course info
+                        $courseInfo = $courseMap[$courseId] ?? null;
+                        if (!$courseInfo) {
+                            continue;
+                        }
+
+                        // Find matching SIS course by code
+                        $sisCourse = \App\Models\Course::where('code', $courseInfo['shortname'])
+                            ->orWhere('code', 'LIKE', '%' . $courseInfo['shortname'] . '%')
+                            ->first();
+
+                        // Determine semester based on course start date
+                        $semesterId = null;
+                        if ($courseInfo['startdate'] > 0) {
+                            $courseStartDate = date('Y-m-d', $courseInfo['startdate']);
+                            foreach ($semesters as $semester) {
+                                if ($courseStartDate >= $semester->start_date && $courseStartDate <= $semester->end_date) {
+                                    $semesterId = $semester->id;
+                                    break;
+                                }
+                            }
+                            // If no exact match, use the closest semester
+                            if (!$semesterId && $semesters->isNotEmpty()) {
+                                foreach ($semesters as $semester) {
+                                    if ($courseStartDate >= $semester->start_date) {
+                                        $semesterId = $semester->id;
+                                        break;
+                                    }
+                                }
+                                // If still no match, use the oldest semester
+                                if (!$semesterId) {
+                                    $semesterId = $semesters->last()->id;
+                                }
+                            }
+                        }
+
+                        // Find or create enrollment
+                        $enrollment = null;
+                        if ($sisCourse) {
+                            $enrollment = \App\Models\Enrollment::where('student_id', $student->id)
+                                ->where('course_id', $sisCourse->id)
+                                ->first();
+
+                            if (!$enrollment && $semesterId) {
+                                // Create enrollment
+                                $enrollment = \App\Models\Enrollment::create([
+                                    'student_id' => $student->id,
+                                    'course_id' => $sisCourse->id,
+                                    'semester_id' => $semesterId,
+                                    'status' => 'COMPLETED',
+                                    'enrolled_at' => now(),
+                                ]);
+                            }
+                        }
+
+                        // Store in moodle_grades table
+                        $moodleGrade = MoodleGrade::updateOrCreate(
+                            [
+                                'moodle_user_id' => $moodleUser['id'],
+                                'moodle_course_id' => $courseId,
+                            ],
+                            [
+                                'enrollment_id' => $enrollment?->id,
+                                'moodle_grade' => $gradeValue,
+                                'moodle_grade_max' => 100,
+                                'completion_status' => $gradeValue >= 50 ? 'completed' : 'failed',
+                                'received_at' => now(),
+                                'synced_to_sis' => false,
+                            ]
+                        );
+
+                        // Also create/update SIS grade if we have enrollment
+                        if ($enrollment) {
+                            $gradeCalc = Grade::calculateGrade($gradeValue ?? 0);
+                            Grade::updateOrCreate(
+                                ['enrollment_id' => $enrollment->id],
+                                [
+                                    'student_id' => $student->id,
+                                    'course_id' => $sisCourse->id,
+                                    'semester_id' => $semesterId,
+                                    'total' => $gradeValue,
+                                    'grade' => $gradeCalc['grade'],
+                                    'points' => $gradeCalc['points'],
+                                    'status' => 'APPROVED',
+                                    'remarks' => 'Imported from Moodle LMS',
+                                ]
+                            );
+                            $moodleGrade->markAsSyncedToSis();
+                        }
+
+                        $results['success']++;
+                        $results['grades'][] = [
+                            'student_id' => $student->student_id,
+                            'student_name' => $student->name_en,
+                            'course_code' => $courseInfo['shortname'],
+                            'course_name' => $courseInfo['fullname'],
+                            'grade' => $gradeValue,
+                            'semester_id' => $semesterId,
+                        ];
+                    }
+
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = [
+                        'user' => $moodleUser['username'] ?? $moodleUser['id'],
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to import all grades from Moodle', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Get grades for a specific student from Moodle
+     */
+    public function getStudentGradesFromMoodle(int $moodleUserId): array
+    {
+        $grades = [];
+
+        try {
+            // Get course info
+            $moodleCourses = $this->callMoodleApi('core_course_get_courses', []);
+            $courseMap = [];
+            foreach ($moodleCourses as $course) {
+                $courseMap[$course['id']] = [
+                    'shortname' => $course['shortname'] ?? '',
+                    'fullname' => $course['fullname'] ?? '',
+                    'startdate' => isset($course['startdate']) ? date('Y-m-d', $course['startdate']) : null,
+                ];
+            }
+
+            // Get grades
+            $gradesResponse = $this->callMoodleApi('gradereport_overview_get_course_grades', [
+                'userid' => $moodleUserId,
+            ]);
+
+            foreach ($gradesResponse['grades'] ?? [] as $gradeData) {
+                $courseId = $gradeData['courseid'] ?? null;
+                if (!$courseId) continue;
+
+                $courseInfo = $courseMap[$courseId] ?? null;
+
+                $grades[] = [
+                    'moodle_course_id' => $courseId,
+                    'course_code' => $courseInfo['shortname'] ?? 'Unknown',
+                    'course_name' => $courseInfo['fullname'] ?? 'Unknown Course',
+                    'grade' => $gradeData['grade'] ?? '-',
+                    'raw_grade' => $gradeData['rawgrade'] ?? null,
+                    'start_date' => $courseInfo['startdate'] ?? null,
+                ];
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get student grades from Moodle', [
+                'user_id' => $moodleUserId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $grades;
+    }
+
+    /**
+     * Get grades summary by semester
+     */
+    public function getGradesBySemester(): array
+    {
+        $semesters = \App\Models\Semester::orderBy('start_date', 'desc')->get();
+        $result = [];
+
+        foreach ($semesters as $semester) {
+            $grades = Grade::where('semester_id', $semester->id)
+                ->with(['student', 'course'])
+                ->get();
+
+            $result[] = [
+                'semester' => [
+                    'id' => $semester->id,
+                    'name' => $semester->name_en,
+                    'name_ar' => $semester->name_ar,
+                    'academic_year' => $semester->academic_year,
+                    'type' => $semester->type,
+                ],
+                'total_grades' => $grades->count(),
+                'students_count' => $grades->pluck('student_id')->unique()->count(),
+                'courses_count' => $grades->pluck('course_id')->unique()->count(),
+                'average_grade' => $grades->avg('total'),
+                'pass_rate' => $grades->count() > 0
+                    ? round(($grades->where('total', '>=', 50)->count() / $grades->count()) * 100, 2)
+                    : 0,
+            ];
+        }
+
+        return $result;
+    }
+
     public function getSyncStatistics(): array
     {
         return [

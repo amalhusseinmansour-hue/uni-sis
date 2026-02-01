@@ -217,6 +217,50 @@ class MoodleSyncController extends Controller
     }
 
     /**
+     * Import ALL grades from Moodle for ALL students
+     * POST /api/moodle/import/all-grades
+     */
+    public function importAllGrades(Request $request): JsonResponse
+    {
+        try {
+            $results = $this->moodleService->importAllGradesFromMoodle();
+
+            return response()->json([
+                'success' => true,
+                'message' => "تم استيراد {$results['success']} درجة بنجاح، {$results['failed']} فشلت",
+                'message_en' => "Imported {$results['success']} grades, {$results['failed']} failed, {$results['skipped']} skipped",
+                'data' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Get grades summary by semester
+     * GET /api/moodle/grades/by-semester
+     */
+    public function getGradesBySemester(): JsonResponse
+    {
+        try {
+            $data = $this->moodleService->getGradesBySemester();
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Sync pending grades from Moodle to SIS
      * POST /api/moodle/sync/grades-to-sis
      */
