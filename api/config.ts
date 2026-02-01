@@ -139,54 +139,89 @@ export interface FrontendConfig {
   pages: Record<string, PageConfig>;
 }
 
-// Config API is disabled - endpoints don't exist on server
-// Return defaults immediately without making HTTP requests
 export const configAPI = {
   // Get public config (no auth required)
   getPublicConfig: async (): Promise<{ settings: Record<string, any>; theme: UiTheme | null }> => {
-    // API disabled - return defaults
-    return { settings: {}, theme: null };
+    try {
+      const response = await apiClient.get('/config/public');
+      return response.data;
+    } catch {
+      return { settings: {}, theme: null };
+    }
   },
 
   // Get menu for current user role
-  getMenu: async (_role: string): Promise<MenuConfig | null> => {
-    // API disabled - return null (use hardcoded menu)
-    return null;
+  getMenu: async (role: string): Promise<MenuConfig | null> => {
+    try {
+      const response = await apiClient.get(`/config/menus/${role}`);
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   // Get dashboard layout for current user role
-  getDashboard: async (_role: string): Promise<DashboardLayout | null> => {
-    // API disabled - return null (use hardcoded dashboard)
-    return null;
+  getDashboard: async (role: string): Promise<DashboardLayout | null> => {
+    try {
+      const response = await apiClient.get(`/config/dashboard/${role}`);
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   // Get current theme
   getTheme: async (): Promise<UiTheme | null> => {
-    // API disabled - return null (use CSS defaults)
-    return null;
+    try {
+      const response = await apiClient.get('/config/theme');
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   // Get page configuration
-  getPageConfig: async (_pageKey: string): Promise<PageConfig | null> => {
-    // API disabled - return null
-    return null;
+  getPageConfig: async (pageKey: string): Promise<PageConfig | null> => {
+    try {
+      const response = await apiClient.get(`/config/page/${pageKey}`);
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   // Get all configuration for a role
-  getFullConfig: async (_role: string): Promise<FrontendConfig> => {
-    // API disabled - return defaults
-    return {
-      menu: null,
-      theme: null,
-      dashboard: null,
-      pages: {},
-    };
+  getFullConfig: async (role: string): Promise<FrontendConfig> => {
+    try {
+      const [menu, theme, dashboard] = await Promise.all([
+        configAPI.getMenu(role),
+        configAPI.getTheme(),
+        configAPI.getDashboard(role),
+      ]);
+      return {
+        menu,
+        theme,
+        dashboard,
+        pages: {},
+      };
+    } catch {
+      return {
+        menu: null,
+        theme: null,
+        dashboard: null,
+        pages: {},
+      };
+    }
   },
 
   // Get all widgets
   getWidgets: async (): Promise<DashboardWidget[]> => {
-    // API disabled - return empty array
-    return [];
+    try {
+      const response = await apiClient.get('/config/widgets');
+      return response.data;
+    } catch {
+      return [];
+    }
   },
 };
 

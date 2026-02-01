@@ -187,16 +187,18 @@ const Dashboard: React.FC<DashboardProps> = ({
             }
 
             // Fetch student-specific data in parallel with individual error handling
+            // Use /my-* endpoints for student's own data to avoid permission issues
+            const studentId = studentData.id || currentUser.student?.id;
             const [enrollmentsData, financialData, timetableData, gradesData, requestsData] = await Promise.all([
-              studentsAPI.getEnrollments(studentData.id || currentUser.id).catch(() => []),
-              financeAPI.getStudentFinancials(studentData.id || currentUser.id).catch(() => null),
+              studentId ? studentsAPI.getEnrollments(studentId).catch(() => []) : Promise.resolve([]),
+              financeAPI.getMyFinancials().catch(() => null),
               scheduleAPI.getMyTimetable().catch(() => []),
               studentsAPI.getMyGrades().catch(() => null),
               import('../api/studentRequests').then(m => m.studentRequestsAPI.getRequests()).catch(() => ({ data: [] })),
             ]);
 
             setEnrollments(enrollmentsData.data || enrollmentsData || []);
-            setFinancials(financialData);
+            setFinancials(financialData?.records || financialData || null);
 
             // Count pending requests
             const requests = requestsData.data || requestsData || [];

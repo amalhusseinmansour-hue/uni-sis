@@ -40,6 +40,8 @@ use App\Http\Controllers\Api\GradingScaleController;
 use App\Http\Controllers\Api\LectureController;
 use App\Http\Controllers\Api\LectureAttendanceController;
 use App\Http\Controllers\Api\LectureMaterialController;
+use App\Http\Controllers\Api\PaymentPlanController;
+use App\Http\Controllers\Api\ScholarshipController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -243,6 +245,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my-discipline/appeals', [DisciplineController::class, 'myAppeals']);
         Route::post('/my-discipline/appeals', [DisciplineController::class, 'storeAppeal']);
         Route::post('/my-discipline/appeals/{appeal}/withdraw', [DisciplineController::class, 'withdrawAppeal']);
+
+        // Student Payment Plans (view own)
+        Route::get('/my-payment-plans', [PaymentPlanController::class, 'myPaymentPlans']);
+
+        // Student Scholarships (view own and apply)
+        Route::get('/my-scholarships', [ScholarshipController::class, 'myScholarships']);
+        Route::get('/scholarships/available', [ScholarshipController::class, 'available']);
+        Route::post('/scholarships/apply', [ScholarshipController::class, 'apply']);
+
+        // Student Financial Records (view own)
+        Route::get('/my-financial-records', [FinancialRecordController::class, 'myFinancialRecords']);
+        Route::get('/my-balance', [FinancialRecordController::class, 'myBalance']);
+        Route::get('/fee-structure', [FinancialRecordController::class, 'getFeeStructure']);
     });
 
     // ==========================================
@@ -299,6 +314,39 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->latest()
                 ->paginate(15);
         });
+
+        // ==========================================
+        // PAYMENT PLANS MANAGEMENT
+        // ==========================================
+        Route::get('/payment-plans', [PaymentPlanController::class, 'index']);
+        Route::get('/payment-plans/statistics', [PaymentPlanController::class, 'statistics']);
+        Route::get('/payment-plans/{paymentPlan}', [PaymentPlanController::class, 'show']);
+        Route::post('/payment-plans', [PaymentPlanController::class, 'store']);
+        Route::put('/payment-plans/{paymentPlan}', [PaymentPlanController::class, 'update']);
+        Route::post('/installments/{installment}/pay', [PaymentPlanController::class, 'payInstallment']);
+
+        // ==========================================
+        // SCHOLARSHIPS MANAGEMENT
+        // ==========================================
+        Route::get('/scholarships', [ScholarshipController::class, 'index']);
+        Route::get('/scholarships/statistics', [ScholarshipController::class, 'statistics']);
+        Route::get('/scholarships/{scholarship}', [ScholarshipController::class, 'show']);
+        Route::post('/scholarships', [ScholarshipController::class, 'store']);
+        Route::put('/scholarships/{scholarship}', [ScholarshipController::class, 'update']);
+        Route::delete('/scholarships/{scholarship}', [ScholarshipController::class, 'destroy']);
+
+        // Student Scholarships Management
+        Route::get('/student-scholarships', [ScholarshipController::class, 'allStudentScholarships']);
+        Route::put('/student-scholarships/{studentScholarship}/status', [ScholarshipController::class, 'updateStatus']);
+
+        // ==========================================
+        // FEE STRUCTURE MANAGEMENT
+        // ==========================================
+        Route::get('/fee-structures', [FinancialRecordController::class, 'allFeeStructures']);
+        Route::get('/fee-types', [FinancialRecordController::class, 'getFeeTypes']);
+        Route::post('/fee-structures', [FinancialRecordController::class, 'createFeeStructure']);
+        Route::put('/fee-structures/{feeStructure}', [FinancialRecordController::class, 'updateFeeStructure']);
+        Route::delete('/fee-structures/{feeStructure}', [FinancialRecordController::class, 'deleteFeeStructure']);
     });
 
     // ==========================================

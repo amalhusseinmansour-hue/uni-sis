@@ -89,6 +89,21 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
   const [allStudentScholarships, setAllStudentScholarships] = useState<StudentScholarship[]>([]);
   const [showCreatePlanModal, setShowCreatePlanModal] = useState(false);
   const [showCreateScholarshipModal, setShowCreateScholarshipModal] = useState(false);
+  const [showViewPlanModal, setShowViewPlanModal] = useState(false);
+  const [viewingPlan, setViewingPlan] = useState<PaymentPlan | null>(null);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [planFormLoading, setPlanFormLoading] = useState(false);
+
+  // Payment Plan form state
+  const [planForm, setPlanForm] = useState({
+    student_id: '',
+    total_amount: '',
+    down_payment: '',
+    number_of_installments: '3',
+    frequency: 'MONTHLY',
+    start_date: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
 
   // Invoice form state
   const [invoiceForm, setInvoiceForm] = useState({
@@ -127,14 +142,18 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
         setBalance(initialStudent?.currentBalance || initialStudent?.balance || 0);
         // Fetch admin data for payment plans and scholarships
         try {
-          const [plans, schols, studentSchols] = await Promise.all([
+          const [plans, schols, studentSchols, allRecords, students] = await Promise.all([
             paymentPlansAPI.getAllPaymentPlans(),
             paymentPlansAPI.getAllScholarships(),
             paymentPlansAPI.getAllStudentScholarships(),
+            financeAPI.getAllRecords({ per_page: 100 }),
+            studentsAPI.getAll({ per_page: 500 }),
           ]);
           setAdminPaymentPlans(plans);
           setAdminScholarships(schols);
           setAllStudentScholarships(studentSchols);
+          setFinancials(allRecords?.data || allRecords || []);
+          setAllStudents(students?.data || students || []);
         } catch {
           // Admin data fetch failed - non-critical, silently continue
         }
@@ -143,40 +162,30 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
 
       try {
         setLoading(true);
-        try {
-          const profile = await studentsAPI.getMyProfile();
-          setStudent(profile);
-          const financialData = await financeAPI.getStudentFinancials(profile.id);
-          setFinancials(financialData.records || []);
-          setBalance(financialData.balance || 0);
+        // Use new student-specific endpoints
+        const [profile, financialData, balanceData, plans, mySchols, availSchols] = await Promise.all([
+          studentsAPI.getMyProfile(),
+          financeAPI.getMyFinancials(),
+          financeAPI.getMyBalance(),
+          paymentPlansAPI.getMyPaymentPlans(),
+          paymentPlansAPI.getMyScholarships(),
+          paymentPlansAPI.getAvailableScholarships(),
+        ]);
 
-          // Fetch payment plans and scholarships
-          const [plans, mySchols, availSchols] = await Promise.all([
-            paymentPlansAPI.getMyPaymentPlans(),
-            paymentPlansAPI.getMyScholarships(),
-            paymentPlansAPI.getAvailableScholarships(),
-          ]);
-          setPaymentPlans(plans);
-          setMyScholarships(mySchols);
-          setAvailableScholarships(availSchols);
-        } catch (apiError: any) {
-          setStudent(initialStudent);
-          setFinancials([]);
-          setBalance(initialStudent?.currentBalance || initialStudent?.balance || 0);
-          // Still try to fetch plans and scholarships with demo data
-          const [plans, mySchols, availSchols] = await Promise.all([
-            paymentPlansAPI.getMyPaymentPlans(),
-            paymentPlansAPI.getMyScholarships(),
-            paymentPlansAPI.getAvailableScholarships(),
-          ]);
-          setPaymentPlans(plans);
-          setMyScholarships(mySchols);
-          setAvailableScholarships(availSchols);
-        }
+        setStudent(profile);
+        setFinancials(financialData.records || []);
+        setBalance(balanceData.balance || financialData.balance || 0);
+        setPaymentPlans(plans);
+        setMyScholarships(mySchols);
+        setAvailableScholarships(availSchols);
       } catch (err: any) {
+        console.warn('[Finance] Data fetch error:', err?.message);
         setStudent(initialStudent);
         setFinancials([]);
         setBalance(initialStudent?.currentBalance || initialStudent?.balance || 0);
+        setPaymentPlans([]);
+        setMyScholarships([]);
+        setAvailableScholarships([]);
       } finally {
         setLoading(false);
       }
@@ -393,6 +402,55 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
     } finally {
       setPaymentProcessing(false);
     }
+  };
+
+  // Helper: Create payment plan (admin)
+  const handleCreatePaymentPlan = async () => {
+    if (!planForm.student_id || !planForm.total_amount || !planForm.start_date) {
+      toast.error(lang === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields');
+      return;
+    }
+
+    try {
+      setPlanFormLoading(true);
+      await paymentPlansAPI.createPaymentPlan({
+        student_id: planForm.student_id,
+        name: 'Semester Payment Plan',
+        name_ar: 'خطة دفع الفصل الدراسي',
+        total_amount: parseFloat(planForm.total_amount),
+        down_payment: parseFloat(planForm.down_payment) || 0,
+        installments_count: parseInt(planForm.number_of_installments),
+        start_date: planForm.start_date,
+        notes: planForm.notes,
+      });
+
+      // Refresh payment plans
+      const plans = await paymentPlansAPI.getAllPaymentPlans();
+      setAdminPaymentPlans(plans);
+
+      // Reset form and close modal
+      setPlanForm({
+        student_id: '',
+        total_amount: '',
+        down_payment: '',
+        number_of_installments: '3',
+        frequency: 'MONTHLY',
+        start_date: new Date().toISOString().split('T')[0],
+        notes: '',
+      });
+      setShowCreatePlanModal(false);
+      toast.success(lang === 'ar' ? 'تم إنشاء خطة الدفع بنجاح' : 'Payment plan created successfully');
+    } catch (err: any) {
+      toast.error(lang === 'ar' ? 'فشل في إنشاء خطة الدفع' : 'Failed to create payment plan');
+    } finally {
+      setPlanFormLoading(false);
+    }
+  };
+
+  // Helper: View payment plan details
+  const handleViewPlan = (plan: PaymentPlan) => {
+    setViewingPlan(plan);
+    setShowViewPlanModal(true);
   };
 
   // Helper: Get installment status badge
@@ -2294,7 +2352,10 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                           <span className="font-mono text-sm font-medium text-blue-600">{plan.id}</span>
                         </td>
                         <td className="p-4">
-                          <p className="font-medium text-slate-800">{plan.student_id}</p>
+                          <div>
+                            <p className="font-medium text-slate-800">{plan.student_name || 'N/A'}</p>
+                            <p className="text-xs text-slate-500">{plan.student_number || ''}</p>
+                          </div>
                         </td>
                         <td className="p-4">
                           <span className="font-bold text-slate-800">{formatCurrency(plan.total_amount)}</span>
@@ -2319,7 +2380,7 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
                         </td>
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <IconButton icon={Eye} size="sm" tooltip={lang === 'ar' ? 'عرض' : 'View'} />
+                            <IconButton icon={Eye} size="sm" tooltip={lang === 'ar' ? 'عرض' : 'View'} onClick={() => handleViewPlan(plan)} />
                             <IconButton icon={Edit} size="sm" tooltip={lang === 'ar' ? 'تعديل' : 'Edit'} />
                           </div>
                         </td>
@@ -2705,6 +2766,240 @@ const Finance: React.FC<FinanceProps> = ({ lang, role, student: initialStudent }
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Create Payment Plan Modal */}
+      <Modal
+        isOpen={showCreatePlanModal}
+        onClose={() => setShowCreatePlanModal(false)}
+        title={lang === 'ar' ? 'إنشاء خطة دفع جديدة' : 'Create New Payment Plan'}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Select
+            label={lang === 'ar' ? 'الطالب' : 'Student'}
+            options={[
+              { value: '', label: lang === 'ar' ? 'اختر الطالب...' : 'Select student...' },
+              ...allStudents.map((s: any) => ({
+                value: s.id.toString(),
+                label: `${s.full_name_en || s.name || 'N/A'} (${s.student_number || s.id})`
+              }))
+            ]}
+            value={planForm.student_id}
+            onChange={(e) => setPlanForm({ ...planForm, student_id: e.target.value })}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label={lang === 'ar' ? 'المبلغ الإجمالي' : 'Total Amount'}
+              type="number"
+              placeholder="0.00"
+              value={planForm.total_amount}
+              onChange={(e) => setPlanForm({ ...planForm, total_amount: e.target.value })}
+              icon={DollarSign}
+            />
+            <Input
+              label={lang === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}
+              type="number"
+              placeholder="0.00"
+              value={planForm.down_payment}
+              onChange={(e) => setPlanForm({ ...planForm, down_payment: e.target.value })}
+              icon={DollarSign}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label={lang === 'ar' ? 'عدد الأقساط' : 'Number of Installments'}
+              options={[
+                { value: '2', label: '2' },
+                { value: '3', label: '3' },
+                { value: '4', label: '4' },
+                { value: '6', label: '6' },
+                { value: '8', label: '8' },
+                { value: '10', label: '10' },
+                { value: '12', label: '12' },
+              ]}
+              value={planForm.number_of_installments}
+              onChange={(e) => setPlanForm({ ...planForm, number_of_installments: e.target.value })}
+            />
+            <Select
+              label={lang === 'ar' ? 'التكرار' : 'Frequency'}
+              options={[
+                { value: 'WEEKLY', label: lang === 'ar' ? 'أسبوعي' : 'Weekly' },
+                { value: 'BI_WEEKLY', label: lang === 'ar' ? 'كل أسبوعين' : 'Bi-Weekly' },
+                { value: 'MONTHLY', label: lang === 'ar' ? 'شهري' : 'Monthly' },
+              ]}
+              value={planForm.frequency}
+              onChange={(e) => setPlanForm({ ...planForm, frequency: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label={lang === 'ar' ? 'تاريخ البدء' : 'Start Date'}
+            type="date"
+            value={planForm.start_date}
+            onChange={(e) => setPlanForm({ ...planForm, start_date: e.target.value })}
+            icon={Calendar}
+          />
+
+          <Textarea
+            label={lang === 'ar' ? 'ملاحظات' : 'Notes'}
+            placeholder={lang === 'ar' ? 'أي ملاحظات إضافية...' : 'Any additional notes...'}
+            value={planForm.notes}
+            onChange={(e) => setPlanForm({ ...planForm, notes: e.target.value })}
+            rows={3}
+          />
+
+          {/* Preview installments */}
+          {planForm.total_amount && planForm.number_of_installments && (
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">
+                {lang === 'ar' ? 'معاينة الأقساط' : 'Installments Preview'}
+              </h4>
+              <div className="text-sm text-slate-600">
+                <p>
+                  {lang === 'ar' ? 'المبلغ بعد الدفعة الأولى:' : 'Amount after down payment:'}{' '}
+                  <span className="font-semibold">
+                    {formatCurrency((parseFloat(planForm.total_amount) || 0) - (parseFloat(planForm.down_payment) || 0))}
+                  </span>
+                </p>
+                <p>
+                  {lang === 'ar' ? 'قيمة كل قسط:' : 'Each installment:'}{' '}
+                  <span className="font-semibold">
+                    {formatCurrency(((parseFloat(planForm.total_amount) || 0) - (parseFloat(planForm.down_payment) || 0)) / parseInt(planForm.number_of_installments))}
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 mt-6 pt-4 border-t">
+            <Button variant="outline" fullWidth onClick={() => setShowCreatePlanModal(false)}>
+              {t.cancel[lang]}
+            </Button>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={handleCreatePaymentPlan}
+              icon={Plus}
+              loading={planFormLoading}
+            >
+              {lang === 'ar' ? 'إنشاء خطة الدفع' : 'Create Payment Plan'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* View Payment Plan Modal */}
+      <Modal
+        isOpen={showViewPlanModal}
+        onClose={() => { setShowViewPlanModal(false); setViewingPlan(null); }}
+        title={lang === 'ar' ? 'تفاصيل خطة الدفع' : 'Payment Plan Details'}
+        size="lg"
+      >
+        {viewingPlan && (
+          <div className="space-y-6">
+            {/* Plan Summary */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-500 uppercase">{lang === 'ar' ? 'رقم الخطة' : 'Plan ID'}</p>
+                <p className="text-lg font-bold text-blue-600">{viewingPlan.id}</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-500 uppercase">{lang === 'ar' ? 'الحالة' : 'Status'}</p>
+                <Badge variant={viewingPlan.status === 'ACTIVE' ? 'success' : viewingPlan.status === 'COMPLETED' ? 'info' : 'danger'}>
+                  {viewingPlan.status}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Student Info */}
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-600 uppercase mb-1">{lang === 'ar' ? 'الطالب' : 'Student'}</p>
+              <p className="font-semibold text-slate-800">{viewingPlan.student_name || 'N/A'}</p>
+              <p className="text-sm text-slate-600">{viewingPlan.student_number || ''}</p>
+            </div>
+
+            {/* Amounts */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-500 uppercase">{lang === 'ar' ? 'الإجمالي' : 'Total'}</p>
+                <p className="text-xl font-bold text-slate-800">{formatCurrency(viewingPlan.total_amount)}</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-xs text-green-600 uppercase">{lang === 'ar' ? 'المدفوع' : 'Paid'}</p>
+                <p className="text-xl font-bold text-green-600">{formatCurrency((viewingPlan as any).paid_amount || 0)}</p>
+              </div>
+              <div className="text-center p-4 bg-amber-50 rounded-lg">
+                <p className="text-xs text-amber-600 uppercase">{lang === 'ar' ? 'المتبقي' : 'Remaining'}</p>
+                <p className="text-xl font-bold text-amber-600">{formatCurrency((viewingPlan as any).remaining_amount || 0)}</p>
+              </div>
+            </div>
+
+            {/* Progress */}
+            <div>
+              <div className="flex justify-between text-sm text-slate-600 mb-2">
+                <span>{lang === 'ar' ? 'التقدم' : 'Progress'}</span>
+                <span>{viewingPlan.progress_percentage || 0}%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3">
+                <div
+                  className="h-full rounded-full bg-green-500 transition-all"
+                  style={{ width: `${viewingPlan.progress_percentage || 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Installments Table */}
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                {lang === 'ar' ? 'الأقساط' : 'Installments'} ({viewingPlan.installments.length})
+              </h4>
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="p-3 text-start text-xs font-semibold text-slate-500">#</th>
+                      <th className="p-3 text-start text-xs font-semibold text-slate-500">{lang === 'ar' ? 'المبلغ' : 'Amount'}</th>
+                      <th className="p-3 text-start text-xs font-semibold text-slate-500">{lang === 'ar' ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
+                      <th className="p-3 text-start text-xs font-semibold text-slate-500">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                      <th className="p-3 text-start text-xs font-semibold text-slate-500">{lang === 'ar' ? 'تاريخ الدفع' : 'Paid Date'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {viewingPlan.installments.map((inst, idx) => (
+                      <tr key={inst.id} className="hover:bg-slate-50">
+                        <td className="p-3">{idx + 1}</td>
+                        <td className="p-3 font-medium">{formatCurrency(inst.amount)}</td>
+                        <td className="p-3">{inst.due_date}</td>
+                        <td className="p-3">{getInstallmentBadge(inst.status)}</td>
+                        <td className="p-3 text-slate-500">{inst.paid_date || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {viewingPlan.notes && (
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-500 uppercase mb-1">{lang === 'ar' ? 'ملاحظات' : 'Notes'}</p>
+                <p className="text-sm text-slate-700">{viewingPlan.notes}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-6 pt-4 border-t">
+              <Button variant="outline" fullWidth onClick={() => { setShowViewPlanModal(false); setViewingPlan(null); }}>
+                {t.close ? t.close[lang] : (lang === 'ar' ? 'إغلاق' : 'Close')}
+              </Button>
+              <Button variant="outline" fullWidth icon={Printer}>
+                {lang === 'ar' ? 'طباعة' : 'Print'}
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
